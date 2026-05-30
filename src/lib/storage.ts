@@ -145,6 +145,38 @@ export function currentStreak(days: string[]): number {
   return count;
 }
 
+/** Longest run of consecutive active days ever (for a gentle "best streak"). */
+export function bestStreak(days: string[]): number {
+  if (days.length === 0) return 0;
+  const sorted = [...new Set(days)].sort();
+  let best = 1;
+  let run = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1]);
+    prev.setDate(prev.getDate() + 1);
+    if (localDay(prev) === sorted[i]) {
+      run += 1;
+      best = Math.max(best, run);
+    } else {
+      run = 1;
+    }
+  }
+  return best;
+}
+
+/** Which of the last `n` local days were active — for a 7-day activity strip. */
+export function recentActivity(days: string[], n = 7): { day: string; active: boolean }[] {
+  const set = new Set(days);
+  const out: { day: string; active: boolean }[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = localDay(d);
+    out.push({ day: key, active: set.has(key) });
+  }
+  return out;
+}
+
 // ── Settings ─────────────────────────────────────────────────────────────────
 export type TextScale = "normal" | "large" | "xl";
 export type Theme = "light" | "dark" | "system";
@@ -170,6 +202,38 @@ export function getSettings(studentId: string): Settings {
 
 export function saveSettings(studentId: string, s: Settings): void {
   write(settingsKey(studentId), JSON.stringify(s));
+}
+
+// ── Progress summary (for the student-initiated "send to Rory" share) ────────
+/** Scans this student's local keys into a short, human-readable summary. No
+ *  content needed — counts completed weeks, ticked tasks and the streak. */
+export function buildProgressSummary(studentId: string, displayName: string): string {
+  let weeksComplete = 0;
+  let ticked = 0;
+  if (typeof window !== "undefined") {
+    try {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (!k || !k.startsWith(`${studentId}_`)) continue;
+        const v = window.localStorage.getItem(k);
+        if (k.endsWith("_complete")) {
+          if (v === "1") weeksComplete += 1;
+        } else if (/_hw\d+_/.test(k) && v === "1") {
+          ticked += 1;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  const streak = currentStreak(getStreakDays(studentId));
+  const lines = [
+    `Hi Rory — ${displayName}'s progress:`,
+    `• Homework weeks completed: ${weeksComplete}`,
+    `• Tasks ticked off: ${ticked}`,
+    `• Current streak: ${streak} day${streak === 1 ? "" : "s"}`,
+  ];
+  return lines.join("\n");
 }
 
 // ── Reset (Settings → "reset progress", with confirm in the UI) ──────────────

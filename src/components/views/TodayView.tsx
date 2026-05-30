@@ -6,18 +6,23 @@ import type { Unit } from "@/lib/types";
 import { useStudent } from "@/components/StudentContext";
 import Screen from "@/components/Screen";
 import { ChevronRightIcon, FlameIcon, ExternalIcon } from "@/components/Icons";
-import { currentStreak, getStreakDays, isWeekComplete } from "@/lib/storage";
+import { bestStreak, currentStreak, getStreakDays, isWeekComplete, recentActivity } from "@/lib/storage";
 
 export default function TodayView({ unit }: { unit: Unit | null }) {
   const { code, studentId, displayName, greeting } = useStudent();
   const [mounted, setMounted] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [best, setBest] = useState(0);
+  const [activity, setActivity] = useState<{ day: string; active: boolean }[]>([]);
   const [dueWeek, setDueWeek] = useState<Unit["homework"][number] | null>(null);
   const [allDone, setAllDone] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setStreak(currentStreak(getStreakDays(studentId)));
+    const days = getStreakDays(studentId);
+    setStreak(currentStreak(days));
+    setBest(bestStreak(days));
+    setActivity(recentActivity(days, 7));
     if (unit) {
       const next = unit.homework.find((h) => !isWeekComplete(studentId, unit.id, h.week));
       setDueWeek(next ?? null);
@@ -62,15 +67,43 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
         </section>
       )}
 
-      {/* Streak — gentle, never guilt-tripping */}
-      {mounted && streak > 0 && (
-        <section className="mt-5 flex items-center gap-3 rounded-card bg-amber/10 p-4">
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-amber/25 text-amber-deep">
-            <FlameIcon />
-          </span>
-          <p className="text-sm font-semibold text-navy dark:text-cream">
-            {streak} day{streak === 1 ? "" : "s"} on the go. Keep it up!
-          </p>
+      {/* Activity strip — gentle, never guilt-tripping */}
+      {mounted && activity.length > 0 && (
+        <section className="mt-5 rounded-card bg-amber/10 p-4">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber/25 text-amber-deep">
+              <FlameIcon />
+            </span>
+            <p className="text-sm font-semibold text-navy dark:text-cream">
+              {streak > 0 ? (
+                <>
+                  {streak} day{streak === 1 ? "" : "s"} on the go. Keep it up!
+                </>
+              ) : (
+                <>A little every day adds up. Tick off a task today!</>
+              )}
+              {best > streak && (
+                <span className="ml-1 font-normal text-navy-soft dark:text-cream/60">
+                  · best: {best}
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-1.5">
+            {activity.map(({ day, active }, i) => (
+              <div key={day} className="flex flex-1 flex-col items-center gap-1">
+                <span
+                  className={`h-7 w-7 rounded-full ${
+                    active ? "bg-amber" : "bg-navy/10 dark:bg-white/10"
+                  } ${i === activity.length - 1 ? "ring-2 ring-amber-deep/40" : ""}`}
+                  aria-hidden
+                />
+                <span className="text-[10px] font-medium text-navy-soft dark:text-cream/50">
+                  {"SMTWTFS"[new Date(day + "T00:00").getDay()]}
+                </span>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 

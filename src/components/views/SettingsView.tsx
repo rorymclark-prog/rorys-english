@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useStudent } from "@/components/StudentContext";
 import { useSettings } from "@/components/SettingsContext";
 import Screen from "@/components/Screen";
-import { resetProgress, type TextScale, type Theme } from "@/lib/storage";
+import { buildProgressSummary, resetProgress, type TextScale, type Theme } from "@/lib/storage";
 
 const TEXT_SIZES: { value: TextScale; label: string }[] = [
   { value: "normal", label: "Normal" },
@@ -25,6 +25,8 @@ export default function SettingsView() {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
 
+  const [shareNote, setShareNote] = useState("");
+
   const doReset = () => {
     resetProgress(studentId);
     setConfirming(false);
@@ -33,12 +35,41 @@ export default function SettingsView() {
     if (typeof window !== "undefined") window.location.reload();
   };
 
+  const shareProgress = async () => {
+    const text = buildProgressSummary(studentId, displayName);
+    try {
+      if (navigator.share) {
+        // Native share sheet — student picks WhatsApp (or anything). No backend,
+        // nothing leaves the device unless the student chooses to send it.
+        await navigator.share({ title: "My progress", text });
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      setShareNote("Copied! Paste it to Rory on WhatsApp.");
+    } catch {
+      setShareNote("Couldn't open share — copy your progress manually.");
+    }
+  };
+
   return (
     <Screen title="Settings">
       <div className="mt-2 space-y-6">
         <Row label="Signed in as">
           <span className="font-bold text-navy dark:text-cream">{displayName}</span>
         </Row>
+
+        <div>
+          <p className="mb-2 text-sm font-bold text-burgundy dark:text-amber/80">Progress</p>
+          <button
+            onClick={shareProgress}
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-navy px-4 font-bold text-cream active:scale-[.99] dark:bg-amber dark:text-navy"
+          >
+            Send my progress to Rory
+          </button>
+          {shareNote && (
+            <p className="mt-2 text-center text-sm text-burgundy dark:text-amber/80">{shareNote}</p>
+          )}
+        </div>
 
         <div>
           <p className="mb-2 text-sm font-bold text-burgundy dark:text-amber/80">Text size</p>

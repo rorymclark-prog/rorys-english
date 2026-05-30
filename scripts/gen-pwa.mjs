@@ -27,6 +27,11 @@ for (const s of students) {
     background_color: "#FDF6EC",
     theme_color: "#1E3A5F",
     icons,
+    // Long-press the installed icon → jump straight to a section.
+    shortcuts: [
+      { name: "Homework", short_name: "Homework", url: `/s/${s.code}/homework/`, icons },
+      { name: "Study", short_name: "Study", url: `/s/${s.code}/study/`, icons },
+    ],
   };
   writeFileSync(join(outDir, `${s.code}.webmanifest`), JSON.stringify(manifest, null, 2));
 }

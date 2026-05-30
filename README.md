@@ -2,6 +2,15 @@
 
 Mobile-first PWA for Rory Clark's English students. Built with Next.js 15 App Router, TypeScript, and Tailwind CSS. Output is a fully static export (`output: "export"`) — no server, no backend, no accounts. All content is shipped as JSON at build time; progress lives in localStorage on the student's device. Study tools are **external HTML pages** linked by URL — there is no in-app quiz engine.
 
+### What students get
+
+- **Today** — greeting, the next homework due, a gentle 7-day activity strip + streak (with a personal best).
+- **Homework** — weekly tasks (tick boxes, lined written answers with debounced autosave, voice-memo prompts), a tasteful confetti + haptic celebration on completion, and an **Add due date to my calendar** button (downloads an `.ics`).
+- **Study** — cards that open the unit's external HTML study tools in a new tab.
+- **Settings** — text size, light/dark/auto theme, **Send my progress to Rory** (native share sheet → WhatsApp, nothing sent automatically), and reset.
+- **Installable PWA** — Add to Home Screen, full-screen, offline after first load, an offline banner when the connection drops, and long-press app-icon shortcuts to Homework/Study.
+- **Private by design** — no accounts, no analytics, `noindex`, progress never leaves the device.
+
 ---
 
 ## Local dev

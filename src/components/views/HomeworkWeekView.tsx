@@ -13,6 +13,8 @@ import {
   setTaskValue,
   setWeekComplete,
 } from "@/lib/storage";
+import { confettiBurst, haptic } from "@/lib/celebrate";
+import { buildHomeworkIcs, downloadIcs, parseDueDate } from "@/lib/ics";
 
 export default function HomeworkWeekView({
   unitId,
@@ -38,8 +40,19 @@ export default function HomeworkWeekView({
     if (next) {
       setFlash(true);
       window.setTimeout(() => setFlash(false), 700);
+      confettiBurst();
+      haptic([10, 40, 20]);
     }
   };
+
+  const addToCalendar = () => {
+    const date = parseDueDate(week.due);
+    if (!date) return;
+    const ics = buildHomeworkIcs(`${week.title} (due)`, date, `${studentId}-${unitId}-hw${week.week}`);
+    downloadIcs(`${unitId}-hw${week.week}.ics`, ics);
+  };
+
+  const canAddCalendar = parseDueDate(week.due) !== null;
 
   return (
     <div className={flash ? "animate-flash" : undefined}>
@@ -65,6 +78,16 @@ export default function HomeworkWeekView({
         {week.tasks.map((task, i) => (
           <TaskCard key={task.id} studentId={studentId} unitId={unitId} week={week.week} index={i} task={task} />
         ))}
+
+        {/* Add the deadline to the phone calendar */}
+        {canAddCalendar && (
+          <button
+            onClick={addToCalendar}
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-navy/15 bg-white px-4 text-sm font-bold text-navy active:scale-[.99] dark:border-white/15 dark:bg-white/5 dark:text-cream"
+          >
+            📅 Add due date to my calendar
+          </button>
+        )}
 
         {/* Mark complete */}
         <button
@@ -141,6 +164,7 @@ function CheckTask({
     const next = !checked;
     setChecked(next);
     setTaskChecked(studentId, unitId, week, task.id, next);
+    if (next) haptic(12);
   };
 
   return (
