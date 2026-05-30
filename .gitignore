@@ -5,6 +5,7 @@
 
 # secrets / local env (Apps Script sync URL + secret)
 .env*
+!.env.local.example
 .DS_Store
 *.pem
 npm-debug.log*
