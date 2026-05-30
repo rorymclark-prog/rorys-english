@@ -86,8 +86,11 @@ function ensureTabs_(ss) {
 }
 
 // A simple formula dashboard; add charts by hand once data flows in.
+// Only writes on first provisioning, so re-running setup() never clobbers
+// annotations/charts the tutor added later.
 function writeDashboard_(ss) {
   var d = ss.getSheetByName("Dashboard");
+  if (d.getLastRow() >= 2) return;
   d.getRange("A1:B1").setValues([["Metric", "Value"]]).setFontWeight("bold");
   d.getRange("A2:B7").setValues([
     ["Homework weeks completed", '=COUNTIF(Homework!E2:E,"complete")'],

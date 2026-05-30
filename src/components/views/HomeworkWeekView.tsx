@@ -102,7 +102,9 @@ export default function HomeworkWeekView({
         </button>
         {complete && (
           <p className="pb-2 text-center text-sm text-burgundy dark:text-amber/80">
-            Nice one. Don&apos;t forget to send Rory your voice memos on WhatsApp.
+            {week.tasks.some((t) => t.type === "voice")
+              ? "Nice one. Don't forget to send Rory your voice memos on WhatsApp."
+              : "Nice one — that's this week done!"}
           </p>
         )}
       </main>

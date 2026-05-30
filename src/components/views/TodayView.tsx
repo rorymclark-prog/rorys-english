@@ -71,7 +71,7 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
       {mounted && activity.length > 0 && (
         <section className="mt-5 rounded-card bg-amber/10 p-4">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber/25 text-amber-deep">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber/25 text-amber-deep dark:text-amber">
               <FlameIcon />
             </span>
             <p className="text-sm font-semibold text-navy dark:text-cream">
@@ -93,12 +93,15 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
             {activity.map(({ day, active }, i) => (
               <div key={day} className="flex flex-1 flex-col items-center gap-1">
                 <span
-                  className={`h-7 w-7 rounded-full ${
+                  className={`relative h-7 w-7 rounded-full ${
                     active ? "bg-amber" : "bg-navy/10 dark:bg-white/10"
-                  } ${i === activity.length - 1 ? "ring-2 ring-amber-deep/40" : ""}`}
+                  } ${i === activity.length - 1 ? "ring-2 ring-amber/70 dark:ring-amber" : ""}`}
                   aria-hidden
-                />
-                <span className="text-[10px] font-medium text-navy-soft dark:text-cream/50">
+                >
+                  {i === activity.length - 1 && <span className="sr-only">Today</span>}
+                </span>
+                <span className="text-[10px] font-medium text-navy-soft dark:text-cream/70">
+                  {/* Sun=0 … Sat=6 → both ends are "S" */}
                   {"SMTWTFS"[new Date(day + "T00:00").getDay()]}
                 </span>
               </div>

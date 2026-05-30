@@ -90,7 +90,7 @@ export default function SettingsView() {
         </div>
 
         <div className="pt-2">
-          <p className="mb-2 text-sm font-bold text-burgundy dark:text-amber/80">Danger zone</p>
+          <p className="mb-2 text-sm font-bold text-burgundy dark:text-amber/80">Start fresh</p>
           {!confirming ? (
             <button
               onClick={() => setConfirming(true)}
@@ -144,7 +144,7 @@ function SegmentedControl<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="grid grid-flow-col gap-2">
+    <div className="flex gap-2">
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -152,10 +152,10 @@ function SegmentedControl<T extends string>({
             key={o.value}
             onClick={() => onChange(o.value)}
             aria-pressed={active}
-            className={`min-h-[48px] rounded-xl px-2 text-sm font-bold transition-colors active:scale-[.98] ${
+            className={`min-h-[48px] flex-1 rounded-xl px-2 text-sm font-bold transition-colors active:scale-[.98] ${
               active
                 ? "bg-amber text-navy"
-                : "bg-white text-navy-soft shadow-card dark:bg-white/5 dark:text-cream/70"
+                : "bg-white text-navy-soft shadow-card dark:bg-white/5 dark:text-cream/70 dark:ring-1 dark:ring-white/10"
             }`}
           >
             {o.label}

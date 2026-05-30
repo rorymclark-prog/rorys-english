@@ -37,7 +37,11 @@ function icsDate(d: Date): string {
 }
 
 function icsStamp(d: Date): string {
-  return `${icsDate(d)}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  // RFC 5545 requires DTSTAMP in UTC (trailing Z) — Outlook is strict about this.
+  return (
+    `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
+    `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
+  );
 }
 
 export function buildHomeworkIcs(summary: string, due: Date, uidSeed: string): string {

@@ -35,11 +35,13 @@ self.addEventListener("fetch", (event) => {
     (req.headers.get("accept") || "").includes("text/html");
 
   if (isPageNavigation) {
-    // Network-first: fresh when online, cached page (or the app start page) offline.
+    // Network-first: fresh when online, cached page (or the app root) offline.
+    // Use the SW's own scope as the root so this works under a sub-path host
+    // (e.g. GitHub Pages /rorys-english/), not just at the domain root.
     event.respondWith(
       fetch(req)
         .then((res) => cachePut(req, res))
-        .catch(() => caches.match(req).then((c) => c || caches.match("/"))),
+        .catch(() => caches.match(req).then((c) => c || caches.match(self.registration.scope))),
     );
     return;
   }

@@ -67,7 +67,7 @@ export default function InstallHint() {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-[76px] z-30 mx-auto max-w-md px-4">
+    <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md px-4">
       <div className="flex items-center gap-3 rounded-card bg-navy p-3 text-cream shadow-card dark:bg-white/10">
         <span className="text-xl" aria-hidden>
           📲
@@ -85,7 +85,7 @@ export default function InstallHint() {
         {!isIos && deferred && (
           <button
             onClick={install}
-            className="min-h-[40px] shrink-0 rounded-lg bg-amber px-3 text-sm font-bold text-navy"
+            className="min-h-[48px] shrink-0 rounded-lg bg-amber px-4 text-sm font-bold text-navy"
           >
             Install
           </button>
@@ -93,7 +93,7 @@ export default function InstallHint() {
         <button
           onClick={dismiss}
           aria-label="Dismiss"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-cream/70 hover:bg-white/10"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-cream/70 hover:bg-white/10"
         >
           ✕
         </button>

@@ -290,6 +290,34 @@
     font-weight: 600;
     margin-bottom: 8px;
   }
+
+  /* ── Speaker button ── */
+  .speak-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 8px;
+    background: var(--amber);
+    color: var(--navy);
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1.1rem;
+    cursor: pointer;
+    vertical-align: middle;
+    margin-left: 8px;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity .15s;
+  }
+  .speak-btn:active { opacity: .7; }
+  .prompt-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+  }
 </style>
 </head>
 <body>
@@ -369,6 +397,34 @@
 </section>
 
 <script>
+// ── Text-to-speech (Web Speech API — no external requests, works offline) ──
+function speak(text, lang) {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = lang || 'en-GB';
+    u.rate = 0.95;
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+// Build a speaker button that speaks the given English text.
+// type="button" prevents form submission; stopPropagation prevents
+// the click bubbling to any answer handler.
+function makeSpeakBtn(englishText) {
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "speak-btn";
+  btn.setAttribute("aria-label", "Pronounce " + englishText);
+  btn.textContent = "🔊";
+  btn.addEventListener("click", function(e) {
+    e.stopPropagation();
+    speak(englishText, 'en-GB');
+  });
+  return btn;
+}
+
 // ── Progress sync (optional) — paste your Apps Script /exec URL + secret to enable.
 var SYNC = { url: "", secret: "change-me-rory-english-2026", code: "ferdi-7h3k", tool: "unit10" };
 function syncQuiz(section, score, total) {
@@ -580,6 +636,8 @@ function initS1() {
     const question = engToGer ? pair[0] : pair[1];
     const answer   = engToGer ? pair[1] : pair[0];
     const answerIdx = engToGer ? 1 : 0;
+    // englishWord is always pair[0] — used for speak()
+    const englishWord = pair[0];
 
     // Distractors: other words from same direction in the list
     const pool = VOCAB
@@ -588,7 +646,7 @@ function initS1() {
     const distractors = pick(pool, 3);
     const options = shuffle([answer, ...distractors]);
 
-    return { question, answer, options,
+    return { question, answer, options, engToGer, englishWord,
              prompt: engToGer ? "What is the German?" : "What is the English?" };
   });
 
@@ -616,11 +674,19 @@ function renderS1Question() {
   card.innerHTML = `
     <div class="q-counter">Question ${s1Current+1} of 10</div>
     <div style="font-size:0.82rem;color:var(--burgundy);font-weight:600;margin-bottom:6px;">${q.prompt}</div>
-    <div style="font-size:1.3rem;font-weight:700;color:var(--navy);margin-bottom:4px;">${q.question}</div>
+    <div class="prompt-row" style="margin-bottom:4px;">
+      <span style="font-size:1.3rem;font-weight:700;color:var(--navy);">${escHtml(q.question)}</span>
+    </div>
     <div class="options" id="s1-opts"></div>
     <div class="feedback" id="s1-fb"></div>
     <button class="btn btn-amber btn-full mt12 hidden" id="s1-next">Next question &rarr;</button>
   `;
+
+  // If English is the prompt, add 🔊 next to it so the student can hear it
+  if (q.engToGer) {
+    const promptRow = card.querySelector(".prompt-row");
+    promptRow.appendChild(makeSpeakBtn(q.englishWord));
+  }
 
   container.appendChild(prog);
   container.appendChild(card);
@@ -639,6 +705,7 @@ function answerS1(chosen, correct, chosenBtn) {
   const fb   = document.getElementById("s1-fb");
   const next = document.getElementById("s1-next");
   const opts = document.querySelectorAll(".opt-btn");
+  const q    = s1Questions[s1Current];
 
   opts.forEach(b => {
     b.disabled = true;
@@ -654,6 +721,13 @@ function answerS1(chosen, correct, chosenBtn) {
     chosenBtn.classList.add("wrong");
     fb.className = "feedback wrong show";
     fb.textContent = `Not quite — the answer is "${correct}".`;
+  }
+
+  // When the English word is the correct answer (German→English direction),
+  // add 🔊 to the feedback so the student can hear the English pronunciation.
+  if (!q.engToGer) {
+    fb.appendChild(document.createTextNode(" "));
+    fb.appendChild(makeSpeakBtn(q.englishWord));
   }
 
   next.classList.remove("hidden");

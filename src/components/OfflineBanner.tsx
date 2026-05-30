@@ -21,9 +21,12 @@ export default function OfflineBanner() {
   if (!offline) return null;
 
   return (
+    // In normal flow (not fixed) so it never overlaps the sticky screen headers;
+    // it only renders while offline, so there's no layout cost otherwise.
     <div
       role="status"
-      className="fixed inset-x-0 top-0 z-40 bg-burgundy px-4 py-1 text-center text-xs font-semibold text-cream"
+      aria-live="polite"
+      className="bg-burgundy px-4 py-1 text-center text-xs font-semibold text-cream"
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.25rem)" }}
     >
       Offline — your saved work is safe and still here.
