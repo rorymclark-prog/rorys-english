@@ -15,6 +15,7 @@ import {
 } from "@/lib/storage";
 import { confettiBurst, haptic } from "@/lib/celebrate";
 import { buildHomeworkIcs, downloadIcs, parseDueDate } from "@/lib/ics";
+import { syncHomework } from "@/lib/sync";
 
 export default function HomeworkWeekView({
   unitId,
@@ -25,7 +26,7 @@ export default function HomeworkWeekView({
   week: HomeworkWeek;
   backHref: string;
 }) {
-  const { studentId } = useStudent();
+  const { studentId, code } = useStudent();
   const [complete, setComplete] = useState(false);
   const [flash, setFlash] = useState(false);
 
@@ -37,6 +38,7 @@ export default function HomeworkWeekView({
     const next = !complete;
     setComplete(next);
     setWeekComplete(studentId, unitId, week.week, next);
+    syncHomework(code, unitId, week.week, week.title, next);
     if (next) {
       setFlash(true);
       window.setTimeout(() => setFlash(false), 700);

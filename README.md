@@ -181,6 +181,17 @@ Tell them: **Share → Add to Home Screen** (Safari on iPhone / Chrome on Androi
 
 ---
 
+## Progress sync to Google Sheets (optional)
+
+By default the app is fully device-local. To collect results in a **Google Sheet
+per student** (homework completion, quiz/vocab scores — plus tabs ready for school
+tests, writing/speaking analysis and mock tests), deploy the Apps Script in
+[`apps-script/progress-sync/`](apps-script/progress-sync/README.md). It provisions
+a Drive folder + Sheet per student and gives you a Web App URL. Put the URL +
+secret in `.env.local` and `npm run deploy` — completing homework or a quiz then
+writes a row to that student's Sheet. Without it, nothing syncs and nothing leaves
+the device.
+
 ## Privacy
 
 - No accounts, no server, no analytics.

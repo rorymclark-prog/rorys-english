@@ -2,6 +2,9 @@
 /.next/
 /out/
 /build
+
+# secrets / local env (Apps Script sync URL + secret)
+.env*
 .DS_Store
 *.pem
 npm-debug.log*
