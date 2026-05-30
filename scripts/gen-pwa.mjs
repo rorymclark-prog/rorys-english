@@ -8,9 +8,12 @@ import { join } from "node:path";
 const root = process.cwd();
 const students = JSON.parse(readFileSync(join(root, "content", "students.json"), "utf-8"));
 
+// Match next.config's basePath so manifests work under a sub-path host.
+const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const icons = [
-  { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-  { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+  { src: `${base}/icons/icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
+  { src: `${base}/icons/icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any maskable" },
 ];
 
 const outDir = join(root, "public", "m");
@@ -20,8 +23,8 @@ for (const s of students) {
   const manifest = {
     name: `Rory's English — ${s.displayName}`,
     short_name: "English",
-    start_url: `/s/${s.code}/`,
-    scope: `/s/${s.code}/`,
+    start_url: `${base}/s/${s.code}/`,
+    scope: `${base}/s/${s.code}/`,
     display: "standalone",
     orientation: "portrait",
     background_color: "#FDF6EC",
@@ -29,8 +32,8 @@ for (const s of students) {
     icons,
     // Long-press the installed icon → jump straight to a section.
     shortcuts: [
-      { name: "Homework", short_name: "Homework", url: `/s/${s.code}/homework/`, icons },
-      { name: "Study", short_name: "Study", url: `/s/${s.code}/study/`, icons },
+      { name: "Homework", short_name: "Homework", url: `${base}/s/${s.code}/homework/`, icons },
+      { name: "Study", short_name: "Study", url: `${base}/s/${s.code}/study/`, icons },
     ],
   };
   writeFileSync(join(outDir, `${s.code}.webmanifest`), JSON.stringify(manifest, null, 2));
@@ -43,8 +46,8 @@ writeFileSync(
     {
       name: "Rory's English",
       short_name: "English",
-      start_url: "/",
-      scope: "/",
+      start_url: `${base}/`,
+      scope: `${base}/`,
       display: "standalone",
       background_color: "#FDF6EC",
       theme_color: "#1E3A5F",

@@ -21,9 +21,10 @@ export async function generateMetadata({
   const { code } = await params;
   const student = getStudentByCode(code);
   const title = student ? `${student.displayName} · Rory's English` : "Rory's English";
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   return {
     title,
-    manifest: `/m/${code}.webmanifest`,
+    manifest: `${base}/m/${code}.webmanifest`,
     // Installed iOS home-screen app shows the student's own name.
     appleWebApp: { capable: true, statusBarStyle: "default", title },
   };

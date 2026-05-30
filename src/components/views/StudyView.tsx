@@ -9,6 +9,10 @@ import { ExternalIcon } from "@/components/Icons";
 // URL to the unit's units.json — no code changes.
 export default function StudyView({ unit }: { unit: Unit | null }) {
   const tools = unit?.studyTools ?? [];
+  // Root-relative tool URLs (study tools bundled in /public) need the host's
+  // base path; full http(s) URLs are used as-is.
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+  const resolve = (url: string) => (url.startsWith("/") ? `${base}${url}` : url);
 
   return (
     <Screen title="Study" subtitle={unit?.title}>
@@ -25,7 +29,7 @@ export default function StudyView({ unit }: { unit: Unit | null }) {
                 <p className="mt-1 text-sm text-burgundy dark:text-amber/80">{tool.blurb}</p>
               )}
               <a
-                href={tool.url}
+                href={resolve(tool.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-amber px-4 text-base font-bold text-navy active:scale-[.99]"
