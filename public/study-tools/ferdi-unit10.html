@@ -369,6 +369,19 @@
 </section>
 
 <script>
+// ── Progress sync (optional) — paste your Apps Script /exec URL + secret to enable.
+var SYNC = { url: "", secret: "change-me-rory-english-2026", code: "ferdi-7h3k", tool: "unit10" };
+function syncQuiz(section, score, total) {
+  if (!SYNC.url) return;
+  try {
+    fetch(SYNC.url, {
+      method: "POST", mode: "no-cors", keepalive: true,
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ secret: SYNC.secret, type: "quiz", code: SYNC.code, tool: SYNC.tool, section: section, score: score, total: total })
+    });
+  } catch (e) {}
+}
+
 /* ════════════════════════════════════════════════════════════════
    DATA
 ═══════════════════════════════════════════════════════════════ */
@@ -653,6 +666,7 @@ function answerS1(chosen, correct, chosenBtn) {
 function finishS1() {
   lsSet("s1_score", s1Score);
   lsSet("s1_total", 10);
+  syncQuiz("Vocabulary", s1Score, 10);
 
   const container = document.getElementById("s1-quiz");
   container.innerHTML = "";
@@ -745,6 +759,7 @@ function checkS2() {
 
   lsSet("s2_score", correct);
   lsSet("s2_total", total);
+  syncQuiz("Conditionals", correct, total);
 
   const res = document.getElementById("s2-result");
   res.className = "feedback show " + (correct === total ? "correct" : "wrong");
@@ -814,6 +829,7 @@ function checkS3() {
 
   lsSet("s3_score", correct);
   lsSet("s3_total", TRAPS.length);
+  syncQuiz("German traps", correct, TRAPS.length);
 
   const res = document.getElementById("s3-result");
   res.className = "feedback show " + (correct === TRAPS.length ? "correct" : "wrong");
