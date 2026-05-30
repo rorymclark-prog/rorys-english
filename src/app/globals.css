@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --text-scale: 1;
+}
+[data-text-scale="large"] {
+  --text-scale: 1.15;
+}
+[data-text-scale="xl"] {
+  --text-scale: 1.32;
+}
+
+html {
+  /* App scales from root font-size so tap targets + text grow together. */
+  font-size: calc(100% * var(--text-scale));
+  -webkit-text-size-adjust: 100%;
+  /* Keep the mark-complete button clear of the fixed tab bar when an input
+     is focused and the page auto-scrolls. */
+  scroll-padding-bottom: 7rem;
+}
+
+/* Lined-paper textarea — line colour is theme-aware so it stays visible in
+   both light and dark mode. */
+.lined-paper {
+  --rule: rgba(30, 58, 95, 0.14);
+  background-color: transparent;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(2rem - 1px),
+    var(--rule) calc(2rem - 1px),
+    var(--rule) 2rem
+  );
+}
+.dark .lined-paper {
+  --rule: rgba(253, 246, 236, 0.18);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Respect users who ask for less motion (iOS "Reduce Motion"). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+body {
+  @apply bg-cream text-navy antialiased;
+}
+.dark body {
+  @apply bg-navy text-cream;
+}
+
+button,
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Safe-area helpers for the fixed bottom tab bar on notched phones. */
+.pb-safe {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+.h-safe-bottom {
+  height: env(safe-area-inset-bottom);
+}

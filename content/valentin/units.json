@@ -1,0 +1,14 @@
+[
+  {
+    "id": "unit05",
+    "title": "Trends & Choices",
+    "active": true,
+    "studyTools": [
+      {
+        "title": "Unit 5 Study Tool",
+        "url": "https://example.com/REPLACE-WITH-NETLIFY-URL",
+        "blurb": "Vocabulary & comparatives practice. (Placeholder — paste the real Netlify link here once the HTML tool is built.)"
+      }
+    ]
+  }
+]

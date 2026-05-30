@@ -1,0 +1,18 @@
+[
+  {
+    "id": "ferdi",
+    "displayName": "Ferdi",
+    "code": "ferdi-7h3k",
+    "profile": "standard",
+    "greeting": "Servus Ferdi",
+    "units": [{ "id": "unit10", "title": "A Fair World", "active": true }]
+  },
+  {
+    "id": "valentin",
+    "displayName": "Valentin",
+    "code": "valentin-q9m2",
+    "profile": "standard",
+    "greeting": "Hi Valentin",
+    "units": [{ "id": "unit05", "title": "Trends & Choices", "active": true }]
+  }
+]

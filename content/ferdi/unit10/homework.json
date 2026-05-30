@@ -1,0 +1,44 @@
+[
+  {
+    "week": 1,
+    "title": "HW1 · Vocab + reading",
+    "due": "Mon 8 June",
+    "tasks": [
+      { "id": "t1", "type": "checkbox", "prompt": "Open the Study Tool and do the Vocabulary round until you score at least 7/10." },
+      { "id": "t2", "type": "checkbox", "prompt": "Read 'A Fair World' (MORE! 4, p. 112) and underline 5 new words." },
+      { "id": "t3", "type": "written", "prompt": "Write the 5 new words with their German meaning.", "lines": 5 },
+      { "id": "t4", "type": "voice", "prompt": "Record yourself reading the first paragraph aloud and send it on WhatsApp." }
+    ]
+  },
+  {
+    "week": 2,
+    "title": "HW2 · Upgrade your writing",
+    "due": "Mon 15 June",
+    "tasks": [
+      { "id": "t1", "type": "written", "prompt": "Take these 3 basic sentences and rewrite them in upgraded B1 English: (1) It's a bad thing that some people are poor. (2) We should help poor countries. (3) Small things you do can change a lot.", "lines": 6 },
+      { "id": "t2", "type": "written", "prompt": "Write 3 sentences about something you think is unfair in the world.", "lines": 4 },
+      { "id": "t3", "type": "voice", "prompt": "Record yourself reading your 3 upgraded sentences aloud." }
+    ]
+  },
+  {
+    "week": 3,
+    "title": "HW3 · Conditionals (if-clauses)",
+    "due": "Mon 22 June",
+    "tasks": [
+      { "id": "t1", "type": "checkbox", "prompt": "Open the Study Tool and complete the Conditionals practice section." },
+      { "id": "t2", "type": "written", "prompt": "First conditional: complete 'If we buy Fair Trade, ...' three different ways.", "lines": 4 },
+      { "id": "t3", "type": "written", "prompt": "Second conditional: 'If I had a million euros, I would ...' three different ways.", "lines": 4 },
+      { "id": "t4", "type": "voice", "prompt": "Record 3 second-conditional sentences about making the world fairer." }
+    ]
+  },
+  {
+    "week": 4,
+    "title": "HW4 · German traps + speaking",
+    "due": "Mon 29 June",
+    "tasks": [
+      { "id": "t1", "type": "checkbox", "prompt": "Open the Study Tool and do the German trap drill until you get all of them right." },
+      { "id": "t2", "type": "written", "prompt": "Write 4 sentences using words or structures you used to get wrong (false friends / if-clauses).", "lines": 5 },
+      { "id": "t3", "type": "voice", "prompt": "Record a 1-minute talk: 'One thing I would change to make the world fairer.'" }
+    ]
+  }
+]

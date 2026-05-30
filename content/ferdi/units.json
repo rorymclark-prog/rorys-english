@@ -1,0 +1,14 @@
+[
+  {
+    "id": "unit10",
+    "title": "A Fair World",
+    "active": true,
+    "studyTools": [
+      {
+        "title": "Unit 10 Study Tool",
+        "url": "/study-tools/ferdi-unit10.html",
+        "blurb": "Vocab quiz (38 words), conditionals practice & German traps."
+      }
+    ]
+  }
+]

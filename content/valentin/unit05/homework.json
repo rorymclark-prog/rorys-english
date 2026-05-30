@@ -1,0 +1,21 @@
+[
+  {
+    "week": 1,
+    "title": "HW1 · Vocab + opinion",
+    "due": "Tue 9 June",
+    "tasks": [
+      { "id": "t1", "type": "checkbox", "prompt": "Open the Study Tool and do the Vocabulary round until you score at least 7/10." },
+      { "id": "t2", "type": "written", "prompt": "Write 4 sentences about a recent trend you like or dislike, and why.", "lines": 6 },
+      { "id": "t3", "type": "voice", "prompt": "Record a 1-minute opinion: 'Does social media control what we buy?'" }
+    ]
+  },
+  {
+    "week": 2,
+    "title": "HW2 · Upgrade + comparatives",
+    "due": "Tue 16 June",
+    "tasks": [
+      { "id": "t1", "type": "written", "prompt": "Compare two products using comparatives (cheaper, more reliable, better value, etc.).", "lines": 6 },
+      { "id": "t2", "type": "written", "prompt": "Rewrite 3 basic sentences in upgraded B1 English.", "lines": 5 }
+    ]
+  }
+]
