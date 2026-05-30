@@ -9,6 +9,7 @@
     "prebuild": "node scripts/gen-pwa.mjs",
     "build": "next build",
     "start": "next start",
+    "deploy": "bash scripts/deploy-pages.sh",
     "lint": "next lint"
   },
   "dependencies": {

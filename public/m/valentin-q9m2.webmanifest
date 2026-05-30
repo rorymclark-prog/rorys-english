@@ -1,21 +1,21 @@
 {
   "name": "Rory's English — Valentin",
   "short_name": "English",
-  "start_url": "/rorys-english/s/valentin-q9m2/",
-  "scope": "/rorys-english/s/valentin-q9m2/",
+  "start_url": "/s/valentin-q9m2/",
+  "scope": "/s/valentin-q9m2/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FDF6EC",
   "theme_color": "#1E3A5F",
   "icons": [
     {
-      "src": "/rorys-english/icons/icon-192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/rorys-english/icons/icon-512.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -25,16 +25,16 @@
     {
       "name": "Homework",
       "short_name": "Homework",
-      "url": "/rorys-english/s/valentin-q9m2/homework/",
+      "url": "/s/valentin-q9m2/homework/",
       "icons": [
         {
-          "src": "/rorys-english/icons/icon-192.png",
+          "src": "/icons/icon-192.png",
           "sizes": "192x192",
           "type": "image/png",
           "purpose": "any"
         },
         {
-          "src": "/rorys-english/icons/icon-512.png",
+          "src": "/icons/icon-512.png",
           "sizes": "512x512",
           "type": "image/png",
           "purpose": "any maskable"
@@ -44,16 +44,16 @@
     {
       "name": "Study",
       "short_name": "Study",
-      "url": "/rorys-english/s/valentin-q9m2/study/",
+      "url": "/s/valentin-q9m2/study/",
       "icons": [
         {
-          "src": "/rorys-english/icons/icon-192.png",
+          "src": "/icons/icon-192.png",
           "sizes": "192x192",
           "type": "image/png",
           "purpose": "any"
         },
         {
-          "src": "/rorys-english/icons/icon-512.png",
+          "src": "/icons/icon-512.png",
           "sizes": "512x512",
           "type": "image/png",
           "purpose": "any maskable"
