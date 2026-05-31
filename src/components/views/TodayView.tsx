@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Unit } from "@/lib/types";
 import { useStudent } from "@/components/StudentContext";
 import Screen from "@/components/Screen";
-import { ChevronRightIcon, FlameIcon, ExternalIcon } from "@/components/Icons";
+import { ChevronRightIcon, FlameIcon, ExternalIcon, ChartIcon } from "@/components/Icons";
 import { bestStreak, currentStreak, getStreakDays, isWeekComplete, recentActivity } from "@/lib/storage";
 
 export default function TodayView({ unit }: { unit: Unit | null }) {
@@ -109,6 +109,19 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
           </div>
         </section>
       )}
+
+      {/* Progress section */}
+      <section className="mt-5">
+        <Link
+          href={`/s/${code}/progress/`}
+          className="flex items-center justify-between gap-3 rounded-card border border-navy/10 bg-white p-4 shadow-card dark:border-white/10 dark:bg-white/5"
+        >
+          <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
+            <ChartIcon className="text-amber-deep dark:text-amber" /> See my progress
+          </span>
+          <ChevronRightIcon className="text-navy-soft dark:text-cream/60" />
+        </Link>
+      </section>
 
       {/* Quick link to study tools */}
       {unit && unit.studyTools.length > 0 && (

@@ -33,6 +33,17 @@ export function getAllCodes(): string[] {
   return getAllStudents().map((s) => s.code);
 }
 
+/** All parent codes — used by generateStaticParams for /p/[code]. */
+export function getAllParentCodes(): string[] {
+  return getAllStudents()
+    .map((s) => s.parentCode)
+    .filter((c): c is string => !!c);
+}
+
+export function getStudentByParentCode(parentCode: string): Student | undefined {
+  return getAllStudents().find((s) => s.parentCode === parentCode);
+}
+
 function loadUnit(studentId: string, unitId: string): Unit | null {
   const unitsPath = path.join(CONTENT_DIR, studentId, "units.json");
   if (!fileExists(unitsPath)) return null;

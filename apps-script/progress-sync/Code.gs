@@ -19,9 +19,17 @@
 // ── Config ────────────────────────────────────────────────────────────────
 // Keep this list in step with content/students.json (code → display name).
 var STUDENTS = [
-  { code: "ferdi-7h3k", name: "Ferdi" },
-  { code: "valentin-q9m2", name: "Valentin" },
+  { code: "ferdi-7h3k", parentCode: "ferdi-fam-3p9k", name: "Ferdi" },
+  { code: "valentin-q9m2", parentCode: "valentin-fam-8w2d", name: "Valentin" },
 ];
+
+// Resolve a student record from either their own code or their parent code.
+function studentByAnyCode_(code) {
+  for (var i = 0; i < STUDENTS.length; i++) {
+    if (STUDENTS[i].code === code || STUDENTS[i].parentCode === code) return STUDENTS[i];
+  }
+  return null;
+}
 
 // Light anti-abuse shared secret. Set the SAME value as the app's
 // NEXT_PUBLIC_SYNC_SECRET. Change it here and re-deploy if it ever leaks.
@@ -125,8 +133,71 @@ function doPost(e) {
   }
 }
 
-function doGet() {
+// doGet serves a read-only progress snapshot as JSONP (so the static app +
+// parent pages can read it cross-origin without CORS). Accepts either the
+// student code or the parent code; both resolve to the same Sheet.
+//   ?action=progress&code=<student-or-parent-code>&secret=<SECRET>&callback=<fn>
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  if (p.action === "progress") return getProgress_(p);
   return json_({ ok: true, service: "rorys-english progress-sync" });
+}
+
+function getProgress_(p) {
+  var out;
+  try {
+    if (p.secret !== SECRET) {
+      out = { ok: false, error: "bad secret" };
+    } else {
+      var student = studentByAnyCode_(p.code);
+      var sheetId = student
+        ? PropertiesService.getScriptProperties().getProperty("sheet_" + student.code)
+        : null;
+      if (!sheetId) {
+        out = { ok: false, error: "unknown code" };
+      } else {
+        var ss = SpreadsheetApp.openById(sheetId);
+        out = {
+          ok: true,
+          name: student.name,
+          generatedAt: now_(),
+          homework: rows_(ss, "Homework"),
+          quizzes: rows_(ss, "Vocab & Quizzes"),
+          schoolTests: rows_(ss, "School Tests"),
+          writing: rows_(ss, "Writing"),
+          speaking: rows_(ss, "Speaking"),
+          mockTests: rows_(ss, "Mock Tests"),
+        };
+      }
+    }
+  } catch (err) {
+    out = { ok: false, error: String(err) };
+  }
+  return reply_(p.callback, out);
+}
+
+// Returns {headers, rows} for a tab, dropping blank rows.
+function rows_(ss, name) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) return { headers: [], rows: [] };
+  var v = sh.getDataRange().getValues();
+  if (v.length < 1) return { headers: [], rows: [] };
+  var rows = v.slice(1).filter(function (r) {
+    return r.join("").trim() !== "";
+  });
+  return { headers: v[0], rows: rows };
+}
+
+// JSON when no callback; JSONP (text/javascript) when a callback is given.
+function reply_(callback, obj) {
+  var body = JSON.stringify(obj);
+  if (callback) {
+    var cb = String(callback).replace(/[^\w$.]/g, "");
+    return ContentService.createTextOutput(cb + "(" + body + ")").setMimeType(
+      ContentService.MimeType.JAVASCRIPT
+    );
+  }
+  return ContentService.createTextOutput(body).setMimeType(ContentService.MimeType.JSON);
 }
 
 // One row per homework week; completing/uncompleting updates it in place.

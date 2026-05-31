@@ -55,9 +55,13 @@ export interface Student {
   displayName: string;
   /** The code in the private link (/s/<code>). This IS the key. */
   code: string;
+  /** The code in the parent's read-only link (/p/<parentCode>). */
+  parentCode?: string;
   profile: Profile;
   /** Warm greeting hook for the Today screen. */
   greeting?: string;
+  /** Optional resource/dashboard links shown in the Progress section. */
+  progressLinks?: StudyTool[];
   units: UnitMeta[];
 }
 

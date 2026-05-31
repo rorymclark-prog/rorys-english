@@ -3,16 +3,20 @@
     "id": "ferdi",
     "displayName": "Ferdi",
     "code": "ferdi-7h3k",
+    "parentCode": "ferdi-fam-3p9k",
     "profile": "standard",
     "greeting": "Servus Ferdi",
+    "progressLinks": [],
     "units": [{ "id": "unit10", "title": "A Fair World", "active": true }]
   },
   {
     "id": "valentin",
     "displayName": "Valentin",
     "code": "valentin-q9m2",
+    "parentCode": "valentin-fam-8w2d",
     "profile": "standard",
     "greeting": "Hi Valentin",
+    "progressLinks": [],
     "units": [{ "id": "unit05", "title": "Trends & Choices", "active": true }]
   }
 ]
