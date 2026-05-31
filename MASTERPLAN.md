@@ -217,7 +217,8 @@ rorys-english/
 | Quiz scores → **Vocab & Quizzes** tab | ✅ wired & live |
 | Secret consistent in all 3 places (Code.gs, .env.local, study tool) = `re-sync-7b3h8d9f4` | ✅ verified |
 | `.env.local` NOT leaked to git | ✅ verified |
-| Sheet tabs ready for richer data (School Tests, Writing, Speaking, Mock Tests) | 🟡 created, empty, awaiting pipelines |
+| **Writing tab pipeline** (`scripts/analyse-writing.py` → Claude → Writing tab) | ✅ write/read plumbing verified; needs `ANTHROPIC_API_KEY` to run the AI step |
+| Sheet tabs awaiting pipelines (School Tests, Speaking, Mock Tests) | 🟡 created, empty (Phase 2c–2d) |
 
 ### 7.5 Live coordinates
 - **Live app:** https://rorymclark-prog.github.io/rorys-english/
@@ -248,7 +249,7 @@ The app, study tool, PWA, deployment, and Google Sheets sync are all built, depl
 Turn the Sheet from "homework + quizzes" into a full learner record, and surface it.
 
 - **2a. Read endpoint on the Apps Script.** ✅ **DONE.** `doGet` returns a progress snapshot as JSONP (CORS-free), resolves student OR parent code, secret-gated. Verified live.
-- **2b. Writing-analysis pipeline.** Rory drops a writing sample in the student's Drive `writing/` folder (or pastes text) → an AI assistant scores CEFR level, grammar/vocab/coherence, lists key errors, gives feedback → appends a row to the **Writing** tab. *(AI does the work; the tab is already built.)*
+- **2b. Writing-analysis pipeline.** ✅ **DONE.** `scripts/analyse-writing.py` (zero-dependency, stdlib only) scores a writing sample with Claude (`claude-sonnet-4-6`, tool-use for structured output, cached rubric) → CEFR, grammar/vocab/coherence /10, top error patterns, feedback → POSTs to the Apps Script (`type:"writing"`) which appends to the **Writing** tab. It then shows automatically in the Progress section + parent view. Run: `export ANTHROPIC_API_KEY=… ; python3 scripts/analyse-writing.py --student ferdi --file sample.txt --title "HW2 essay"` (add `--dry-run` to preview without writing). Write/read plumbing verified live; the AI step needs an `ANTHROPIC_API_KEY`.
 - **2c. Speaking/audio-analysis pipeline.** Student records (voice memos, as today) → audio reaches the `recordings/` folder → transcribe → score fluency/pronunciation/grammar/vocab range → **Speaking** tab.
 - **2d. School tests + mock tests.** Manual entry, or AI scores a photo/scan → **School Tests** / **Mock Tests** tabs.
 - **2e. Dashboard.** Charts on the Sheet's Dashboard tab (levels over time, % learned, trends) and/or an in-app Progress view that reads via 2a.

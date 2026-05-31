@@ -124,6 +124,8 @@ function doPost(e) {
       upsertHomework_(ss, data);
     } else if (data.type === "quiz") {
       appendQuiz_(ss, data);
+    } else if (data.type === "writing") {
+      appendWriting_(ss, data);
     } else {
       return json_({ ok: false, error: "unknown type" });
     }
@@ -219,6 +221,24 @@ function appendQuiz_(ss, d) {
   var sheet = ss.getSheetByName("Vocab & Quizzes");
   var pct = d.total ? Math.round((d.score / d.total) * 100) : "";
   sheet.appendRow([now_(), d.tool || "", d.section || "", d.score, d.total, pct]);
+}
+
+// One row per analysed writing sample. Matches the Writing tab headers:
+// Date, Title, CEFR, Grammar, Vocab, Coherence, Key errors, Feedback, Link
+function appendWriting_(ss, d) {
+  var sheet = ss.getSheetByName("Writing");
+  var errors = Array.isArray(d.errors) ? d.errors.join("; ") : d.errors || "";
+  sheet.appendRow([
+    now_(),
+    d.title || "Writing sample",
+    d.cefr || "",
+    d.grammar,
+    d.vocab,
+    d.coherence,
+    errors,
+    d.feedback || "",
+    d.link || "",
+  ]);
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
