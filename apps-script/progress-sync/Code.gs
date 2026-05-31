@@ -25,7 +25,7 @@ var STUDENTS = [
 
 // Light anti-abuse shared secret. Set the SAME value as the app's
 // NEXT_PUBLIC_SYNC_SECRET. Change it here and re-deploy if it ever leaks.
-var SECRET = "change-me-rory-english-2026";
+var SECRET = "re-sync-7b3h8d9f4";
 
 var ROOT_FOLDER_NAME = "Rory's English — Progress";
 
