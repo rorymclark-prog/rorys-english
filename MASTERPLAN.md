@@ -247,15 +247,16 @@ The app, study tool, PWA, deployment, and Google Sheets sync are all built, depl
 ### Phase 2 — The progress hub becomes real (the next big push)
 Turn the Sheet from "homework + quizzes" into a full learner record, and surface it.
 
-- **2a. Read endpoint on the Apps Script.** Add `doGet`/JSONP so the app can *read* a student's progress from the Sheet (not just write). This is the linchpin that unlocks cross-device views (incl. parents) and an in-app dashboard with Sheet data. Protect with a read token.
+- **2a. Read endpoint on the Apps Script.** ✅ **DONE.** `doGet` returns a progress snapshot as JSONP (CORS-free), resolves student OR parent code, secret-gated. Verified live.
 - **2b. Writing-analysis pipeline.** Rory drops a writing sample in the student's Drive `writing/` folder (or pastes text) → an AI assistant scores CEFR level, grammar/vocab/coherence, lists key errors, gives feedback → appends a row to the **Writing** tab. *(AI does the work; the tab is already built.)*
 - **2c. Speaking/audio-analysis pipeline.** Student records (voice memos, as today) → audio reaches the `recordings/` folder → transcribe → score fluency/pronunciation/grammar/vocab range → **Speaking** tab.
 - **2d. School tests + mock tests.** Manual entry, or AI scores a photo/scan → **School Tests** / **Mock Tests** tabs.
 - **2e. Dashboard.** Charts on the Sheet's Dashboard tab (levels over time, % learned, trends) and/or an in-app Progress view that reads via 2a.
 
-### Phase 3 — Progress section + parent view (see backlog §10 for the agreed shape)
-- In-app **Progress section** (links shelf + live dashboard).
-- **Parent view**: a private read-only link per family (`/p/<code>`), powered by the read endpoint (2a).
+### Phase 3 — Progress section + parent view ✅ DONE
+- In-app **Progress section** (`/s/<code>/progress`, reached via a "See my progress" card on Today): summary tiles + per-tab tables (homework, quizzes, school tests, writing, speaking, mock) + a links shelf (`progressLinks` in students.json). Verified live.
+- **Parent view** (`/p/<parentCode>`): read-only, no tab bar, follows OS theme, own private code that maps to the child's Sheet without exposing the student's app code. Verified live.
+- *Remaining for Phase 3+:* populate the rich tabs (writing/speaking/school/mock) via Phase 2b–2d pipelines; charts.
 
 ### Phase 4 — Scale & polish
 - More units + more study tools (clone the Ferdi pattern).
@@ -356,6 +357,8 @@ That, plus repo access (and Rory's Google login for any Apps Script change), is 
 | Live app | https://rorymclark-prog.github.io/rorys-english/ |
 | Ferdi link | …/s/ferdi-7h3k/ |
 | Valentin link | …/s/valentin-q9m2/ |
+| Ferdi PARENT link | …/p/ferdi-fam-3p9k/ |
+| Valentin PARENT link | …/p/valentin-fam-8w2d/ |
 | GitHub repo | https://github.com/rorymclark-prog/rorys-english (account `rorymclark-prog`) |
 | Apps Script /exec | `https://script.google.com/macros/s/AKfycbxzo-IunYLs8JA6R-ZCCrzIiB7Gt1gONgFJvYbnOc119XEnmaFaHp4AW2DYnJRS_lNsxQ/exec` |
 | Apps Script scriptId | `1wATmdmLpg5EfE8f3Ub5BL7HtObWg1RkYVR7WqvMAWNwUQZ3_5zVB8S8_` |
