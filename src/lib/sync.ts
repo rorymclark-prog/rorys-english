@@ -21,16 +21,69 @@ export function syncEnabled(): boolean {
   return URL.length > 0;
 }
 
+// ── Retry queue ──────────────────────────────────────────────────────────────
+// no-cors gives an opaque response, so the only detectable failure is a network
+// throw (offline, DNS, aborted). Those events are queued in localStorage and
+// replayed when the connection returns — the Sheet catches up instead of
+// silently staying stale. localStorage remains the source of truth regardless.
+const QUEUE_KEY = "re_sync_queue";
+const QUEUE_MAX = 50;
+
+function readQueue(): Record<string, unknown>[] {
+  try {
+    return JSON.parse(window.localStorage.getItem(QUEUE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function writeQueue(q: Record<string, unknown>[]): void {
+  try {
+    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(q.slice(-QUEUE_MAX)));
+  } catch {
+    /* quota/private mode — drop silently */
+  }
+}
+
+function enqueue(payload: Record<string, unknown>): void {
+  writeQueue([...readQueue(), payload]);
+}
+
+function send(payload: Record<string, unknown>): Promise<void> {
+  return fetch(URL, {
+    method: "POST",
+    mode: "no-cors",
+    keepalive: true,
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ secret: SECRET, ...payload }),
+  }).then(() => undefined);
+}
+
+/** Replay queued events; keeps whatever still fails for the next attempt. */
+export function drainSyncQueue(): void {
+  if (!URL || typeof window === "undefined") return;
+  const q = readQueue();
+  if (q.length === 0) return;
+  writeQueue([]); // claim the batch; failures get re-queued below
+  q.forEach((payload) => {
+    send(payload).catch(() => enqueue(payload));
+  });
+}
+
+// Auto-drain when connectivity returns and once on app load.
+if (typeof window !== "undefined" && URL) {
+  window.addEventListener("online", drainSyncQueue);
+  window.setTimeout(drainSyncQueue, 3000);
+}
+
 function post(payload: Record<string, unknown>): void {
   if (!URL) return;
   try {
-    void fetch(URL, {
-      method: "POST",
-      mode: "no-cors",
-      keepalive: true,
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ secret: SECRET, ...payload }),
-    });
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      enqueue(payload);
+      return;
+    }
+    send(payload).catch(() => enqueue(payload));
   } catch {
     /* best-effort — localStorage stays the source of truth */
   }

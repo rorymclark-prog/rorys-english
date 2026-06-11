@@ -454,7 +454,7 @@ const VOCAB = [
   ["increase","die Zunahme"],
   ["rate","die Rate"],
   ["racism","der Rassismus"],
-  ["racist","rassistisch"],
+  ["racist (adj.)","rassistisch"],
   ["slavery","die Sklaverei"],
   ["recognition","die Anerkennung"],
   ["overcome","überwinden"],
@@ -496,7 +496,7 @@ const CONDITIONALS = [
     template: "If I ___ (know) that Fair Trade pays a fixed price, I ___ (join) earlier.",
     blanks: 2,
     answers: ["had known","would have joined"],
-    altAnswers: [null, ["would have joined"]],
+    altAnswers: [null, ["would have joined","would've joined","'d have joined"]],
     type: "3rd conditional",
     why: "3rd conditional again — you didn't know in the past, imagining a different past outcome."
   },
@@ -512,7 +512,7 @@ const CONDITIONALS = [
     template: "If I ___ (be) a coffee farmer, I ___ (join) Fair Trade.",
     blanks: 2,
     answers: ["were","would join"],
-    altAnswers: [null, null],
+    altAnswers: [null, ["would join","'d join"]],
     type: "2nd conditional — present unreal",
     why: "2nd conditional: if + past simple (were for all persons) → would + infinitive. Imaginary present scenario."
   },
@@ -520,7 +520,7 @@ const CONDITIONALS = [
     template: "If people ___ (care) more about the planet, pollution ___ (decrease).",
     blanks: 2,
     answers: ["cared","would decrease"],
-    altAnswers: [null, null],
+    altAnswers: [null, ["would decrease","'d decrease"]],
     type: "2nd conditional",
     why: "2nd conditional — hypothetical present/future wish."
   },
@@ -936,30 +936,34 @@ function renderS4() {
     { key: "s3", name: "German Trap Drill",    total: 4  }
   ];
 
+  // Pass 1: compute pct for every section, find true weakest (lowest pct, attempts > 0)
   let grandOk = 0, grandTot = 0;
-  let weakest = null, weakestPct = 1;
+  let weakestName = null, weakestPct = Infinity;
 
-  const rowsDiv = document.getElementById("s4-rows");
-  rowsDiv.innerHTML = "";
-
-  sections.forEach(sec => {
+  const computed = sections.map(sec => {
     const sc  = lsGet(sec.key+"_score", null);
     const tot = lsGet(sec.key+"_total", null) || sec.total;
     const done = sc !== null;
-    const pct  = done ? sc/tot : null;
-
+    const pct  = done ? sc / tot : null;
     if (done) {
       grandOk  += sc;
       grandTot += tot;
-      if (pct < weakestPct) { weakestPct = pct; weakest = sec.name; }
+      if (pct < weakestPct) { weakestPct = pct; weakestName = sec.name; }
     }
+    return { sec, sc, tot, done, pct };
+  });
 
+  // Pass 2: build rows, badge only the true weakest
+  const rowsDiv = document.getElementById("s4-rows");
+  rowsDiv.innerHTML = "";
+
+  computed.forEach(({ sec, sc, tot, done, pct }) => {
+    const isWeakest = done && sec.name === weakestName;
     const row = document.createElement("div");
     row.className = "summary-row";
     row.innerHTML = `
       <span class="label">${escHtml(sec.name)}
-        ${(done && pct === weakestPct && weakest === sec.name)
-          ? '<span class="weak-badge">Review this</span>' : ""}
+        ${isWeakest ? '<span class="weak-badge">Review this</span>' : ""}
       </span>
       <span class="val">${done ? sc+" / "+tot : "—"}</span>
     `;
@@ -1002,6 +1006,28 @@ function resetAll() {
 function escHtml(s) {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
+
+/* ════════════════════════════════════════════════════════════════
+   iOS TTS — resume synthesis when app returns to foreground (Fix 3)
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && window.speechSynthesis) {
+    try { window.speechSynthesis.resume(); } catch(e) {}
+  }
+});
+
+/* ════════════════════════════════════════════════════════════════
+   Keyboard scroll — keep focused input visible above soft keyboard (Fix 4)
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('focusin', function(e) {
+  var el = e.target;
+  if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') &&
+      el.closest('#s2, #s3')) {
+    setTimeout(function() {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 250);
+  }
+});
 
 /* ════════════════════════════════════════════════════════════════
    BOOT

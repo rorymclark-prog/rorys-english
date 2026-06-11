@@ -111,27 +111,57 @@ function writeDashboard_(ss) {
 }
 
 // ── 2. Ingestion endpoint ──────────────────────────────────────────────────
+// Hardening notes: the secret is client-visible by design (light anti-abuse),
+// so the real defences are below — payload caps, cell sanitization (formula
+// injection), a write lock (duplicate-row races), and generic error responses.
+var MAX_PAYLOAD_BYTES = 20000; // far above any legitimate event
+var MAX_CELL_CHARS = 2000; // per-cell cap so one post can't bloat the Sheet
+
+// Sheets executes strings starting with = + - @ as formulas when written.
+// Prefix them with ' (renders as plain text) and cap the length.
+function sanitize_(v) {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "number" || typeof v === "boolean") return v;
+  var s = String(v).slice(0, MAX_CELL_CHARS);
+  return /^[=+\-@]/.test(s) ? "'" + s : s;
+}
+
 function doPost(e) {
   try {
+    if (!e.postData || e.postData.contents.length > MAX_PAYLOAD_BYTES) {
+      return json_({ ok: false, error: "rejected" });
+    }
     var data = JSON.parse(e.postData.contents);
-    if (data.secret !== SECRET) return json_({ ok: false, error: "bad secret" });
-
-    var sheetId = PropertiesService.getScriptProperties().getProperty("sheet_" + data.code);
-    if (!sheetId) return json_({ ok: false, error: "unknown code" });
+    // One generic auth error: no oracle distinguishing bad secret vs unknown code.
+    var sheetId =
+      data.secret === SECRET
+        ? PropertiesService.getScriptProperties().getProperty("sheet_" + data.code)
+        : null;
+    if (!sheetId) return json_({ ok: false, error: "unauthorized" });
     var ss = SpreadsheetApp.openById(sheetId);
 
-    if (data.type === "homework") {
-      upsertHomework_(ss, data);
-    } else if (data.type === "quiz") {
-      appendQuiz_(ss, data);
-    } else if (data.type === "writing") {
-      appendWriting_(ss, data);
-    } else {
-      return json_({ ok: false, error: "unknown type" });
+    // Serialize writes: concurrent posts for the same homework key would
+    // otherwise both read-then-append and create duplicate rows (TOCTOU).
+    var lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+    try {
+      if (data.type === "homework") {
+        upsertHomework_(ss, data);
+      } else if (data.type === "quiz") {
+        appendQuiz_(ss, data);
+      } else if (data.type === "writing") {
+        appendWriting_(ss, data);
+      } else {
+        return json_({ ok: false, error: "unknown type" });
+      }
+    } finally {
+      lock.releaseLock();
     }
     return json_({ ok: true });
   } catch (err) {
-    return json_({ ok: false, error: String(err) });
+    // Log the real error internally; never echo exception detail to callers.
+    console.error("doPost error: " + err);
+    return json_({ ok: false, error: "internal error" });
   }
 }
 
@@ -149,14 +179,15 @@ function getProgress_(p) {
   var out;
   try {
     if (p.secret !== SECRET) {
-      out = { ok: false, error: "bad secret" };
+      out = { ok: false, error: "unauthorized" };
     } else {
       var student = studentByAnyCode_(p.code);
       var sheetId = student
         ? PropertiesService.getScriptProperties().getProperty("sheet_" + student.code)
         : null;
       if (!sheetId) {
-        out = { ok: false, error: "unknown code" };
+        // Same generic error as a bad secret — no code-enumeration oracle.
+        out = { ok: false, error: "unauthorized" };
       } else {
         var ss = SpreadsheetApp.openById(sheetId);
         out = {
@@ -206,21 +237,24 @@ function reply_(callback, obj) {
 function upsertHomework_(ss, d) {
   var sheet = ss.getSheetByName("Homework");
   var key = d.unitId + "|" + d.week;
+  var row = [now_(), sanitize_(d.unitId), sanitize_(d.week), sanitize_(d.title), sanitize_(d.status)];
   var values = sheet.getDataRange().getValues();
   for (var i = 1; i < values.length; i++) {
     if (values[i][1] + "|" + values[i][2] === key) {
-      sheet.getRange(i + 1, 1, 1, 5).setValues([[now_(), d.unitId, d.week, d.title, d.status]]);
+      sheet.getRange(i + 1, 1, 1, 5).setValues([row]);
       return;
     }
   }
-  sheet.appendRow([now_(), d.unitId, d.week, d.title, d.status]);
+  sheet.appendRow(row);
 }
 
 // Each quiz round is a new row (a time series of scores).
 function appendQuiz_(ss, d) {
   var sheet = ss.getSheetByName("Vocab & Quizzes");
-  var pct = d.total ? Math.round((d.score / d.total) * 100) : "";
-  sheet.appendRow([now_(), d.tool || "", d.section || "", d.score, d.total, pct]);
+  var score = Number(d.score) || 0;
+  var total = Number(d.total) || 0;
+  var pct = total ? Math.round((score / total) * 100) : "";
+  sheet.appendRow([now_(), sanitize_(d.tool), sanitize_(d.section), score, total, pct]);
 }
 
 // One row per analysed writing sample. Matches the Writing tab headers:
@@ -230,14 +264,14 @@ function appendWriting_(ss, d) {
   var errors = Array.isArray(d.errors) ? d.errors.join("; ") : d.errors || "";
   sheet.appendRow([
     now_(),
-    d.title || "Writing sample",
-    d.cefr || "",
-    d.grammar,
-    d.vocab,
-    d.coherence,
-    errors,
-    d.feedback || "",
-    d.link || "",
+    sanitize_(d.title || "Writing sample"),
+    sanitize_(d.cefr),
+    Number(d.grammar) || "",
+    Number(d.vocab) || "",
+    Number(d.coherence) || "",
+    sanitize_(errors),
+    sanitize_(d.feedback),
+    sanitize_(d.link),
   ]);
 }
 

@@ -28,7 +28,9 @@ export default function InstallHint() {
     if (localStorage.getItem(DISMISS_KEY) === "1") return;
 
     const ua = window.navigator.userAgent;
-    const ios = /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS/.test(ua);
+    // iPadOS 13+ reports "Macintosh" in the UA — detect it via touch support.
+    const ipadOs13Plus = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    const ios = (/iPad|iPhone|iPod/.test(ua) || ipadOs13Plus) && !/CriOS|FxiOS/.test(ua);
     setIsIos(ios);
 
     const onPrompt = (e: Event) => {

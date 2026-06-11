@@ -19,9 +19,9 @@ export function parseDueDate(due: string, now = new Date()): Date | null {
   if (mon === undefined || day < 1 || day > 31) return null;
   let year = now.getFullYear();
   let d = new Date(year, mon, day);
-  // If it's already well past, assume next year.
+  // Strictly before today → the label must mean next year (keeps today as-is).
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (d.getTime() < today.getTime() - 1000 * 60 * 60 * 24) {
+  if (d.getTime() < today.getTime()) {
     year += 1;
     d = new Date(year, mon, day);
   }

@@ -5,7 +5,12 @@
 //    redeploy shows new content immediately; fall back to cache when offline.
 //  • Everything else (JS/CSS/icons/manifests) → cache-first with background
 //    refresh: instant loads, updated quietly for next time.
-const CACHE = "rorys-english-v1";
+//
+// CACHE version: "__BUILD__" is stamped with a timestamp by scripts/deploy-pages.sh
+// on every deploy, so each release gets a fresh cache and activate() evicts the
+// old one (otherwise dead content-hashed _next/ chunks accumulate forever).
+// In local dev the literal placeholder is fine — it just means one stable cache.
+const CACHE = "rorys-english-__BUILD__";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -47,12 +52,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Cache-first for static assets, warming the cache in the background.
+  // waitUntil keeps the SW alive for the refresh — iOS Safari otherwise kills
+  // the worker as soon as respondWith settles, so caches never updated there.
+  const cachedPromise = caches.match(req);
+  const network = fetch(req)
+    .then((res) => cachePut(req, res))
+    .catch(() => undefined);
+  event.waitUntil(network);
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => cachePut(req, res))
-        .catch(() => cached);
-      return cached || network;
-    }),
+    cachedPromise.then((cached) => cached || network.then((res) => res || Response.error())),
   );
 });
