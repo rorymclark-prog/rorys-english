@@ -137,6 +137,19 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
         </section>
       )}
 
+      {/* AI helper: word lookup + writing coach */}
+      <section className="mt-5">
+        <Link
+          href={`/s/${code}/coach/`}
+          className="flex items-center justify-between gap-3 rounded-card border border-amber/40 bg-amber/10 p-4 active:scale-[.99]"
+        >
+          <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
+            <span className="text-lg" aria-hidden>✨</span> Word help &amp; writing coach
+          </span>
+          <ChevronRightIcon className="text-amber-deep dark:text-amber" />
+        </Link>
+      </section>
+
       {/* Lessons & feedback (Drive-shared files) */}
       <section className="mt-5">
         <Link

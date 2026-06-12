@@ -173,13 +173,98 @@ function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.action === "progress") return getProgress_(p);
   if (p.action === "resources") return getResources_(p);
+  if (p.action === "ai") return getAi_(p);
   return json_({ ok: true, service: "rorys-english progress-sync" });
 }
 
-// Lists the files in the student's "Shared" Drive subfolder (lesson slides,
-// marked work, assessments). Auto-creates the folder on first call and shares
-// each file link-viewable. ONLY this subfolder is exposed — recordings/ and
-// writing/ working files stay private. Accepts student OR parent code.
+// ── AI layer (word helper + writing coach) ───────────────────────────────────
+// The Anthropic key lives in Script Properties (ANTHROPIC_API_KEY) — server-side,
+// never in the app. Rate-limited per student per day so a leaked secret can't run
+// up the bill. Returns the model's text via JSONP.
+var AI_DAILY_CAP = 40; // model calls per student per day
+var AI_MAX_INPUT = 2000; // chars
+
+var WORD_SYSTEM =
+  "You are a warm English tutor for a German-speaking teenager (A2–B1). " +
+  "Given an English word or phrase, reply briefly and in plain text (no markdown headings): " +
+  "1) a simple-English meaning, 2) the German translation, 3) one natural example sentence, " +
+  "4) one short usage tip only if helpful. Keep it short, clear and encouraging.";
+
+var WRITING_SYSTEM =
+  "You are an encouraging English writing coach for a German-speaking teenager (around B1). " +
+  "This is the student's own PRACTICE writing, not graded homework — never give a grade or score. " +
+  "Reply in plain text, warmly and concisely: first 2 things they did well, then 2–3 specific " +
+  "things to improve with tiny examples, then a short improved version of one or two of their sentences. " +
+  "Encourage them to keep writing.";
+
+function getAi_(p) {
+  var out;
+  try {
+    var student = p.secret === SECRET ? studentByAnyCode_(p.code) : null;
+    if (!student) {
+      out = { ok: false, error: "unauthorized" };
+    } else if (!aiRateOk_(student.code)) {
+      out = { ok: false, error: "That's enough practice with the helper for today — try again tomorrow!" };
+    } else {
+      var q = String(p.q || "").slice(0, AI_MAX_INPUT).trim();
+      if (!q) {
+        out = { ok: false, error: "empty" };
+      } else if (p.kind === "writing") {
+        out = callClaude_("claude-sonnet-4-6", WRITING_SYSTEM, q, 800);
+      } else {
+        out = callClaude_("claude-haiku-4-5", WORD_SYSTEM, q, 350);
+      }
+    }
+  } catch (err) {
+    console.error("getAi_ error: " + err);
+    out = { ok: false, error: "internal error" };
+  }
+  return reply_(p.callback, out);
+}
+
+function aiRateOk_(code) {
+  var props = PropertiesService.getScriptProperties();
+  var k = "ai_" + code + "_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  var n = parseInt(props.getProperty(k) || "0", 10);
+  if (n >= AI_DAILY_CAP) return false;
+  props.setProperty(k, String(n + 1));
+  return true;
+}
+
+function callClaude_(model, system, userText, maxTokens) {
+  var key = PropertiesService.getScriptProperties().getProperty("ANTHROPIC_API_KEY");
+  if (!key) return { ok: false, error: "The AI helper isn't switched on yet." };
+  var res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
+    method: "post",
+    contentType: "application/json",
+    muteHttpExceptions: true,
+    headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
+    payload: JSON.stringify({
+      model: model,
+      max_tokens: maxTokens,
+      system: system,
+      messages: [{ role: "user", content: userText }],
+    }),
+  });
+  if (res.getResponseCode() !== 200) {
+    console.error("Anthropic " + res.getResponseCode() + ": " + res.getContentText().slice(0, 300));
+    return { ok: false, error: "The helper couldn't answer just now — try again." };
+  }
+  var body = JSON.parse(res.getContentText());
+  var text = (body.content || [])
+    .filter(function (b) { return b.type === "text"; })
+    .map(function (b) { return b.text; })
+    .join("\n");
+  return { ok: true, text: text };
+}
+
+// Lists lesson slides / marked work / assessments for a student — AUTOMATICALLY,
+// with no drag-and-drop. Two sources, deduped:
+//   1. Any Drive file you OWN whose title contains the student's name
+//      (your existing naming convention, e.g. "Ferdi_ESA_Debrief_Deck.pptx").
+//   2. Anything dropped into their "Shared" subfolder (still supported).
+// Each surfaced file is set link-viewable so the student can open it.
+// NOTE: name your private files WITHOUT the student's name to keep them out.
 function getResources_(p) {
   var out;
   try {
@@ -190,29 +275,36 @@ function getResources_(p) {
     if (!sheetId) {
       out = { ok: false, error: "unauthorized" };
     } else {
+      var seen = {}, cands = [];
+
+      // 1. Files you own named with the student's display name (fast: metadata only).
+      var safeName = student.name.replace(/'/g, "\\'");
+      var q =
+        "title contains '" + safeName + "' and trashed = false" +
+        " and mimeType != 'application/vnd.google-apps.folder'" +
+        " and 'me' in owners";
+      var it = DriveApp.searchFiles(q);
+      while (it.hasNext()) collectResource_(it.next(), cands, seen, student);
+
+      // 2. The student's Shared subfolder (optional extra drop-zone).
       var parents = DriveApp.getFileById(sheetId).getParents();
-      var items = [];
       if (parents.hasNext()) {
-        var shared = getOrCreateFolder_(parents.next(), "Shared");
-        var it = shared.getFiles();
-        while (it.hasNext()) {
-          var f = it.next();
-          try {
-            f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-          } catch (e2) {
-            /* already shared / cannot change — link may still resolve */
-          }
-          items.push({
-            name: f.getName(),
-            url: f.getUrl(),
-            type: f.getMimeType(),
-            modified: Utilities.formatDate(f.getLastUpdated(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
-          });
-        }
-        items.sort(function (a, b) {
-          return a.modified < b.modified ? 1 : -1; // newest first
-        });
+        var sit = getOrCreateFolder_(parents.next(), "Shared").getFiles();
+        while (sit.hasNext()) collectResource_(sit.next(), cands, seen, student);
       }
+
+      // Newest first, cap to keep the list and the share-step manageable.
+      cands.sort(function (a, b) {
+        return a.modified < b.modified ? 1 : -1;
+      });
+      cands = cands.slice(0, 40);
+
+      // Share each surfaced file ONCE (cached), so repeat loads are fast.
+      ensureShared_(cands);
+
+      var items = cands.map(function (c) {
+        return { name: c.name, url: c.url, type: c.type, modified: c.modified };
+      });
       out = { ok: true, name: student.name, resources: items };
     }
   } catch (err) {
@@ -220,6 +312,50 @@ function getResources_(p) {
     out = { ok: false, error: "internal error" };
   }
   return reply_(p.callback, out);
+}
+
+// Collect metadata only (no Drive writes). Skips the app's own artifacts.
+function collectResource_(f, cands, seen, student) {
+  var id = f.getId();
+  if (seen[id]) return;
+  var mt = f.getMimeType();
+  if (mt === "application/vnd.google-apps.script") return;
+  if (mt === "application/vnd.google-apps.spreadsheet" && f.getName() === student.name + " — Progress") return;
+  seen[id] = 1;
+  cands.push({
+    id: id,
+    name: f.getName(),
+    url: f.getUrl(),
+    type: mt,
+    modified: Utilities.formatDate(f.getLastUpdated(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
+    file: f,
+  });
+}
+
+// Set link-viewable sharing only for files not already shared by us before.
+// A cache of shared ids in Script Properties keeps repeat calls fast.
+function ensureShared_(cands) {
+  var props = PropertiesService.getScriptProperties();
+  var shared = {};
+  try {
+    (JSON.parse(props.getProperty("shared_ids") || "[]")).forEach(function (id) { shared[id] = 1; });
+  } catch (e) {}
+  var changed = false;
+  cands.forEach(function (c) {
+    if (shared[c.id]) return;
+    try {
+      c.file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (e2) {
+      /* couldn't change — still mark so we don't retry every load */
+    }
+    shared[c.id] = 1;
+    changed = true;
+  });
+  if (changed) {
+    var ids = Object.keys(shared);
+    if (ids.length > 800) ids = ids.slice(ids.length - 800); // bound the cache
+    props.setProperty("shared_ids", JSON.stringify(ids));
+  }
 }
 
 function getProgress_(p) {

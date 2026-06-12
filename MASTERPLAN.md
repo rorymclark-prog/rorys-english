@@ -265,9 +265,15 @@ Turn the Sheet from "homework + quizzes" into a full learner record, and surface
 - ~~Example sentences + audio per vocab item~~ ✅ **DONE** — every vocab word in both tools reveals a B1 example sentence with a 🔊 button after each answer.
 
 ### Phase 3.5 — Lessons & feedback hub (Drive-connected) ✅ DONE
-- Each student's Drive folder has a **`Shared`** subfolder (auto-created by the Apps Script). Rory drops lesson slides / marked work / assessments there → they appear in the app automatically (no rebuild). Only that subfolder is exposed; `recordings/` and `writing/` working files stay private. Files are set link-viewable.
-- Apps Script `doGet?action=resources` lists the Shared folder (student OR parent code, secret-gated). App: `fetchResources()` → **Lessons & feedback** screen (`/s/<code>/resources`, reached from a Today card). Verified live (empty-state + endpoint).
-- *Not yet:* surfacing these in the parent view (easy follow-up — `ResourcesView` already takes a `mode` prop).
+- **Fully automatic — no drag-and-drop.** `doGet?action=resources` searches Drive for files Rory owns whose **title contains the student's name** (his existing convention, e.g. `Ferdi_ESA_Debrief_Deck.pptx`) + anything in their optional `Shared` subfolder. Newest 40, deduped; the app's own Sheet/Script are excluded. Verified live: 40 real files surface for Ferdi.
+- Each surfaced file is set **link-viewable once** (cached in Script Property `shared_ids` so repeat loads are fast — first load ~9s while sharing, then ~4s). ⚠️ **Naming rule:** any Drive file named with a student's name becomes link-viewable in their app — name genuinely-private files *without* the student's name.
+- App: `fetchResources()` → **Lessons & feedback** screen (`/s/<code>/resources`, Today card). Student or parent code.
+
+### Phase 3.6 — AI helper (word lookup + writing coach) ✅ DONE (needs 1-time key)
+- **Word help** (Haiku) and **Writing coach** (Sonnet, practice-not-graded) at `/s/<code>/coach` (Today card). App → `fetchAi()` (JSONP) → Apps Script `doGet?action=ai`.
+- **Key stays server-side:** the Anthropic key lives in Script Property `ANTHROPIC_API_KEY`, never in the app bundle. Rate-limited to **40 calls/student/day** (`ai_<code>_<date>` counters) so a leaked secret can't run up the bill; input capped at 2000 chars; generic errors.
+- **To switch on (1-time, Rory):** (1) Apps Script editor → Project Settings → Script Properties → add `ANTHROPIC_API_KEY`. (2) Run any function (e.g. `setup`) once to approve the new `script.external_request` scope. Until then the app shows a friendly "isn't switched on yet" (verified live).
+- Models: `claude-haiku-4-5` (word), `claude-sonnet-4-6` (writing).
 - Possibly: cloud sync upgrade (Supabase) only if/when the Apps Script approach is outgrown.
 
 ---

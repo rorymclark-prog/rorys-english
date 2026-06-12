@@ -37,18 +37,18 @@ export interface Progress {
 let counter = 0;
 
 // Generic JSONP GET against the Apps Script doGet endpoint.
-function jsonp<T>(action: string, code: string): Promise<T> {
+function jsonp<T>(params: Record<string, string>): Promise<T> {
   return new Promise((resolve, reject) => {
     if (!URL) {
       reject(new Error("sync not configured"));
       return;
     }
-    const cb = `__re_${action}_${counter++}_${Date.now()}`;
+    const cb = `__re_${params.action}_${counter++}_${Date.now()}`;
     const script = document.createElement("script");
     const timer = window.setTimeout(() => {
       cleanup();
       reject(new Error("timeout"));
-    }, 12000);
+    }, 20000);
 
     function cleanup() {
       window.clearTimeout(timer);
@@ -61,8 +61,8 @@ function jsonp<T>(action: string, code: string): Promise<T> {
       resolve(data);
     };
 
-    const params = new URLSearchParams({ action, code, secret: SECRET, callback: cb });
-    script.src = `${URL}?${params.toString()}`;
+    const usp = new URLSearchParams({ ...params, secret: SECRET, callback: cb });
+    script.src = `${URL}?${usp.toString()}`;
     script.onerror = () => {
       cleanup();
       reject(new Error("network error"));
@@ -73,7 +73,19 @@ function jsonp<T>(action: string, code: string): Promise<T> {
 
 /** Fetch a progress snapshot by student code OR parent code. */
 export function fetchProgress(code: string): Promise<Progress> {
-  return jsonp<Progress>("progress", code);
+  return jsonp<Progress>({ action: "progress", code });
+}
+
+// ── AI helper (word lookup + writing coach) ──────────────────────────────────
+export interface AiResult {
+  ok: boolean;
+  text?: string;
+  error?: string;
+}
+
+/** Ask the AI helper. kind "word" = quick lookup; "writing" = writing coach. */
+export function fetchAi(code: string, kind: "word" | "writing", q: string): Promise<AiResult> {
+  return jsonp<AiResult>({ action: "ai", code, kind, q });
 }
 
 // ── Shared Drive resources (lesson slides, feedback, assessments) ────────────
@@ -92,5 +104,5 @@ export interface Resources {
 
 /** Fetch the student's shared Drive files by student code OR parent code. */
 export function fetchResources(code: string): Promise<Resources> {
-  return jsonp<Resources>("resources", code);
+  return jsonp<Resources>({ action: "resources", code });
 }
