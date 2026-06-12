@@ -230,8 +230,8 @@ rorys-english/
 
 ## 8. What does NOT work yet / known gaps
 
-1. **Valentin has no study tool** — his Study card points at a placeholder URL. Ferdi's `ferdi-unit10.html` is the working template to clone.
-2. **German vocab translations are AI best-effort** — the study tool shows a "double-check against the MORE! 4 glossary" note. Rory should verify.
+1. ~~Valentin has no study tool~~ **DONE** — `public/study-tools/valentin-unit05.html` (20 trends-vocab words, comparatives gap-fill, B1 German traps, TTS, SR) is live and linked from his Study tab.
+2. **German vocab translations are AI best-effort** — both study tools show a "double-check against the glossary" note (MORE! 4 / way2go!). Rory should verify. Most-likely mismatch flagged by review: *rate → die Rate*.
 3. **The rich Sheet tabs are empty** — School Tests, Writing, Speaking, Mock Tests have headers but no data pipeline yet (this is the big Phase-2 work, §9).
 4. **No Progress section or parent view yet** — decided this session, now in the backlog (§10).
 5. **Sync is best-effort with a retry queue** — uses `no-cors`, so HTTP-level failures are invisible, but network-level failures (offline) now queue in localStorage (`re_sync_queue`) and replay on the `online` event / app load. `localStorage` remains the source of truth regardless.
@@ -261,7 +261,7 @@ Turn the Sheet from "homework + quizzes" into a full learner record, and surface
 
 ### Phase 4 — Scale & polish
 - More units + more study tools (clone the Ferdi pattern).
-- Spaced-repetition review inside the study tools (highest learning ROI — see §10).
+- ~~Spaced-repetition review inside the study tools~~ ✅ **DONE** — SM-2-lite in both tools (state under `re_sr_<code>_<tool>` in localStorage: `{idx: {d: dueDate, i: interval, e: ease×100}}`; due-first question selection; "N words ready to review" card on Today reads the same keys via `countWordsDue()`).
 - Example sentences + audio per vocab item.
 - Possibly: cloud sync upgrade (Supabase) only if/when the Apps Script approach is outgrown.
 

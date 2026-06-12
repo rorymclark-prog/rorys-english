@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Unit 10 Study Tool — Ferdi</title>
+<title>Unit 5 Study Tool — Valentin</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -215,7 +215,7 @@
     background: transparent;
     font-size: 0.95rem;
     color: var(--navy);
-    width: 110px;
+    width: 160px;
     padding: 2px 4px;
     outline: none;
     font-family: inherit;
@@ -324,13 +324,13 @@
 
 <header>
   <a class="back-link" href="#" onclick="history.back(); return false;">← Back to app</a>
-  <h1>Unit 10 — Study Tool</h1>
-  <p>Vocabulary · Conditionals · German Traps · Summary</p>
+  <h1>Unit 5 — Study Tool</h1>
+  <p>Vocabulary · Comparatives · German Traps · Summary</p>
 </header>
 
 <nav>
   <button class="active" onclick="showTab('s1')">Vocab</button>
-  <button onclick="showTab('s2')">Conditionals</button>
+  <button onclick="showTab('s2')">Comparatives</button>
   <button onclick="showTab('s3')">Traps</button>
   <button onclick="showTab('s4')">Score</button>
 </nav>
@@ -351,16 +351,16 @@
     <div class="score-msg" id="s1-score-msg"></div>
     <button class="btn btn-amber btn-full mt16" onclick="initS1()">Try again &rarr;</button>
   </div>
-  <p class="disclaimer">German translations to be double-checked against the MORE! 4 glossary.</p>
+  <p class="disclaimer">Word list to be checked against the way2go! glossary.</p>
 </section>
 
 <!-- ════════════════════════════════════
-     SECTION 2 — Conditionals gap-fill
+     SECTION 2 — Comparatives gap-fill
 ═══════════════════════════════════════ -->
 <section id="s2">
   <div class="section-label">Section 2</div>
-  <h2 class="card-title mt8">Conditionals Gap-Fill</h2>
-  <p style="font-size:0.82rem;color:#6b7280;margin-bottom:12px;">Type the correct verb form in each blank.</p>
+  <h2 class="card-title mt8">Comparatives &amp; Superlatives</h2>
+  <p style="font-size:0.82rem;color:#6b7280;margin-bottom:12px;">Type the correct form in each blank.</p>
   <div id="s2-items"></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;" class="mt12">
     <button class="btn btn-amber" onclick="checkS2()">Check answers</button>
@@ -410,9 +410,6 @@ function speak(text, lang) {
   } catch (e) {}
 }
 
-// Build a speaker button that speaks the given English text.
-// type="button" prevents form submission; stopPropagation prevents
-// the click bubbling to any answer handler.
 function makeSpeakBtn(englishText) {
   var btn = document.createElement("button");
   btn.type = "button";
@@ -426,8 +423,13 @@ function makeSpeakBtn(englishText) {
   return btn;
 }
 
-// ── Progress sync (optional) — paste your Apps Script /exec URL + secret to enable.
-var SYNC = { url: "https://script.google.com/macros/s/AKfycbxzo-IunYLs8JA6R-ZCCrzIiB7Gt1gONgFJvYbnOc119XEnmaFaHp4AW2DYnJRS_lNsxQ/exec", secret: "re-sync-7b3h8d9f4", code: "ferdi-7h3k", tool: "unit10" };
+// ── Progress sync ──
+var SYNC = {
+  url:    "https://script.google.com/macros/s/AKfycbxzo-IunYLs8JA6R-ZCCrzIiB7Gt1gONgFJvYbnOc119XEnmaFaHp4AW2DYnJRS_lNsxQ/exec",
+  secret: "re-sync-7b3h8d9f4",
+  code:   "valentin-q9m2",
+  tool:   "unit05"
+};
 function syncQuiz(section, score, total) {
   if (!SYNC.url) return;
   try {
@@ -443,173 +445,174 @@ function syncQuiz(section, score, total) {
    DATA
 ═══════════════════════════════════════════════════════════════ */
 
+// 20 EN-DE pairs for Unit 5 — Trends & Choices
 const VOCAB = [
-  ["oil","das Öl"],
-  ["Fair Trade","der faire Handel"],
-  ["farmer","der Bauer"],
-  ["make a living","den Lebensunterhalt verdienen"],
-  ["pay rise","die Gehaltserhöhung"],
-  ["pesticide","das Pestizid"],
-  ["select","auswählen"],
-  ["agreement","die Vereinbarung"],
-  ["increase","die Zunahme"],
-  ["rate","die Rate"],
-  ["racism","der Rassismus"],
-  ["racist (adj.)","rassistisch"],
-  ["slavery","die Sklaverei"],
-  ["recognition","die Anerkennung"],
-  ["overcome","überwinden"],
-  ["harmony","die Harmonie"],
-  ["fairness","die Fairness"],
-  ["ignorance","die Unwissenheit"],
-  ["human being","der Mensch"],
-  ["angry","wütend"],
-  ["annoy","ärgern"],
-  ["frustrated","frustriert"],
-  ["helpless","hilflos"],
-  ["hurt","verletzen"],
-  ["hurtful","verletzend"],
-  ["painful","schmerzhaft"],
-  ["misunderstood","missverstanden"],
-  ["proud","stolz"],
-  ["shocked","schockiert"],
-  ["surprised","überrascht"],
-  ["brother-in-law","der Schwager"],
-  ["son-in-law","der Schwiegersohn"],
-  ["pollution","die Umweltverschmutzung"],
-  ["bicycle","das Fahrrad"],
-  ["hell","die Hölle"],
-  ["introduction","die Einführung"],
-  ["defeat","die Niederlage"],
-  ["claim","die Behauptung"]
+  ["influence",    "der Einfluss"],
+  ["sustainable",  "nachhaltig"],
+  ["trendsetter",  "der Trendsetter"],
+  ["advertising",  "die Werbung"],
+  ["persuade",     "\xFCberreden"],
+  ["promote",      "bewerben"],
+  ["compare",      "vergleichen"],
+  ["responsible",  "verantwortungsbewusst"],
+  ["reputation",   "der Ruf"],
+  ["waste (money)","verschwenden"],
+  ["consumer",     "der Konsument"],
+  ["brand",        "die Marke"],
+  ["affordable",   "erschwinglich"],
+  ["quality",      "die Qualit\xE4t"],
+  ["decision",     "die Entscheidung"],
+  ["second-hand",  "gebraucht"],
+  ["bargain",      "das Schn\xE4ppchen"],
+  ["trend",        "der Trend"],
+  ["choice",       "die Auswahl"],
+  ["purchase",     "der Kauf"]
 ];
 
-const CONDITIONALS = [
+// 7 comparative / superlative sentences
+// template uses ___ for each blank; answers array matches blank order
+const COMPARATIVES = [
   {
-    template: "If Fair Trade ___ (exist) when my dad had the farm, he ___ (not/sell) it.",
-    blanks: 2,
-    answers: ["had existed","wouldn't have sold"],
-    altAnswers: [null, ["would not have sold","wouldn't have sold"]],
-    type: "3rd conditional — past unreal",
-    why: "3rd conditional: if + past perfect → would have + past participle. The event is in the past and didn't happen."
+    template: "Online shopping is ___ (convenient) than going to the mall.",
+    blanks: 1,
+    answers: ["more convenient"],
+    altAnswers: [null],
+    hint: "(convenient)",
+    why: "Longer adjectives (3+ syllables) take <strong>more</strong> — never add -er."
   },
   {
-    template: "If I ___ (know) that Fair Trade pays a fixed price, I ___ (join) earlier.",
-    blanks: 2,
-    answers: ["had known","would have joined"],
-    altAnswers: [null, ["would have joined","would've joined","'d have joined"]],
-    type: "3rd conditional",
-    why: "3rd conditional again — you didn't know in the past, imagining a different past outcome."
+    template: "This is the ___ (good) bargain I've ever found.",
+    blanks: 1,
+    answers: ["best"],
+    altAnswers: [null],
+    hint: "(good)",
+    why: "Irregular superlative: good &rarr; better &rarr; <strong>best</strong>."
   },
   {
-    template: "If we ___ (buy) Fair Trade coffee, farmers ___ (earn) more money.",
+    template: "Second-hand clothes are often much ___ (cheap) than new ones.",
+    blanks: 1,
+    answers: ["cheaper"],
+    altAnswers: [null],
+    hint: "(cheap)",
+    why: "Short adjective (1 syllable): add <strong>-er</strong>. cheap &rarr; cheaper."
+  },
+  {
+    template: "That was the ___ (bad) purchase I've ever made.",
+    blanks: 1,
+    answers: ["worst"],
+    altAnswers: [null],
+    hint: "(bad)",
+    why: "Irregular superlative: bad &rarr; worse &rarr; <strong>worst</strong>."
+  },
+  {
+    template: "Advertising is getting ___ and ___ (aggressive).",
     blanks: 2,
-    answers: ["buy","will earn"],
+    answers: ["more", "more aggressive"],
     altAnswers: [null, null],
-    type: "1st conditional — real future",
-    why: "1st conditional: if + present simple → will + infinitive. It's a realistic future possibility."
+    hint: "(aggressive)",
+    why: "Double comparative for increasing degree: <strong>more and more + adjective</strong>."
   },
   {
-    template: "If I ___ (be) a coffee farmer, I ___ (join) Fair Trade.",
+    template: "The ___ (early) you buy, the ___ (cheap) the tickets are.",
     blanks: 2,
-    answers: ["were","would join"],
-    altAnswers: [null, ["would join","'d join"]],
-    type: "2nd conditional — present unreal",
-    why: "2nd conditional: if + past simple (were for all persons) → would + infinitive. Imaginary present scenario."
-  },
-  {
-    template: "If people ___ (care) more about the planet, pollution ___ (decrease).",
-    blanks: 2,
-    answers: ["cared","would decrease"],
-    altAnswers: [null, ["would decrease","'d decrease"]],
-    type: "2nd conditional",
-    why: "2nd conditional — hypothetical present/future wish."
-  },
-  {
-    template: "If it ___ (rain) tomorrow, we ___ (stay) inside.",
-    blanks: 2,
-    answers: ["rains","will stay"],
+    answers: ["earlier", "cheaper"],
     altAnswers: [null, null],
-    type: "1st conditional",
-    why: "1st conditional — realistic future condition."
+    hint: "(early / cheap)",
+    why: "<strong>The + comparative … the + comparative</strong> — used for parallel change."
   },
   {
-    template: "If you ___ (heat) water to 100°C, it ___ (boil).",
-    blanks: 2,
-    answers: ["heat","boils"],
-    altAnswers: [null, null],
-    type: "Zero conditional — always true",
-    why: "Zero conditional: if + present simple → present simple. Used for scientific facts and general truths."
+    template: "For me, quality is ___ (important) than the brand name.",
+    blanks: 1,
+    answers: ["more important"],
+    altAnswers: [null],
+    hint: "(important)",
+    why: "3-syllable adjective &rarr; use <strong>more</strong>, not -er."
   }
 ];
 
 const TRAPS = [
   {
-    wrong:  "If I would have known about Fair Trade...",
-    right:  "If I had known about Fair Trade...",
-    why:    "No 'would' in the if-clause. Use past perfect (had + past participle) for the 3rd conditional."
+    wrong: "I will become a new phone for my birthday.",
+    right: "I will get a new phone for my birthday.",
+    why:   "<em>bekommen</em> = to get/receive &mdash; NOT <em>become</em>. Use <strong>get</strong> or <strong>receive</strong>."
   },
   {
-    wrong:  "If I would be a farmer...",
-    right:  "If I were a farmer...",
-    why:    "2nd conditional uses past simple / 'were' in the if-clause — never 'would'."
+    wrong: "This offer is very actual.",
+    right: "This offer is very current.",
+    why:   "<em>aktuell</em> = current / up to date &mdash; NOT <em>actual</em> (= real/true)."
   },
   {
-    wrong:  "When he helps me, I will tell him.",
-    right:  "If he helps me, I will tell him.",
-    why:    "It's a condition (it may or may not happen), not a certainty. Use 'if', not 'when'."
+    wrong: "He is the chef of the company.",
+    right: "He is the boss of the company.",
+    why:   "<em>der Chef</em> = boss/manager &mdash; a <em>chef</em> in English only cooks. Use <strong>boss</strong> or <strong>manager</strong>."
   },
   {
-    wrong:  "If it rains, I would stay home.",
-    right:  "If it rains, I will stay home.",
-    why:    "1st conditional: present simple in the if-clause + 'will' in the result — not 'would'."
+    wrong: "I made a photo of the new sneakers.",
+    right: "I took a photo of the new sneakers.",
+    why:   "In English you <strong>take</strong> a photo (not <em>make</em>). <em>ein Foto machen</em> &rarr; take a photo."
   }
 ];
 
 /* ════════════════════════════════════════════════════════════════
    STORAGE HELPERS
 ═══════════════════════════════════════════════════════════════ */
-const PRE = "ferdi_u10_studytool_";
+var PRE    = "valentin_u05_studytool_";
+var SR_KEY = "re_sr_valentin-q9m2_unit05";
 
 function lsGet(k, def) {
-  try { const v = localStorage.getItem(PRE+k); return v === null ? def : JSON.parse(v); }
+  try { var v = localStorage.getItem(PRE + k); return v === null ? def : JSON.parse(v); }
   catch(e) { return def; }
 }
 function lsSet(k, v) {
-  try { localStorage.setItem(PRE+k, JSON.stringify(v)); } catch(e) {}
+  try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch(e) {}
 }
 
-/* ════════════════════════════════════════════════════════════════
-   SPACED REPETITION (SM-2 lite)
-   State lives under its own top-level key (the app's Today screen
-   reads the same convention to show "N words ready to review").
-═══════════════════════════════════════════════════════════════ */
-const SR_KEY = "re_sr_ferdi-7h3k_unit10";
-
+// SR data stored under its own top-level key (not PRE-prefixed)
 function srLoad() {
-  try { const v = localStorage.getItem(SR_KEY); return v ? JSON.parse(v) : {}; }
+  try { var v = localStorage.getItem(SR_KEY); return v ? JSON.parse(v) : {}; }
   catch(e) { return {}; }
 }
 function srSave(data) {
   try { localStorage.setItem(SR_KEY, JSON.stringify(data)); } catch(e) {}
 }
-// "YYYY-MM-DD" from LOCAL date parts (not UTC)
+
+/* ════════════════════════════════════════════════════════════════
+   SPACED REPETITION HELPERS
+═══════════════════════════════════════════════════════════════ */
+// Return today's date as "YYYY-MM-DD" using LOCAL date parts (not UTC)
 function localDay() {
-  const d = new Date();
-  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  var d = new Date();
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
 }
+
 function addDays(dateStr, n) {
-  const d = new Date(dateStr + "T00:00:00");
+  var d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
-  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
 }
-// Update the schedule for one vocab word after an answer.
+
+// Update SR record for a vocab index after an answer
+// correct: boolean
 function srUpdate(vocabIndex, correct) {
-  const data = srLoad();
-  const today = localDay();
-  const rec = data[vocabIndex] || { d: today, i: 0, e: 250 };
+  var data = srLoad();
+  var today = localDay();
+  var rec = data[vocabIndex] || { d: today, i: 0, e: 250 };
+
   if (correct) {
-    const newI = rec.i === 0 ? 1 : rec.i === 1 ? 3 : Math.max(1, Math.round(rec.i * rec.e / 100));
+    var newI;
+    if (rec.i === 0) {
+      newI = 1;
+    } else if (rec.i === 1) {
+      newI = 3;
+    } else {
+      newI = Math.max(1, Math.round(rec.i * rec.e / 100));
+    }
     rec.e = Math.min(300, rec.e + 5);
     rec.i = newI;
     rec.d = addDays(today, newI);
@@ -621,50 +624,62 @@ function srUpdate(vocabIndex, correct) {
   data[vocabIndex] = rec;
   srSave(data);
 }
-// Question pool: due words first, then unseen, then the rest; take 10.
+
+// Build ordered question pool: due first, then unseen, then rest; take up to 10
 function srBuildPool() {
-  const data = srLoad();
-  const today = localDay();
-  const due = [], unseen = [], rest = [];
+  var data = srLoad();
+  var today = localDay();
+
+  var due    = [];
+  var unseen = [];
+  var rest   = [];
+
   VOCAB.forEach(function(pair, idx) {
-    if (!data[idx]) unseen.push(idx);
-    else if (data[idx].d <= today) due.push(idx);
-    else rest.push(idx);
+    if (!data[idx]) {
+      unseen.push(idx);
+    } else if (data[idx].d <= today) {
+      due.push(idx);
+    } else {
+      rest.push(idx);
+    }
   });
-  return shuffle(due).concat(shuffle(unseen)).concat(shuffle(rest)).slice(0, 10);
+
+  // Shuffle within each bucket
+  due    = shuffle(due);
+  unseen = shuffle(unseen);
+  rest   = shuffle(rest);
+
+  var pool = due.concat(unseen).concat(rest);
+  return pool.slice(0, 10);
 }
+
+// Count how many words are currently due
 function srDueCount() {
-  const data = srLoad();
-  const today = localDay();
-  let count = 0;
+  var data = srLoad();
+  var today = localDay();
+  var count = 0;
   VOCAB.forEach(function(pair, idx) {
     if (data[idx] && data[idx].d <= today) count++;
   });
   return count;
-}
-function updateSrBadge() {
-  const el = document.getElementById("srDue");
-  if (!el) return;
-  const due = srDueCount();
-  el.textContent = due > 0 ? "🔁 " + due + " word" + (due === 1 ? "" : "s") + " due for review" : "";
 }
 
 /* ════════════════════════════════════════════════════════════════
    UTILS
 ═══════════════════════════════════════════════════════════════ */
 function shuffle(arr) {
-  const a = arr.slice();
-  for (let i = a.length-1; i>0; i--) {
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i],a[j]] = [a[j],a[i]];
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
   }
   return a;
 }
 
-function pick(arr, n) { return shuffle(arr).slice(0,n); }
+function pick(arr, n) { return shuffle(arr).slice(0, n); }
 
 function scoreMsg(correct, total) {
-  const pct = correct/total;
+  var pct = correct / total;
   if (pct === 1)   return "Perfect score! You nailed every single one. 🎯";
   if (pct >= 0.8)  return "Really strong work — just a couple to review!";
   if (pct >= 0.6)  return "Solid effort. Check the ones you missed and you'll get there.";
@@ -675,12 +690,12 @@ function scoreMsg(correct, total) {
 /* ════════════════════════════════════════════════════════════════
    TAB NAVIGATION
 ═══════════════════════════════════════════════════════════════ */
-const navBtns = document.querySelectorAll("nav button");
+var navBtns = document.querySelectorAll("nav button");
 
 function showTab(id) {
-  document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll("section").forEach(function(s) { s.classList.remove("active"); });
   document.getElementById(id).classList.add("active");
-  navBtns.forEach((b,i) => {
+  navBtns.forEach(function(b, i) {
     b.classList.toggle("active", ["s1","s2","s3","s4"][i] === id);
   });
   if (id === "s4") renderS4();
@@ -689,10 +704,11 @@ function showTab(id) {
 /* ════════════════════════════════════════════════════════════════
    SECTION 1 — Vocabulary quiz
 ═══════════════════════════════════════════════════════════════ */
-let s1Questions = [];
-let s1Current   = 0;
-let s1Score     = 0;
-let s1Done      = false;
+var s1Questions  = [];
+var s1VocabIdxs  = []; // parallel array: VOCAB index for each question
+var s1Current    = 0;
+var s1Score      = 0;
+var s1Done       = false;
 
 function initS1() {
   s1Score   = 0;
@@ -700,27 +716,31 @@ function initS1() {
   s1Done    = false;
   document.getElementById("s1-score").classList.add("hidden");
 
-  // Spaced repetition: due words first, then unseen, then the rest (10 total).
-  // For each, randomly choose direction.
-  updateSrBadge();
-  const chosenIdx = srBuildPool();
-  s1Questions = chosenIdx.map(vocabIdx => {
-    const pair = VOCAB[vocabIdx];
-    const engToGer = Math.random() < 0.5;
-    const question = engToGer ? pair[0] : pair[1];
-    const answer   = engToGer ? pair[1] : pair[0];
-    const answerIdx = engToGer ? 1 : 0;
-    // englishWord is always pair[0] — used for speak()
-    const englishWord = pair[0];
+  // Update SR due badge
+  var due = srDueCount();
+  var srSpan = document.getElementById("srDue");
+  srSpan.textContent = due > 0 ? (due + " word" + (due === 1 ? "" : "s") + " due for review") : "";
 
-    // Distractors: other words from same direction in the list
-    const pool = VOCAB
-      .filter(p => p !== pair)
-      .map(p => p[answerIdx]);
-    const distractors = pick(pool, 3);
-    const options = shuffle([answer, ...distractors]);
+  // Build pool using SR ordering
+  var pool = srBuildPool();
+  s1VocabIdxs = pool;
 
-    return { question, answer, options, engToGer, englishWord, vocabIdx,
+  s1Questions = pool.map(function(vocabIdx) {
+    var pair = VOCAB[vocabIdx];
+    var engToGer = Math.random() < 0.5;
+    var question = engToGer ? pair[0] : pair[1];
+    var answer   = engToGer ? pair[1] : pair[0];
+    var answerIdx = engToGer ? 1 : 0;
+    var englishWord = pair[0];
+
+    var poolAnswers = VOCAB
+      .filter(function(p) { return p !== pair; })
+      .map(function(p) { return p[answerIdx]; });
+    var distractors = pick(poolAnswers, 3);
+    var options = shuffle([answer].concat(distractors));
+
+    return { question: question, answer: answer, options: options,
+             engToGer: engToGer, englishWord: englishWord,
              prompt: engToGer ? "What is the German?" : "What is the English?" };
   });
 
@@ -728,7 +748,7 @@ function initS1() {
 }
 
 function renderS1Question() {
-  const container = document.getElementById("s1-quiz");
+  var container = document.getElementById("s1-quiz");
   container.innerHTML = "";
 
   if (s1Current >= s1Questions.length) {
@@ -736,57 +756,60 @@ function renderS1Question() {
     return;
   }
 
-  const q = s1Questions[s1Current];
+  var q = s1Questions[s1Current];
 
-  // Progress bar
-  const prog = document.createElement("div");
+  var prog = document.createElement("div");
   prog.className = "progress-bar-wrap";
-  prog.innerHTML = `<div class="progress-bar-fill" style="width:${(s1Current/10)*100}%"></div>`;
+  prog.innerHTML = '<div class="progress-bar-fill" style="width:' + (s1Current / 10 * 100) + '%"></div>';
 
-  const card = document.createElement("div");
+  var card = document.createElement("div");
   card.className = "card";
-  card.innerHTML = `
-    <div class="q-counter">Question ${s1Current+1} of 10</div>
-    <div style="font-size:0.82rem;color:var(--burgundy);font-weight:600;margin-bottom:6px;">${q.prompt}</div>
-    <div class="prompt-row" style="margin-bottom:4px;">
-      <span style="font-size:1.3rem;font-weight:700;color:var(--navy);">${escHtml(q.question)}</span>
-    </div>
-    <div class="options" id="s1-opts"></div>
-    <div class="feedback" id="s1-fb"></div>
-    <button class="btn btn-amber btn-full mt12 hidden" id="s1-next">Next question &rarr;</button>
-  `;
+  card.innerHTML =
+    '<div class="q-counter">Question ' + (s1Current + 1) + ' of 10</div>' +
+    '<div style="font-size:0.82rem;color:var(--burgundy);font-weight:600;margin-bottom:6px;">' + escHtml(q.prompt) + '</div>' +
+    '<div class="prompt-row" style="margin-bottom:4px;">' +
+      '<span style="font-size:1.3rem;font-weight:700;color:var(--navy);">' + escHtml(q.question) + '</span>' +
+    '</div>' +
+    '<div class="options" id="s1-opts"></div>' +
+    '<div class="feedback" id="s1-fb"></div>' +
+    '<button class="btn btn-amber btn-full mt12 hidden" id="s1-next">Next question &rarr;</button>';
 
-  // If English is the prompt, add 🔊 next to it so the student can hear it
   if (q.engToGer) {
-    const promptRow = card.querySelector(".prompt-row");
+    var promptRow = card.querySelector(".prompt-row");
     promptRow.appendChild(makeSpeakBtn(q.englishWord));
   }
 
   container.appendChild(prog);
   container.appendChild(card);
 
-  const optsDiv = document.getElementById("s1-opts");
-  q.options.forEach(opt => {
-    const btn = document.createElement("button");
+  var optsDiv = document.getElementById("s1-opts");
+  q.options.forEach(function(opt) {
+    var btn = document.createElement("button");
     btn.className = "opt-btn";
     btn.textContent = opt;
-    btn.onclick = () => answerS1(opt, q.answer, btn);
+    btn.onclick = function() { answerS1(opt, q.answer, btn); };
     optsDiv.appendChild(btn);
   });
 }
 
 function answerS1(chosen, correct, chosenBtn) {
-  const fb   = document.getElementById("s1-fb");
-  const next = document.getElementById("s1-next");
-  const opts = document.querySelectorAll(".opt-btn");
-  const q    = s1Questions[s1Current];
+  var fb   = document.getElementById("s1-fb");
+  var next = document.getElementById("s1-next");
+  var opts = document.querySelectorAll(".opt-btn");
+  var q    = s1Questions[s1Current];
+  var vocabIdx = s1VocabIdxs[s1Current];
 
-  opts.forEach(b => {
+  opts.forEach(function(b) {
     b.disabled = true;
     if (b.textContent === correct) b.classList.add("correct");
   });
 
-  if (chosen === correct) {
+  var isCorrect = (chosen === correct);
+
+  // Update SR record
+  srUpdate(vocabIdx, isCorrect);
+
+  if (isCorrect) {
     s1Score++;
     chosenBtn.classList.add("correct");
     fb.className = "feedback correct show";
@@ -794,22 +817,16 @@ function answerS1(chosen, correct, chosenBtn) {
   } else {
     chosenBtn.classList.add("wrong");
     fb.className = "feedback wrong show";
-    fb.textContent = `Not quite — the answer is "${correct}".`;
+    fb.textContent = "Not quite — the answer is “" + correct + "”.";
   }
 
-  // Spaced repetition: reschedule this word based on the answer.
-  srUpdate(q.vocabIdx, chosen === correct);
-  updateSrBadge();
-
-  // When the English word is the correct answer (German→English direction),
-  // add 🔊 to the feedback so the student can hear the English pronunciation.
   if (!q.engToGer) {
     fb.appendChild(document.createTextNode(" "));
     fb.appendChild(makeSpeakBtn(q.englishWord));
   }
 
   next.classList.remove("hidden");
-  next.onclick = () => {
+  next.onclick = function() {
     s1Current++;
     renderS1Question();
   };
@@ -820,37 +837,41 @@ function finishS1() {
   lsSet("s1_total", 10);
   syncQuiz("Vocabulary", s1Score, 10);
 
-  const container = document.getElementById("s1-quiz");
+  var container = document.getElementById("s1-quiz");
   container.innerHTML = "";
 
-  const sc = document.getElementById("s1-score");
+  var sc = document.getElementById("s1-score");
   sc.classList.remove("hidden");
   document.getElementById("s1-score-num").textContent = s1Score;
   document.getElementById("s1-score-msg").textContent = scoreMsg(s1Score, 10);
+
+  // Refresh SR due count in header after round
+  var due = srDueCount();
+  var srSpan = document.getElementById("srDue");
+  srSpan.textContent = due > 0 ? (due + " word" + (due === 1 ? "" : "s") + " due for review") : "";
 }
 
 /* ════════════════════════════════════════════════════════════════
-   SECTION 2 — Conditionals gap-fill
+   SECTION 2 — Comparatives & Superlatives gap-fill
 ═══════════════════════════════════════════════════════════════ */
 function buildS2() {
-  const container = document.getElementById("s2-items");
+  var container = document.getElementById("s2-items");
   container.innerHTML = "";
-  CONDITIONALS.forEach((item, idx) => {
-    const card = document.createElement("div");
+  COMPARATIVES.forEach(function(item, idx) {
+    var card = document.createElement("div");
     card.className = "card";
     card.dataset.idx = idx;
 
-    // Build sentence with inputs
-    let parts = item.template.split("___");
-    let html = `<div class="gap-sentence">`;
-    parts.forEach((part, pi) => {
+    var parts = item.template.split("___");
+    var html = '<div class="gap-sentence">';
+    parts.forEach(function(part, pi) {
       html += escHtml(part);
       if (pi < parts.length - 1) {
-        html += `<input class="gap-input" data-q="${idx}" data-b="${pi}" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="…">`;
+        html += '<input class="gap-input" data-q="' + idx + '" data-b="' + pi + '" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="…">';
       }
     });
-    html += `</div>`;
-    html += `<div class="feedback" id="s2-fb-${idx}"></div>`;
+    html += '</div>';
+    html += '<div class="feedback" id="s2-fb-' + idx + '"></div>';
 
     card.innerHTML = html;
     container.appendChild(card);
@@ -859,42 +880,42 @@ function buildS2() {
 
 function normalise(s) {
   return s.toLowerCase()
-           .replace(/['']/g, "'")
+           .replace(/[‘’]/g, "'")
            .replace(/[,.!?;:]/g, "")
            .trim();
 }
 
 function acceptedAnswers(item, blankIdx) {
-  const main = item.answers[blankIdx];
-  const alts = item.altAnswers && item.altAnswers[blankIdx];
-  const all  = [main];
-  if (alts) alts.forEach(a => { if (!all.includes(a)) all.push(a); });
+  var main = item.answers[blankIdx];
+  var alts = item.altAnswers && item.altAnswers[blankIdx];
+  var all  = [main];
+  if (alts) alts.forEach(function(a) { if (all.indexOf(a) === -1) all.push(a); });
   return all.map(normalise);
 }
 
 function checkS2() {
-  let correct = 0;
-  let total   = 0;
-  let allAttempted = true;
+  var correct = 0;
+  var total   = 0;
+  var allAttempted = true;
 
-  CONDITIONALS.forEach((item, idx) => {
-    const inputs = document.querySelectorAll(`[data-q="${idx}"]`);
-    const fb = document.getElementById(`s2-fb-${idx}`);
-    let rowOk = true;
-    let feedback = [];
+  COMPARATIVES.forEach(function(item, idx) {
+    var inputs = document.querySelectorAll('[data-q="' + idx + '"]');
+    var fb = document.getElementById("s2-fb-" + idx);
+    var rowOk = true;
+    var feedback = [];
 
-    inputs.forEach((inp, bi) => {
-      const val = normalise(inp.value);
+    inputs.forEach(function(inp, bi) {
+      var val = normalise(inp.value);
       if (!val) { allAttempted = false; }
-      const accepted = acceptedAnswers(item, bi);
-      if (accepted.includes(val)) {
+      var accepted = acceptedAnswers(item, bi);
+      if (accepted.indexOf(val) !== -1) {
         inp.classList.remove("wrong-input");
         inp.classList.add("correct-input");
         correct++;
       } else {
         inp.classList.remove("correct-input");
         inp.classList.add("wrong-input");
-        feedback.push(`Blank ${bi+1}: "${inp.value.trim() || '?'}" → should be "<strong>${item.answers[bi]}</strong>"`);
+        feedback.push("Blank " + (bi + 1) + ": “" + (inp.value.trim() || "?") + "” → should be “<strong>" + escHtml(item.answers[bi]) + "</strong>”");
         rowOk = false;
       }
       total++;
@@ -902,32 +923,32 @@ function checkS2() {
 
     if (rowOk) {
       fb.className = "feedback correct show";
-      fb.innerHTML = `✓ Correct! <em>(${item.type})</em> — ${item.why}`;
+      fb.innerHTML = "✓ Correct! — " + item.why;
     } else {
       fb.className = "feedback wrong show";
-      fb.innerHTML = `${feedback.join("; ")}. <em>(${item.type})</em> — ${item.why}`;
+      fb.innerHTML = feedback.join("; ") + ". — " + item.why;
     }
   });
 
   lsSet("s2_score", correct);
   lsSet("s2_total", total);
-  syncQuiz("Conditionals", correct, total);
+  syncQuiz("Comparatives", correct, total);
 
-  const res = document.getElementById("s2-result");
+  var res = document.getElementById("s2-result");
   res.className = "feedback show " + (correct === total ? "correct" : "wrong");
-  res.textContent = `${correct} / ${total} blanks correct. ${scoreMsg(correct, total)}`;
+  res.textContent = correct + " / " + total + " blanks correct. " + scoreMsg(correct, total);
 }
 
 function resetS2() {
-  document.querySelectorAll(".gap-input").forEach(inp => {
+  document.querySelectorAll(".gap-input").forEach(function(inp) {
     inp.value = "";
-    inp.classList.remove("correct-input","wrong-input");
+    inp.classList.remove("correct-input", "wrong-input");
   });
-  document.querySelectorAll("[id^='s2-fb-']").forEach(fb => {
+  document.querySelectorAll("[id^='s2-fb-']").forEach(function(fb) {
     fb.className = "feedback";
     fb.innerHTML = "";
   });
-  const res = document.getElementById("s2-result");
+  var res = document.getElementById("s2-result");
   res.className = "feedback";
   res.textContent = "";
   lsSet("s2_score", null);
@@ -938,44 +959,42 @@ function resetS2() {
    SECTION 3 — German trap drill
 ═══════════════════════════════════════════════════════════════ */
 function buildS3() {
-  const container = document.getElementById("s3-items");
+  var container = document.getElementById("s3-items");
   container.innerHTML = "";
 
-  TRAPS.forEach((trap, idx) => {
-    const card = document.createElement("div");
+  TRAPS.forEach(function(trap, idx) {
+    var card = document.createElement("div");
     card.className = "card";
 
-    card.innerHTML = `
-      <div class="section-label">Trap ${idx+1}</div>
-      <p class="trap-sentence mt8">✗ "${escHtml(trap.wrong)}"</p>
-      <p style="font-size:0.82rem;color:var(--navy);margin-bottom:8px;">Type the corrected sentence:</p>
-      <input class="type-input" data-trap="${idx}" type="text"
-             autocomplete="off" autocorrect="off" autocapitalize="off"
-             spellcheck="false" placeholder="Type the correct version…">
-      <div class="feedback" id="s3-fb-${idx}"></div>
-    `;
+    card.innerHTML =
+      '<div class="section-label">Trap ' + (idx + 1) + '</div>' +
+      '<p class="trap-sentence mt8">✗ “' + escHtml(trap.wrong) + '”</p>' +
+      '<p style="font-size:0.82rem;color:var(--navy);margin-bottom:8px;">Type the corrected sentence:</p>' +
+      '<input class="type-input" data-trap="' + idx + '" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type the correct version…">' +
+      '<div class="feedback" id="s3-fb-' + idx + '"></div>';
+
     container.appendChild(card);
   });
 }
 
 function checkS3() {
-  let correct = 0;
+  var correct = 0;
 
-  TRAPS.forEach((trap, idx) => {
-    const inp = document.querySelector(`[data-trap="${idx}"]`);
-    const val = normalise(inp.value);
-    const exp = normalise(trap.right);
-    const fb  = document.getElementById(`s3-fb-${idx}`);
+  TRAPS.forEach(function(trap, idx) {
+    var inp = document.querySelector('[data-trap="' + idx + '"]');
+    var val = normalise(inp.value);
+    var exp = normalise(trap.right);
+    var fb  = document.getElementById("s3-fb-" + idx);
 
     if (val === exp) {
       inp.style.borderColor = "#16a34a";
       fb.className = "feedback correct show";
-      fb.innerHTML = `✓ Exactly right! — ${trap.why}`;
+      fb.innerHTML = "✓ Exactly right! — " + trap.why;
       correct++;
     } else {
       inp.style.borderColor = "#f59e0b";
       fb.className = "feedback wrong show";
-      fb.innerHTML = `Not quite. The correct version: "<strong>${escHtml(trap.right)}</strong>" — ${trap.why}`;
+      fb.innerHTML = "Not quite. The correct version: “<strong>" + escHtml(trap.right) + "</strong>” — " + trap.why;
     }
   });
 
@@ -983,21 +1002,21 @@ function checkS3() {
   lsSet("s3_total", TRAPS.length);
   syncQuiz("German traps", correct, TRAPS.length);
 
-  const res = document.getElementById("s3-result");
+  var res = document.getElementById("s3-result");
   res.className = "feedback show " + (correct === TRAPS.length ? "correct" : "wrong");
-  res.textContent = `${correct} / ${TRAPS.length} traps corrected. ${scoreMsg(correct, TRAPS.length)}`;
+  res.textContent = correct + " / " + TRAPS.length + " traps corrected. " + scoreMsg(correct, TRAPS.length);
 }
 
 function resetS3() {
-  document.querySelectorAll("[data-trap]").forEach(inp => {
+  document.querySelectorAll("[data-trap]").forEach(function(inp) {
     inp.value = "";
     inp.style.borderColor = "";
   });
-  document.querySelectorAll("[id^='s3-fb-']").forEach(fb => {
+  document.querySelectorAll("[id^='s3-fb-']").forEach(function(fb) {
     fb.className = "feedback";
     fb.innerHTML = "";
   });
-  const res = document.getElementById("s3-result");
+  var res = document.getElementById("s3-result");
   res.className = "feedback";
   res.textContent = "";
   lsSet("s3_score", null);
@@ -1006,64 +1025,63 @@ function resetS3() {
 
 /* ════════════════════════════════════════════════════════════════
    SECTION 4 — Summary
+   Two-pass render: compute weakest in pass 1, badge in pass 2.
 ═══════════════════════════════════════════════════════════════ */
 function renderS4() {
-  const sections = [
-    { key: "s1", name: "Vocabulary Quiz",     total: 10 },
-    { key: "s2", name: "Conditionals Gap-fill", total: 14 },
-    { key: "s3", name: "German Trap Drill",    total: 4  }
+  var sections = [
+    { key: "s1", name: "Vocabulary Quiz",         total: 10 },
+    { key: "s2", name: "Comparatives Gap-fill",   total: 9  },
+    { key: "s3", name: "German Trap Drill",        total: 4  }
   ];
 
-  // Pass 1: compute pct for every section, find true weakest (lowest pct, attempts > 0)
-  let grandOk = 0, grandTot = 0;
-  let weakestName = null, weakestPct = Infinity;
+  // Pass 1: compute pct for every section, find true weakest
+  var grandOk = 0, grandTot = 0;
+  var weakestName = null, weakestPct = Infinity;
 
-  const computed = sections.map(sec => {
-    const sc  = lsGet(sec.key+"_score", null);
-    const tot = lsGet(sec.key+"_total", null) || sec.total;
-    const done = sc !== null;
-    const pct  = done ? sc / tot : null;
+  var computed = sections.map(function(sec) {
+    var sc   = lsGet(sec.key + "_score", null);
+    var tot  = lsGet(sec.key + "_total", null) || sec.total;
+    var done = sc !== null;
+    var pct  = done ? sc / tot : null;
     if (done) {
       grandOk  += sc;
       grandTot += tot;
       if (pct < weakestPct) { weakestPct = pct; weakestName = sec.name; }
     }
-    return { sec, sc, tot, done, pct };
+    return { sec: sec, sc: sc, tot: tot, done: done, pct: pct };
   });
 
-  // Pass 2: build rows, badge only the true weakest
-  const rowsDiv = document.getElementById("s4-rows");
+  // Pass 2: build rows
+  var rowsDiv = document.getElementById("s4-rows");
   rowsDiv.innerHTML = "";
 
-  computed.forEach(({ sec, sc, tot, done, pct }) => {
-    const isWeakest = done && sec.name === weakestName;
-    const row = document.createElement("div");
+  computed.forEach(function(item) {
+    var isWeakest = item.done && item.sec.name === weakestName;
+    var row = document.createElement("div");
     row.className = "summary-row";
-    row.innerHTML = `
-      <span class="label">${escHtml(sec.name)}
-        ${isWeakest ? '<span class="weak-badge">Review this</span>' : ""}
-      </span>
-      <span class="val">${done ? sc+" / "+tot : "—"}</span>
-    `;
+    row.innerHTML =
+      '<span class="label">' + escHtml(item.sec.name) +
+        (isWeakest ? ' <span class="weak-badge">Review this</span>' : "") +
+      '</span>' +
+      '<span class="val">' + (item.done ? item.sc + " / " + item.tot : "—") + '</span>';
     rowsDiv.appendChild(row);
   });
 
   // Grand total row
-  const grand = document.createElement("div");
+  var grand = document.createElement("div");
   grand.className = "summary-row";
   grand.style.fontWeight = "700";
-  grand.innerHTML = `
-    <span class="label">Total</span>
-    <span class="val" style="font-size:1.1rem;color:var(--navy);">${grandTot ? grandOk+" / "+grandTot : "—"}</span>
-  `;
+  grand.innerHTML =
+    '<span class="label">Total</span>' +
+    '<span class="val" style="font-size:1.1rem;color:var(--navy);">' + (grandTot ? grandOk + " / " + grandTot : "—") + '</span>';
   rowsDiv.appendChild(grand);
 
-  const msg = document.getElementById("s4-msg");
+  var msg = document.getElementById("s4-msg");
   if (!grandTot) {
     msg.textContent = "Complete the sections above to see your results here.";
   } else {
-    msg.textContent = scoreMsg(grandOk, grandTot)
-      + (weakest ? ` Your weakest area is "${weakest}" — worth an extra round!` : "");
+    msg.textContent = scoreMsg(grandOk, grandTot) +
+      (weakestName ? ' Your weakest area is "' + weakestName + '" — worth an extra round!' : "");
   }
 }
 
@@ -1071,7 +1089,7 @@ function renderS4() {
    RESET ALL
 ═══════════════════════════════════════════════════════════════ */
 function resetAll() {
-  ["s1_score","s1_total","s2_score","s2_total","s3_score","s3_total"].forEach(k => lsSet(k, null));
+  ["s1_score","s1_total","s2_score","s2_total","s3_score","s3_total"].forEach(function(k) { lsSet(k, null); });
   initS1();
   resetS2();
   resetS3();
@@ -1086,7 +1104,7 @@ function escHtml(s) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   iOS TTS — resume synthesis when app returns to foreground (Fix 3)
+   iOS TTS — resume synthesis when app returns to foreground
 ═══════════════════════════════════════════════════════════════ */
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible' && window.speechSynthesis) {
@@ -1095,7 +1113,7 @@ document.addEventListener('visibilitychange', function() {
 });
 
 /* ════════════════════════════════════════════════════════════════
-   Keyboard scroll — keep focused input visible above soft keyboard (Fix 4)
+   Keyboard scroll — keep focused input visible above soft keyboard
 ═══════════════════════════════════════════════════════════════ */
 document.addEventListener('focusin', function(e) {
   var el = e.target;

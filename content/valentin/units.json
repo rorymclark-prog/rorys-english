@@ -6,8 +6,8 @@
     "studyTools": [
       {
         "title": "Unit 5 Study Tool",
-        "url": "https://example.com/REPLACE-WITH-NETLIFY-URL",
-        "blurb": "Vocabulary & comparatives practice. (Placeholder — paste the real Netlify link here once the HTML tool is built.)"
+        "url": "/study-tools/valentin-unit05.html",
+        "blurb": "Vocab quiz (20 words), comparatives practice & German traps."
       }
     ]
   }

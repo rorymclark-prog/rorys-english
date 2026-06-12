@@ -204,6 +204,30 @@ export function saveSettings(studentId: string, s: Settings): void {
   write(settingsKey(studentId), JSON.stringify(s));
 }
 
+// ── Spaced repetition (read-side) ────────────────────────────────────────────
+// The study tools write SR state under `re_sr_<code>_<tool>` as a JSON object
+// mapping word-index → {d: "YYYY-MM-DD" due date, i: interval, e: ease}. The
+// Today screen only needs the count of words due today or earlier.
+export function countWordsDue(code: string): number {
+  if (typeof window === "undefined") return 0;
+  const today = localDay();
+  let due = 0;
+  try {
+    const prefix = `re_sr_${code}_`;
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (!k || !k.startsWith(prefix)) continue;
+      const data = JSON.parse(window.localStorage.getItem(k) || "{}");
+      for (const idx of Object.keys(data)) {
+        if (data[idx] && typeof data[idx].d === "string" && data[idx].d <= today) due += 1;
+      }
+    }
+  } catch {
+    /* malformed SR state → just show no badge */
+  }
+  return due;
+}
+
 // ── Progress summary (for the student-initiated "send to Rory" share) ────────
 /** Scans this student's local keys into a short, human-readable summary. No
  *  content needed — counts completed weeks, ticked tasks and the streak. */

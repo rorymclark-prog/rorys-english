@@ -6,7 +6,14 @@ import type { Unit } from "@/lib/types";
 import { useStudent } from "@/components/StudentContext";
 import Screen from "@/components/Screen";
 import { ChevronRightIcon, FlameIcon, ExternalIcon, ChartIcon } from "@/components/Icons";
-import { bestStreak, currentStreak, getStreakDays, isWeekComplete, recentActivity } from "@/lib/storage";
+import {
+  bestStreak,
+  countWordsDue,
+  currentStreak,
+  getStreakDays,
+  isWeekComplete,
+  recentActivity,
+} from "@/lib/storage";
 
 export default function TodayView({ unit }: { unit: Unit | null }) {
   const { code, studentId, displayName, greeting } = useStudent();
@@ -16,6 +23,7 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
   const [activity, setActivity] = useState<{ day: string; active: boolean }[]>([]);
   const [dueWeek, setDueWeek] = useState<Unit["homework"][number] | null>(null);
   const [allDone, setAllDone] = useState(false);
+  const [wordsDue, setWordsDue] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -23,12 +31,13 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
     setStreak(currentStreak(days));
     setBest(bestStreak(days));
     setActivity(recentActivity(days, 7));
+    setWordsDue(countWordsDue(code));
     if (unit) {
       const next = unit.homework.find((h) => !isWeekComplete(studentId, unit.id, h.week));
       setDueWeek(next ?? null);
       setAllDone(unit.homework.length > 0 && !next);
     }
-  }, [studentId, unit]);
+  }, [studentId, code, unit]);
 
   return (
     <Screen title={`${greeting ?? "Hi"} 👋`} subtitle={unit ? unit.title : undefined}>
@@ -107,6 +116,24 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Vocab due for review (spaced repetition, written by the study tools) */}
+      {mounted && wordsDue > 0 && (
+        <section className="mt-5">
+          <Link
+            href={`/s/${code}/study/`}
+            className="flex items-center justify-between gap-3 rounded-card border-2 border-amber/40 bg-amber/10 p-4 active:scale-[.99]"
+          >
+            <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber/25 text-lg" aria-hidden>
+                🔁
+              </span>
+              {wordsDue} word{wordsDue === 1 ? "" : "s"} ready to review
+            </span>
+            <ChevronRightIcon className="shrink-0 text-amber-deep dark:text-amber" />
+          </Link>
         </section>
       )}
 
