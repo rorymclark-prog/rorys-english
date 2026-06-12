@@ -137,6 +137,19 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
         </section>
       )}
 
+      {/* Lessons & feedback (Drive-shared files) */}
+      <section className="mt-5">
+        <Link
+          href={`/s/${code}/resources/`}
+          className="flex items-center justify-between gap-3 rounded-card border border-navy/10 bg-white p-4 shadow-card dark:border-white/10 dark:bg-white/5"
+        >
+          <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
+            <span className="text-lg" aria-hidden>📚</span> Lessons &amp; feedback
+          </span>
+          <ChevronRightIcon className="text-navy-soft dark:text-cream/60" />
+        </Link>
+      </section>
+
       {/* Progress section */}
       <section className="mt-5">
         <Link

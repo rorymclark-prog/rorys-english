@@ -444,44 +444,44 @@ function syncQuiz(section, score, total) {
 ═══════════════════════════════════════════════════════════════ */
 
 const VOCAB = [
-  ["oil","das Öl"],
-  ["Fair Trade","der faire Handel"],
-  ["farmer","der Bauer"],
-  ["make a living","den Lebensunterhalt verdienen"],
-  ["pay rise","die Gehaltserhöhung"],
-  ["pesticide","das Pestizid"],
-  ["select","auswählen"],
-  ["agreement","die Vereinbarung"],
-  ["increase","die Zunahme"],
-  ["rate","die Rate"],
-  ["racism","der Rassismus"],
-  ["racist (adj.)","rassistisch"],
-  ["slavery","die Sklaverei"],
-  ["recognition","die Anerkennung"],
-  ["overcome","überwinden"],
-  ["harmony","die Harmonie"],
-  ["fairness","die Fairness"],
-  ["ignorance","die Unwissenheit"],
-  ["human being","der Mensch"],
-  ["angry","wütend"],
-  ["annoy","ärgern"],
-  ["frustrated","frustriert"],
-  ["helpless","hilflos"],
-  ["hurt","verletzen"],
-  ["hurtful","verletzend"],
-  ["painful","schmerzhaft"],
-  ["misunderstood","missverstanden"],
-  ["proud","stolz"],
-  ["shocked","schockiert"],
-  ["surprised","überrascht"],
-  ["brother-in-law","der Schwager"],
-  ["son-in-law","der Schwiegersohn"],
-  ["pollution","die Umweltverschmutzung"],
-  ["bicycle","das Fahrrad"],
-  ["hell","die Hölle"],
-  ["introduction","die Einführung"],
-  ["defeat","die Niederlage"],
-  ["claim","die Behauptung"]
+  ["oil","das Öl","Many countries depend on oil, but it damages the environment."],
+  ["Fair Trade","der faire Handel","Fair Trade guarantees farmers a fair price for their crops."],
+  ["farmer","der Bauer","The farmer earns very little money for the coffee he grows."],
+  ["make a living","den Lebensunterhalt verdienen","It is hard to make a living when prices keep falling."],
+  ["pay rise","die Gehaltserhöhung","Fair Trade workers received a pay rise last year."],
+  ["pesticide","das Pestizid","Some farmers use pesticide to protect their crops from insects."],
+  ["select","auswählen","Shoppers can select Fair Trade products at the supermarket."],
+  ["agreement","die Vereinbarung","The two countries signed an agreement to reduce pollution."],
+  ["increase","die Zunahme","There has been an increase in the number of Fair Trade shops."],
+  ["rate","die Rate","The rate of poverty is still too high in many countries."],
+  ["racism","der Rassismus","Racism is unfair and hurtful to everyone it affects."],
+  ["racist (adj.)","rassistisch","It is wrong to make racist comments about anyone."],
+  ["slavery","die Sklaverei","Slavery is one of the worst injustices in human history."],
+  ["recognition","die Anerkennung","Farmers deserve recognition for the hard work they do."],
+  ["overcome","überwinden","Communities can overcome poverty by working together."],
+  ["harmony","die Harmonie","People of different backgrounds can live in harmony."],
+  ["fairness","die Fairness","Fairness means everyone gets an equal chance in life."],
+  ["ignorance","die Unwissenheit","Ignorance about other cultures can lead to misunderstanding."],
+  ["human being","der Mensch","Every human being deserves to be treated with respect."],
+  ["angry","wütend","She felt angry when she heard about the unfair wages."],
+  ["annoy","ärgern","It can annoy people when others ignore environmental problems."],
+  ["frustrated","frustriert","He was frustrated because nobody listened to his ideas."],
+  ["helpless","hilflos","Poor farmers often feel helpless against big companies."],
+  ["hurt","verletzen","Racist words can deeply hurt the people they target."],
+  ["hurtful","verletzend","It is hurtful when someone is treated differently because of their skin."],
+  ["painful","schmerzhaft","It is painful to see children living in extreme poverty."],
+  ["misunderstood","missverstanden","She felt misunderstood when nobody believed her story."],
+  ["proud","stolz","He was proud of his community for fighting for fair rights."],
+  ["shocked","schockiert","We were shocked to learn how little cocoa farmers are paid."],
+  ["surprised","überrascht","I was surprised by how much Fair Trade products cost more."],
+  ["brother-in-law","der Schwager","Her brother-in-law works on a Fair Trade coffee farm."],
+  ["son-in-law","der Schwiegersohn","His son-in-law started a campaign against racism at school."],
+  ["pollution","die Umweltverschmutzung","Pollution from factories is making rivers dangerous to drink from."],
+  ["bicycle","das Fahrrad","Riding a bicycle instead of driving helps reduce pollution."],
+  ["hell","die Hölle","Life without clean water or food can feel like hell."],
+  ["introduction","die Einführung","The introduction of Fair Trade changed many farmers' lives."],
+  ["defeat","die Niederlage","They refused to accept defeat in the fight against poverty."],
+  ["claim","die Behauptung","Some companies claim their products are ethical, but they are not."]
 ];
 
 const CONDITIONALS = [
@@ -806,6 +806,21 @@ function answerS1(chosen, correct, chosenBtn) {
   if (!q.engToGer) {
     fb.appendChild(document.createTextNode(" "));
     fb.appendChild(makeSpeakBtn(q.englishWord));
+  }
+
+  // Example sentence — always shown as a teaching moment.
+  var exSentence = VOCAB[q.vocabIdx] && VOCAB[q.vocabIdx][2];
+  if (exSentence) {
+    var exDiv = document.createElement("div");
+    exDiv.style.cssText = "margin-top:10px;font-size:0.88rem;color:var(--navy);background:var(--amber-bg);border-radius:6px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;";
+    // Bold the target English word inside the sentence (case-insensitive, first match)
+    var wordRe = new RegExp("(" + q.englishWord.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + ")", "i");
+    var highlighted = exSentence.replace(wordRe, "<strong>$1</strong>");
+    var exText = document.createElement("span");
+    exText.innerHTML = "e.g. <em>" + highlighted + "</em>";
+    exDiv.appendChild(exText);
+    exDiv.appendChild(makeSpeakBtn(exSentence));
+    fb.appendChild(exDiv);
   }
 
   next.classList.remove("hidden");

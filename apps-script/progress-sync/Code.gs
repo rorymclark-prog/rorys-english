@@ -172,7 +172,54 @@ function doPost(e) {
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.action === "progress") return getProgress_(p);
+  if (p.action === "resources") return getResources_(p);
   return json_({ ok: true, service: "rorys-english progress-sync" });
+}
+
+// Lists the files in the student's "Shared" Drive subfolder (lesson slides,
+// marked work, assessments). Auto-creates the folder on first call and shares
+// each file link-viewable. ONLY this subfolder is exposed — recordings/ and
+// writing/ working files stay private. Accepts student OR parent code.
+function getResources_(p) {
+  var out;
+  try {
+    var student = p.secret === SECRET ? studentByAnyCode_(p.code) : null;
+    var sheetId = student
+      ? PropertiesService.getScriptProperties().getProperty("sheet_" + student.code)
+      : null;
+    if (!sheetId) {
+      out = { ok: false, error: "unauthorized" };
+    } else {
+      var parents = DriveApp.getFileById(sheetId).getParents();
+      var items = [];
+      if (parents.hasNext()) {
+        var shared = getOrCreateFolder_(parents.next(), "Shared");
+        var it = shared.getFiles();
+        while (it.hasNext()) {
+          var f = it.next();
+          try {
+            f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          } catch (e2) {
+            /* already shared / cannot change — link may still resolve */
+          }
+          items.push({
+            name: f.getName(),
+            url: f.getUrl(),
+            type: f.getMimeType(),
+            modified: Utilities.formatDate(f.getLastUpdated(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
+          });
+        }
+        items.sort(function (a, b) {
+          return a.modified < b.modified ? 1 : -1; // newest first
+        });
+      }
+      out = { ok: true, name: student.name, resources: items };
+    }
+  } catch (err) {
+    console.error("getResources_ error: " + err);
+    out = { ok: false, error: "internal error" };
+  }
+  return reply_(p.callback, out);
 }
 
 function getProgress_(p) {

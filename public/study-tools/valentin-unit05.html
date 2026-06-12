@@ -446,27 +446,28 @@ function syncQuiz(section, score, total) {
 ═══════════════════════════════════════════════════════════════ */
 
 // 20 EN-DE pairs for Unit 5 — Trends & Choices
+// Each entry: [english, german, exampleSentence]
 const VOCAB = [
-  ["influence",    "der Einfluss"],
-  ["sustainable",  "nachhaltig"],
-  ["trendsetter",  "der Trendsetter"],
-  ["advertising",  "die Werbung"],
-  ["persuade",     "\xFCberreden"],
-  ["promote",      "bewerben"],
-  ["compare",      "vergleichen"],
-  ["responsible",  "verantwortungsbewusst"],
-  ["reputation",   "der Ruf"],
-  ["waste (money)","verschwenden"],
-  ["consumer",     "der Konsument"],
-  ["brand",        "die Marke"],
-  ["affordable",   "erschwinglich"],
-  ["quality",      "die Qualit\xE4t"],
-  ["decision",     "die Entscheidung"],
-  ["second-hand",  "gebraucht"],
-  ["bargain",      "das Schn\xE4ppchen"],
-  ["trend",        "der Trend"],
-  ["choice",       "die Auswahl"],
-  ["purchase",     "der Kauf"]
+  ["influence",    "der Einfluss",             "Social media has a big influence on what we buy."],
+  ["sustainable",  "nachhaltig",               "Buying sustainable clothes helps protect the environment."],
+  ["trendsetter",  "der Trendsetter",          "She is a trendsetter who always wears something new."],
+  ["advertising",  "die Werbung",              "Advertising on social media can reach millions of people."],
+  ["persuade",     "\xFCberreden",             "The ad tried to persuade me to buy the new trainers."],
+  ["promote",      "bewerben",                 "Companies promote their products with catchy slogans."],
+  ["compare",      "vergleichen",              "Always compare prices before you make a decision."],
+  ["responsible",  "verantwortungsbewusst",    "A responsible consumer thinks about where products come from."],
+  ["reputation",   "der Ruf",                  "That brand has a great reputation for quality."],
+  ["waste (money)","verschwenden",             "Don’t waste money on things you don’t really need."],
+  ["consumer",     "der Konsument",            "Every consumer can make a difference by choosing wisely."],
+  ["brand",        "die Marke",                "Some people only buy one brand because they trust it."],
+  ["affordable",   "erschwinglich",            "Second-hand shops offer affordable clothes for students."],
+  ["quality",      "die Qualit\xE4t",          "Good quality items last much longer than cheap ones."],
+  ["decision",     "die Entscheidung",         "Choosing what to buy can be a difficult decision."],
+  ["second-hand",  "gebraucht",                "I found a second-hand jacket in perfect condition."],
+  ["bargain",      "das Schn\xE4ppchen",       "She got a great bargain at the end-of-season sale."],
+  ["trend",        "der Trend",                "The trend for vintage fashion is growing every year."],
+  ["choice",       "die Auswahl",              "There is a huge choice of smartphones on the market."],
+  ["purchase",     "der Kauf",                 "Think carefully before every online purchase you make."]
 ];
 
 // 7 comparative / superlative sentences
@@ -823,6 +824,18 @@ function answerS1(chosen, correct, chosenBtn) {
   if (!q.engToGer) {
     fb.appendChild(document.createTextNode(" "));
     fb.appendChild(makeSpeakBtn(q.englishWord));
+  }
+
+  // Example sentence block — shown on every answer (correct or wrong)
+  var example = VOCAB[vocabIdx] && VOCAB[vocabIdx][2];
+  if (example) {
+    var exDiv = document.createElement("div");
+    exDiv.style.cssText = "margin-top:10px;font-size:0.85rem;color:var(--navy);font-style:italic;display:flex;align-items:center;gap:4px;flex-wrap:wrap;";
+    var exText = document.createElement("span");
+    exText.textContent = "“" + example + "”";
+    exDiv.appendChild(exText);
+    exDiv.appendChild(makeSpeakBtn(example));
+    fb.appendChild(exDiv);
   }
 
   next.classList.remove("hidden");

@@ -262,7 +262,12 @@ Turn the Sheet from "homework + quizzes" into a full learner record, and surface
 ### Phase 4 — Scale & polish
 - More units + more study tools (clone the Ferdi pattern).
 - ~~Spaced-repetition review inside the study tools~~ ✅ **DONE** — SM-2-lite in both tools (state under `re_sr_<code>_<tool>` in localStorage: `{idx: {d: dueDate, i: interval, e: ease×100}}`; due-first question selection; "N words ready to review" card on Today reads the same keys via `countWordsDue()`).
-- Example sentences + audio per vocab item.
+- ~~Example sentences + audio per vocab item~~ ✅ **DONE** — every vocab word in both tools reveals a B1 example sentence with a 🔊 button after each answer.
+
+### Phase 3.5 — Lessons & feedback hub (Drive-connected) ✅ DONE
+- Each student's Drive folder has a **`Shared`** subfolder (auto-created by the Apps Script). Rory drops lesson slides / marked work / assessments there → they appear in the app automatically (no rebuild). Only that subfolder is exposed; `recordings/` and `writing/` working files stay private. Files are set link-viewable.
+- Apps Script `doGet?action=resources` lists the Shared folder (student OR parent code, secret-gated). App: `fetchResources()` → **Lessons & feedback** screen (`/s/<code>/resources`, reached from a Today card). Verified live (empty-state + endpoint).
+- *Not yet:* surfacing these in the parent view (easy follow-up — `ResourcesView` already takes a `mode` prop).
 - Possibly: cloud sync upgrade (Supabase) only if/when the Apps Script approach is outgrown.
 
 ---

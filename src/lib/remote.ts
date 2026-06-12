@@ -36,14 +36,14 @@ export interface Progress {
 
 let counter = 0;
 
-/** Fetch a progress snapshot by student code OR parent code. */
-export function fetchProgress(code: string): Promise<Progress> {
+// Generic JSONP GET against the Apps Script doGet endpoint.
+function jsonp<T>(action: string, code: string): Promise<T> {
   return new Promise((resolve, reject) => {
     if (!URL) {
       reject(new Error("sync not configured"));
       return;
     }
-    const cb = `__reProg_${counter++}_${Date.now()}`;
+    const cb = `__re_${action}_${counter++}_${Date.now()}`;
     const script = document.createElement("script");
     const timer = window.setTimeout(() => {
       cleanup();
@@ -56,12 +56,12 @@ export function fetchProgress(code: string): Promise<Progress> {
       script.remove();
     }
 
-    (window as unknown as Record<string, unknown>)[cb] = (data: Progress) => {
+    (window as unknown as Record<string, unknown>)[cb] = (data: T) => {
       cleanup();
       resolve(data);
     };
 
-    const params = new URLSearchParams({ action: "progress", code, secret: SECRET, callback: cb });
+    const params = new URLSearchParams({ action, code, secret: SECRET, callback: cb });
     script.src = `${URL}?${params.toString()}`;
     script.onerror = () => {
       cleanup();
@@ -69,4 +69,28 @@ export function fetchProgress(code: string): Promise<Progress> {
     };
     document.body.appendChild(script);
   });
+}
+
+/** Fetch a progress snapshot by student code OR parent code. */
+export function fetchProgress(code: string): Promise<Progress> {
+  return jsonp<Progress>("progress", code);
+}
+
+// ── Shared Drive resources (lesson slides, feedback, assessments) ────────────
+export interface ResourceItem {
+  name: string;
+  url: string;
+  type: string; // MIME type
+  modified: string; // YYYY-MM-DD
+}
+export interface Resources {
+  ok: boolean;
+  name?: string;
+  resources?: ResourceItem[];
+  error?: string;
+}
+
+/** Fetch the student's shared Drive files by student code OR parent code. */
+export function fetchResources(code: string): Promise<Resources> {
+  return jsonp<Resources>("resources", code);
 }
