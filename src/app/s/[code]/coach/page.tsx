@@ -9,7 +9,7 @@ export default async function CoachPage({ params }: { params: Promise<{ code: st
   return (
     <>
       <header
-        className="sticky top-0 z-10 flex items-center gap-2 bg-cream/95 px-3 backdrop-blur dark:bg-navy/95"
+        className="sticky top-0 z-10 flex items-center gap-2 bg-cream px-3 dark:bg-navy"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)", paddingBottom: "0.25rem" }}
       >
         <Link

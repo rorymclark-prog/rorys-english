@@ -52,7 +52,7 @@ export default function ProgressView({
     <>
       {/* Header (self-contained so this works in the app shell AND the parent page) */}
       <header
-        className="sticky top-0 z-10 flex items-start justify-between gap-3 bg-cream/95 px-5 pb-3 backdrop-blur dark:bg-navy/95"
+        className="sticky top-0 z-10 flex items-start justify-between gap-3 bg-cream px-5 pb-3 dark:bg-navy"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
       >
         <div className="min-w-0">
