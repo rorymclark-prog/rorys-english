@@ -26,27 +26,99 @@ export function syncEnabled(): boolean {
 // throw (offline, DNS, aborted). Those events are queued in localStorage and
 // replayed when the connection returns — the Sheet catches up instead of
 // silently staying stale. localStorage remains the source of truth regardless.
-const QUEUE_KEY = "re_sync_queue";
+//
+// The queue is scoped per student code (`re_sync_queue_<code>`) so two students
+// sharing one browser profile never mix events, and a cross-tab lock guards the
+// drain so two open tabs can't replay — and double-write — the same batch.
+const QUEUE_PREFIX = "re_sync_queue"; // per-code key: `${QUEUE_PREFIX}_<code>`
+const LEGACY_QUEUE_KEY = "re_sync_queue"; // pre-scoping single queue; drained too
 const QUEUE_MAX = 50;
+const LOCK_KEY = "re_sync_drain_lock";
+const LOCK_TTL = 15000; // ms a drain may hold the cross-tab lock before it lapses
 
-function readQueue(): Record<string, unknown>[] {
+function queueKey(code: unknown): string {
+  const c =
+    typeof code === "string" && code
+      ? code.replace(/[^A-Za-z0-9_-]/g, "")
+      : "unknown";
+  return `${QUEUE_PREFIX}_${c}`;
+}
+
+function readQueueAt(key: string): Record<string, unknown>[] {
   try {
-    return JSON.parse(window.localStorage.getItem(QUEUE_KEY) || "[]");
+    const v = JSON.parse(window.localStorage.getItem(key) || "[]");
+    return Array.isArray(v) ? v : [];
   } catch {
     return [];
   }
 }
 
-function writeQueue(q: Record<string, unknown>[]): void {
+function writeQueueAt(key: string, q: Record<string, unknown>[]): void {
   try {
-    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(q.slice(-QUEUE_MAX)));
+    if (q.length === 0) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    if (q.length > QUEUE_MAX) {
+      const dropped = q.length - QUEUE_MAX;
+      q = q.slice(-QUEUE_MAX);
+      // Signal rather than drop in silence — 50 unsent events means the backend
+      // has been unreachable for a long time; worth a console breadcrumb.
+      console.warn(
+        `[sync] ${key} exceeded ${QUEUE_MAX} events; dropped ${dropped} oldest`,
+      );
+    }
+    window.localStorage.setItem(key, JSON.stringify(q));
   } catch {
     /* quota/private mode — drop silently */
   }
 }
 
 function enqueue(payload: Record<string, unknown>): void {
-  writeQueue([...readQueue(), payload]);
+  const key = queueKey(payload.code);
+  writeQueueAt(key, [...readQueueAt(key), payload]);
+}
+
+/** Every queue key in localStorage: the legacy single key + all per-code keys. */
+function allQueueKeys(): string[] {
+  const keys: string[] = [];
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && (k === LEGACY_QUEUE_KEY || k.startsWith(`${QUEUE_PREFIX}_`))) {
+        keys.push(k);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return keys;
+}
+
+// ── Cross-tab drain lock ─────────────────────────────────────────────────────
+// localStorage has no atomic compare-and-swap, so this is a best-effort mutex:
+// claim a fresh timestamp+token, then read it back — if another tab's token won
+// the write, we back off. Combined with the synchronous batch-claim below it
+// closes the "two tabs come online together and both replay the queue" window.
+function acquireDrainLock(): boolean {
+  try {
+    const prev = window.localStorage.getItem(LOCK_KEY);
+    if (prev && Date.now() - parseInt(prev, 10) < LOCK_TTL) return false;
+    const token = `${Date.now()}:${Math.floor(Math.random() * 1e6)}`;
+    window.localStorage.setItem(LOCK_KEY, token);
+    return window.localStorage.getItem(LOCK_KEY) === token;
+  } catch {
+    // No localStorage (private mode): don't let the lock block sending.
+    return true;
+  }
+}
+
+function releaseDrainLock(): void {
+  try {
+    window.localStorage.removeItem(LOCK_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 function send(payload: Record<string, unknown>): Promise<void> {
@@ -62,12 +134,24 @@ function send(payload: Record<string, unknown>): Promise<void> {
 /** Replay queued events; keeps whatever still fails for the next attempt. */
 export function drainSyncQueue(): void {
   if (!URL || typeof window === "undefined") return;
-  const q = readQueue();
-  if (q.length === 0) return;
-  writeQueue([]); // claim the batch; failures get re-queued below
-  q.forEach((payload) => {
-    send(payload).catch(() => enqueue(payload));
-  });
+  const keys = allQueueKeys();
+  if (keys.length === 0) return;
+  if (!acquireDrainLock()) return; // another tab is draining — let it
+  try {
+    keys.forEach((key) => {
+      const q = readQueueAt(key);
+      if (q.length === 0) return;
+      writeQueueAt(key, []); // claim the batch synchronously; failures re-queue
+      q.forEach((payload) => {
+        send(payload).catch(() => enqueue(payload));
+      });
+    });
+  } finally {
+    // The batch is already claimed (queues emptied synchronously), so releasing
+    // now is safe: a re-enqueue from a failed send is a legitimate later retry,
+    // not a duplicate of something another tab is also holding.
+    releaseDrainLock();
+  }
 }
 
 // Auto-drain when connectivity returns and once on app load.

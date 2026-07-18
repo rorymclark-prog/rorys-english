@@ -22,6 +22,23 @@ This file is the working backlog; MASTERPLAN.md remains the source of truth for 
 
 ---
 
+## ✅ Done — fourth pass (this session)
+
+- **Sync retry-queue hardening (was #4).** `src/lib/sync.ts`:
+  - **Per-student queue keys** — `re_sync_queue_<code>` instead of one shared queue, so two
+    students on one browser profile never mix events. `drainSyncQueue` scans all
+    `re_sync_queue*` keys (incl. the legacy single key) and drains each; a failed legacy item
+    migrates to its per-code queue. Verified live: a seeded **legacy** *and* **per-code** queue
+    both drained in one pass.
+  - **Cross-tab drain lock** — `re_sync_drain_lock` (timestamp+token, 15 s TTL, read-back guard)
+    around the synchronous batch-claim, so two tabs coming online together can't both replay —
+    and double-write — the same batch. Verified live: a drain is **blocked** while another tab
+    holds a fresh lock (0 sends, queue untouched), then drains exactly once after release.
+  - **Cap signal** — over `QUEUE_MAX` (50) now `console.warn`s the drop count instead of
+    silently discarding the oldest.
+  - Adversarially reviewed across concurrency / back-compat / edge-case lenses (each finding
+    verified) → **0 confirmed defects**; build clean; end-to-end proven on the live site.
+
 ## ✅ Done — third pass (this session)
 
 - **Record-and-compare speaking tool** (was #8). New `/s/<code>/speak` screen (Study-tab card):
@@ -74,12 +91,13 @@ This file is the working backlog; MASTERPLAN.md remains the source of truth for 
    "Open a study tool" card (duplicates the Study tab + words-due card), and put
    Coach / Resources / Progress in one compact 3-icon row.
 
-4. **Sync retry queue hardening.** *Audit: med / S.*
-   Scope the queue key per student code; add a short cross-tab lock (localStorage timestamp)
-   before claiming, so two open tabs can't double-POST duplicate rows; raise/period-signal the
-   50-item cap instead of silently dropping the oldest.
+4. ~~**Sync retry queue hardening.**~~ ✅ **Done (fourth pass)** — per-student queue keys,
+   cross-tab drain lock, cap signal. Shipped + verified live.
 
-5. **3-way SR self-rating (Again / Good / Easy).** *Research: med / S.*
+5. **3-way SR self-rating (Again / Good / Easy).** *Research: med / S.* — **Deferred by choice.**
+   Binary correct/incorrect loses information, but a post-reveal self-rating fights the current
+   fast multiple-choice UX (tap-answer-move-on). Revisit only if the study flow moves to a
+   flashcard/reveal model. Small UI + a tweak to `srUpdate` if picked up.
    Binary correct/incorrect loses information. A quick self-rating after the reveal (classic
    SM-2 quality signal) schedules far more accurately. Small UI + a tweak to `srUpdate`.
 
