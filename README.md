@@ -4,9 +4,12 @@ Mobile-first PWA for Rory Clark's English students. Built with Next.js 15 App Ro
 
 ### What students get
 
-- **Today** — greeting, the next homework due, a gentle 7-day activity strip + streak (with a personal best).
+- **Today** — greeting, the next homework due, a gentle 7-day activity strip + streak (with a personal best), and cards for Study, Lessons & feedback, and Ask the English tutor.
 - **Homework** — weekly tasks (tick boxes, lined written answers with debounced autosave, voice-memo prompts), a tasteful confetti + haptic celebration on completion, and an **Add due date to my calendar** button (downloads an `.ics`).
-- **Study** — cards that open the unit's external HTML study tools in a new tab.
+- **Study** — cards that open the unit's external HTML study tools in a new tab (vocab quizzes, grammar, German traps, text-to-speech, spaced-repetition review).
+- **Lessons & feedback** — automatic search of Rory's Drive for files with the student's name (no manual drag-and-drop) — practice sheets, audio files, slides, etc. Cached and link-viewable once. Click to download/preview.
+- **Ask the English tutor** — conversational Q&A (Haiku), vocabulary lookup, and writing coach feedback at `/s/<code>/coach`. On-device chat history, rate-limited to 40 calls/day per student.
+- **Progress** — summary tiles + per-section tables (homework, quizzes, writing, etc.) at `/s/<code>/progress`, reached via a Today card. Parent view at `/p/<parentCode>` (private read-only link, same features).
 - **Settings** — text size, light/dark/auto theme, **Send my progress to Rory** (native share sheet → WhatsApp, nothing sent automatically), and reset.
 - **Installable PWA** — Add to Home Screen, full-screen, offline after first load, an offline banner when the connection drops, and long-press app-icon shortcuts to Homework/Study.
 - **Private by design** — no accounts, no analytics, `noindex`, progress never leaves the device.
@@ -67,13 +70,15 @@ rorys-english/
   "id": "anna",
   "displayName": "Anna",
   "code": "anna-x4p7",
+  "parentCode": "anna-fam-k2m9",
   "profile": "standard",
   "greeting": "Hi Anna",
   "units": [{ "id": "unit05", "title": "Trends & Choices", "active": true }]
 }
 ```
 
-The `code` value is the private-URL key — students access the app at `/s/<code>/`. Keep it unguessable (a few random chars appended to the name works fine).
+- The `code` value is the **student's private-URL key** — they access the app at `/s/<code>/`. Keep it unguessable (a few random chars appended to the name works fine).
+- The `parentCode` is an optional **parent/guardian read-only link** at `/p/<parentCode>/` — same progress data, no edits. Omit if no parent view is needed.
 
 2. Create `content/anna/units.json` and `content/anna/unit05/homework.json` (see shapes below).
 
@@ -131,8 +136,6 @@ The app renders each entry as a card that opens the URL in a new tab. A study to
 
 No code changes either way.
 
-> **Placeholder URL:** `content/valentin/units.json` still contains `https://example.com/REPLACE-WITH-NETLIFY-URL`. Replace it once Valentin's study tool exists (or add one under `public/study-tools/` and point to it).
-
 ---
 
 ## How to add a homework week
@@ -183,14 +186,11 @@ Tell them: **Share → Add to Home Screen** (Safari on iPhone / Chrome on Androi
 
 ## Progress sync to Google Sheets (optional)
 
-By default the app is fully device-local. To collect results in a **Google Sheet
-per student** (homework completion, quiz/vocab scores — plus tabs ready for school
-tests, writing/speaking analysis and mock tests), deploy the Apps Script in
-[`apps-script/progress-sync/`](apps-script/progress-sync/README.md). It provisions
-a Drive folder + Sheet per student and gives you a Web App URL. Put the URL +
-secret in `.env.local` and `npm run deploy` — completing homework or a quiz then
-writes a row to that student's Sheet. Without it, nothing syncs and nothing leaves
-the device.
+By default the app is fully device-local. To collect results in a **Google Sheet per student** (homework completion, quiz/vocab scores — plus tabs ready for school tests, writing/speaking analysis and mock tests), deploy the Apps Script in [`apps-script/progress-sync/`](apps-script/progress-sync/README.md). It provisions a Drive folder + Sheet per student and gives you a Web App URL. Put the URL + secret in `.env.local` and `npm run deploy` — completing homework or a quiz then writes a row to that student's Sheet. Without it, nothing syncs and nothing leaves the device.
+
+### Optional: enable the AI tutor
+
+The Lessons & feedback hub (Drive-linked) is automatic once the Apps Script is deployed. To also enable the AI tutor (chat, word help, writing coach), add `ANTHROPIC_API_KEY` to the Apps Script's Script Properties (one-time setup), then approve the `script.external_request` scope. See [`apps-script/progress-sync/README.md`](apps-script/progress-sync/README.md#3-ai-helper-endpoints-tutor-chat--word-lookup--writing-coach) for details and rate limits (40 calls per student per day).
 
 ## Privacy
 

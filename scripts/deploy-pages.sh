@@ -14,7 +14,8 @@ NEXT_PUBLIC_BASE_PATH="$BASE_PATH" npm run build
 # Stamp the service-worker cache version so each deploy invalidates the last
 # (public/sw.js keeps the literal __BUILD__ placeholder for local dev).
 BUILD_ID="$(date +%Y%m%d%H%M%S)"
-sed -i '' "s/__BUILD__/$BUILD_ID/" out/sw.js
+# perl -i is portable across macOS (BSD) and Linux (GNU); `sed -i ''` is BSD-only.
+perl -i -pe "s/__BUILD__/$BUILD_ID/" out/sw.js
 echo "→ SW cache version: rorys-english-$BUILD_ID"
 
 echo "→ Publishing out/ to gh-pages…"

@@ -403,7 +403,9 @@ function speak(text, lang) {
   try {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text);
+    // Strip parenthetical notes (e.g. "(adj.)") before speaking — they read badly aloud.
+    var spoken = text.replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();
+    var u = new SpeechSynthesisUtterance(spoken);
     u.lang = lang || 'en-GB';
     u.rate = 0.95;
     window.speechSynthesis.speak(u);
@@ -444,44 +446,44 @@ function syncQuiz(section, score, total) {
 ═══════════════════════════════════════════════════════════════ */
 
 const VOCAB = [
-  ["oil","das Öl","Many countries depend on oil, but it damages the environment."],
-  ["Fair Trade","der faire Handel","Fair Trade guarantees farmers a fair price for their crops."],
-  ["farmer","der Bauer","The farmer earns very little money for the coffee he grows."],
-  ["make a living","den Lebensunterhalt verdienen","It is hard to make a living when prices keep falling."],
-  ["pay rise","die Gehaltserhöhung","Fair Trade workers received a pay rise last year."],
-  ["pesticide","das Pestizid","Some farmers use pesticide to protect their crops from insects."],
-  ["select","auswählen","Shoppers can select Fair Trade products at the supermarket."],
-  ["agreement","die Vereinbarung","The two countries signed an agreement to reduce pollution."],
-  ["increase","die Zunahme","There has been an increase in the number of Fair Trade shops."],
-  ["rate","die Rate","The rate of poverty is still too high in many countries."],
-  ["racism","der Rassismus","Racism is unfair and hurtful to everyone it affects."],
-  ["racist (adj.)","rassistisch","It is wrong to make racist comments about anyone."],
-  ["slavery","die Sklaverei","Slavery is one of the worst injustices in human history."],
-  ["recognition","die Anerkennung","Farmers deserve recognition for the hard work they do."],
-  ["overcome","überwinden","Communities can overcome poverty by working together."],
-  ["harmony","die Harmonie","People of different backgrounds can live in harmony."],
-  ["fairness","die Fairness","Fairness means everyone gets an equal chance in life."],
-  ["ignorance","die Unwissenheit","Ignorance about other cultures can lead to misunderstanding."],
-  ["human being","der Mensch","Every human being deserves to be treated with respect."],
-  ["angry","wütend","She felt angry when she heard about the unfair wages."],
-  ["annoy","ärgern","It can annoy people when others ignore environmental problems."],
-  ["frustrated","frustriert","He was frustrated because nobody listened to his ideas."],
-  ["helpless","hilflos","Poor farmers often feel helpless against big companies."],
-  ["hurt","verletzen","Racist words can deeply hurt the people they target."],
-  ["hurtful","verletzend","It is hurtful when someone is treated differently because of their skin."],
-  ["painful","schmerzhaft","It is painful to see children living in extreme poverty."],
-  ["misunderstood","missverstanden","She felt misunderstood when nobody believed her story."],
-  ["proud","stolz","He was proud of his community for fighting for fair rights."],
-  ["shocked","schockiert","We were shocked to learn how little cocoa farmers are paid."],
-  ["surprised","überrascht","I was surprised by how much Fair Trade products cost more."],
-  ["brother-in-law","der Schwager","Her brother-in-law works on a Fair Trade coffee farm."],
-  ["son-in-law","der Schwiegersohn","His son-in-law started a campaign against racism at school."],
-  ["pollution","die Umweltverschmutzung","Pollution from factories is making rivers dangerous to drink from."],
-  ["bicycle","das Fahrrad","Riding a bicycle instead of driving helps reduce pollution."],
-  ["hell","die Hölle","Life without clean water or food can feel like hell."],
-  ["introduction","die Einführung","The introduction of Fair Trade changed many farmers' lives."],
-  ["defeat","die Niederlage","They refused to accept defeat in the fight against poverty."],
-  ["claim","die Behauptung","Some companies claim their products are ethical, but they are not."]
+  ["oil","das Öl",["Many countries depend on oil, but it damages the environment.","Cutting our oil use would help protect the planet."]],
+  ["Fair Trade","der faire Handel",["Fair Trade guarantees farmers a fair price for their crops.","More shops now sell Fair Trade chocolate and coffee."]],
+  ["farmer","der Bauer",["The farmer earns very little money for the coffee he grows.","Every farmer deserves a fair price for their harvest."]],
+  ["make a living","den Lebensunterhalt verdienen",["It is hard to make a living when prices keep falling.","Fair Trade helps small farmers make a living fairly."]],
+  ["pay rise","die Gehaltserhöhung",["Fair Trade workers received a pay rise last year.","The workers finally got a pay rise after protesting."]],
+  ["pesticide","das Pestizid",["Some farmers use pesticide to protect their crops from insects.","Too much pesticide can pollute the rivers nearby."]],
+  ["select","auswählen",["Shoppers can select Fair Trade products at the supermarket.","You can select organic vegetables instead of sprayed ones."]],
+  ["agreement","die Vereinbarung",["The two countries signed an agreement to reduce pollution.","Farmers and buyers reached a fair agreement on prices."]],
+  ["increase","die Zunahme",["There has been an increase in the number of Fair Trade shops.","Charities reported a sharp increase in child poverty."]],
+  ["rate","die Rate",["The rate of poverty is still too high in many countries.","The unemployment rate rose sharply during the crisis."]],
+  ["racism","der Rassismus",["Racism is unfair and hurtful to everyone it affects.","Schools should teach children to speak out against racism."]],
+  ["racist (adj.)","rassistisch",["It is wrong to make racist comments about anyone.","Nobody should stay silent when they hear a racist joke."]],
+  ["slavery","die Sklaverei",["Slavery is one of the worst injustices in human history.","Fair Trade was partly created to fight modern slavery."]],
+  ["recognition","die Anerkennung",["Farmers deserve recognition for the hard work they do.","The volunteers finally received recognition for their years of work."]],
+  ["overcome","überwinden",["Communities can overcome poverty by working together.","It takes courage to overcome years of unfair treatment."]],
+  ["harmony","die Harmonie",["People of different backgrounds can live in harmony.","The festival celebrates cultures living together in harmony."]],
+  ["fairness","die Fairness",["Fairness means everyone gets an equal chance in life.","Fairness at work means equal pay for equal work."]],
+  ["ignorance","die Unwissenheit",["Ignorance about other cultures can lead to misunderstanding.","Travelling can help reduce ignorance about other countries."]],
+  ["human being","der Mensch",["Every human being deserves to be treated with respect.","Poverty affects the dignity of every human being."]],
+  ["angry","wütend",["She felt angry when she heard about the unfair wages.","He grew angry watching factories pollute the local river."]],
+  ["annoy","ärgern",["It can annoy people when others ignore environmental problems.","Constant littering starts to annoy people who love nature."]],
+  ["frustrated","frustriert",["He was frustrated because nobody listened to his ideas.","Farmers feel frustrated when big companies control the prices."]],
+  ["helpless","hilflos",["Poor farmers often feel helpless against big companies.","Refugees often feel helpless in an unfamiliar country."]],
+  ["hurt","verletzen",["Racist words can deeply hurt the people they target.","Unfair wages hurt families who are already struggling."]],
+  ["hurtful","verletzend",["It is hurtful when someone is treated differently because of their skin.","It is hurtful to be judged by your accent."]],
+  ["painful","schmerzhaft",["It is painful to see children living in extreme poverty.","Losing the family farm was painful for everyone."]],
+  ["misunderstood","missverstanden",["She felt misunderstood when nobody believed her story.","Immigrants sometimes feel misunderstood in an unfamiliar culture."]],
+  ["proud","stolz",["He was proud of his community for fighting for fair rights.","The village felt proud when the school reopened."]],
+  ["shocked","schockiert",["We were shocked to learn how little cocoa farmers are paid.","Visitors were shocked by the factory's working conditions."]],
+  ["surprised","überrascht",["I was surprised by how much Fair Trade products cost more.","I was surprised how cheap the unfair products still were."]],
+  ["brother-in-law","der Schwager",["Her brother-in-law works on a Fair Trade coffee farm.","My brother-in-law volunteers for a Fair Trade charity."]],
+  ["son-in-law","der Schwiegersohn",["His son-in-law started a campaign against racism at school.","Her son-in-law writes articles about pollution and poverty."]],
+  ["pollution","die Umweltverschmutzung",["Pollution from factories is making rivers dangerous to drink from.","Air pollution in the city gets worse every winter."]],
+  ["bicycle","das Fahrrad",["Riding a bicycle instead of driving helps reduce pollution.","Many students ride an old bicycle to school daily."]],
+  ["hell","die Hölle",["Life without clean water or food can feel like hell.","Working long hours for low pay felt like hell."]],
+  ["introduction","die Einführung",["The introduction of Fair Trade changed many farmers' lives.","Her introduction to Fair Trade began on a school trip."]],
+  ["defeat","die Niederlage",["They refused to accept defeat in the fight against poverty.","Accepting defeat too easily won't change an unfair system."]],
+  ["claim","die Behauptung",["Some companies claim their products are ethical, but they are not.","Don't believe every claim a company makes about fairness."]]
 ];
 
 const CONDITIONALS = [
@@ -577,6 +579,17 @@ function lsGet(k, def) {
 }
 function lsSet(k, v) {
   try { localStorage.setItem(PRE+k, JSON.stringify(v)); } catch(e) {}
+}
+
+/* ════════════════════════════════════════════════════════════════
+   WORD SEEN COUNTER — rotates which example sentence is shown.
+   Unrelated to the SR schedule below; stored under its own PRE key.
+═══════════════════════════════════════════════════════════════ */
+function bumpSeenCount(vocabIdx) {
+  const counts = lsGet("seenCounts", {});
+  counts[vocabIdx] = (counts[vocabIdx] || 0) + 1;
+  lsSet("seenCounts", counts);
+  return counts[vocabIdx];
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -809,8 +822,13 @@ function answerS1(chosen, correct, chosenBtn) {
   }
 
   // Example sentence — always shown as a teaching moment.
-  var exSentence = VOCAB[q.vocabIdx] && VOCAB[q.vocabIdx][2];
-  if (exSentence) {
+  // VOCAB[i][2] may be an array of 2–3 sentences (preferred) or a plain string (back-compat).
+  var exRaw = VOCAB[q.vocabIdx] && VOCAB[q.vocabIdx][2];
+  var exArr = Array.isArray(exRaw) ? exRaw : (typeof exRaw === "string" && exRaw ? [exRaw] : []);
+  if (exArr.length) {
+    // Rotate through the available sentences so repeat encounters show a different one.
+    var seenN = bumpSeenCount(q.vocabIdx);
+    var exSentence = exArr[(seenN - 1) % exArr.length];
     var exDiv = document.createElement("div");
     exDiv.style.cssText = "margin-top:10px;font-size:0.88rem;color:var(--navy);background:var(--amber-bg);border-radius:6px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;";
     // Bold the target English word inside the sentence (case-insensitive, first match)

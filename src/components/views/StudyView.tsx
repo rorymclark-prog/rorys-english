@@ -1,14 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import type { Unit } from "@/lib/types";
+import { useStudent } from "@/components/StudentContext";
 import Screen from "@/components/Screen";
-import { ExternalIcon } from "@/components/Icons";
+import { ExternalIcon, ChevronRightIcon } from "@/components/Icons";
 
 // The app does NOT host a quiz engine. Each study tool is an external HTML page
 // (built in Claude, hosted on Netlify); we just link out. Add a tool by adding a
 // URL to the unit's units.json — no code changes.
 export default function StudyView({ unit }: { unit: Unit | null }) {
+  const { code } = useStudent();
   const tools = unit?.studyTools ?? [];
+  const hasSpeaking = (unit?.speakingLines?.length ?? 0) > 0;
   // Root-relative tool URLs (study tools bundled in /public) need the host's
   // base path; full http(s) URLs are used as-is.
   const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -16,6 +20,19 @@ export default function StudyView({ unit }: { unit: Unit | null }) {
 
   return (
     <Screen title="Study" subtitle={unit?.title}>
+      {/* In-app speaking practice (record & compare) */}
+      {hasSpeaking && (
+        <Link
+          href={`/s/${code}/speak/`}
+          className="mt-2 flex items-center justify-between gap-3 rounded-card border border-amber/40 bg-amber/10 p-4 active:scale-[.99]"
+        >
+          <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
+            <span className="text-lg" aria-hidden>🎤</span> Speaking practice
+          </span>
+          <ChevronRightIcon className="text-amber-deep dark:text-amber" />
+        </Link>
+      )}
+
       {tools.length === 0 ? (
         <p className="mt-6 rounded-card bg-white p-5 text-center text-burgundy shadow-card dark:bg-white/5 dark:text-amber/80">
           No study tools yet. They&apos;ll appear here when Rory adds them.

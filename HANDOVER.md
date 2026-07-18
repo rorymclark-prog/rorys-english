@@ -125,6 +125,14 @@ npm run deploy     # rebuilds with .env.local baked in + pushes to gh-pages
 ```
 Wait ~1 min for GitHub Pages.
 
+### Step 6b — (optional) enable the AI tutor
+The Lessons & feedback hub (auto-linked Drive files) is now live. To also enable the AI helper (chat, word help, writing coach), add the Anthropic API key to Script Properties:
+
+1. Go to the Apps Script editor → **Project Settings → Script Properties**.
+2. Add a new property: `ANTHROPIC_API_KEY` = your key from [Anthropic dashboard](https://console.anthropic.com/api-keys/).
+3. Run any Apps Script function (e.g., `setup()` again) once to approve the new `script.external_request` scope.
+4. That's it — students now see an "Ask the English tutor" card on Today, and the `/s/<code>/coach` endpoint works. Rate limit: 40 calls/student/day; input capped at 2000 chars.
+
 ### Step 7 — verify (do not skip)
 1. Open `…/s/ferdi-7h3k/homework/1/`, tick a task, tap **Mark as complete**.
 2. Open the **Ferdi — Progress** Sheet → **Homework** tab → a row should appear within seconds.
@@ -179,13 +187,18 @@ Wait ~1 min for GitHub Pages.
 
 ## 9. Known open items & roadmap
 
+**Shipped (✅ done & live):**
+- Valentin's study tool (`public/study-tools/valentin-unit05.html`) — 20 vocab words, comparatives gap-fill, B1 German traps, TTS, spaced-rep.
+- Lessons & feedback hub — auto-linked Drive files (no manual drag-and-drop); 40 newest, Sheets/Scripts excluded, [private] naming opt-out.
+- AI helper suite — tutor chat, word lookup, writing coach at `/s/<code>/coach`; 40 calls/student/day, models: Haiku (chat/word), Sonnet (writing).
+- Progress section & parent view — `/s/<code>/progress` and `/p/<parentCode>/` (read-only, same features).
+
 **Open (content, not code):**
-- **Valentin's study tool** is a placeholder URL — Ferdi's `ferdi-unit10.html` is the working model to clone.
-- **German vocab translations** in `ferdi-unit10.html` are AI best-effort — verify against the MORE! 4 glossary (the tool shows a note).
+- **German vocab translations** in both study tools are AI best-effort — verify against the MORE! 4 and way2go! glossaries (the tools show a note).
 
 **Roadmap (researched, ranked by value-for-effort):**
-1. **Spaced-repetition review (SM-2)** inside the study tools — highest learning ROI; per-word due-dates in localStorage, surfaced on Today. ~M effort.
-2. **Example sentences** per vocab word (static JSON) + reuse the existing TTS to read them. ~S effort, needs tutor content.
+1. ~~**Spaced-repetition review (SM-2)**~~ ✅ **DONE** — both study tools now ship with SM-2-lite (per-word due-dates in localStorage, "N words ready to review" card on Today, questions sorted by due-first).
+2. ~~**Example sentences**~~ ✅ **DONE** — every vocab word in both tools reveals a B1 example sentence + 🔊 TTS button after answer.
 3. **Analysis pipelines feeding the Sheets** (the rich tabs are already created):
    - *Writing analysis:* tutor drops a sample in the student's `writing/` Drive folder → an agent scores CEFR/grammar/vocab/coherence → appends to the **Writing** tab.
    - *Speaking/audio analysis:* recording → transcribe → fluency/pronunciation/grammar → **Speaking** tab.

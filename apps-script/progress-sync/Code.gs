@@ -224,7 +224,10 @@ function getAi_(p) {
   var out;
   try {
     var student = p.secret === SECRET ? studentByAnyCode_(p.code) : null;
-    if (!student) {
+    // AI is student-only: a parent code can READ progress/resources but must not
+    // spend the student's daily AI quota. Parent codes resolve to a student whose
+    // .code differs from the code that was sent.
+    if (!student || student.code !== p.code) {
       out = { ok: false, error: "unauthorized" };
     } else if (aiCount_(student.code) >= AI_DAILY_CAP) {
       out = { ok: false, error: "That's enough practice with the helper for today — try again tomorrow!" };
@@ -266,9 +269,28 @@ function aiInc_(code) {
   } catch (e) {}
   var props = PropertiesService.getScriptProperties();
   var k = aiKey_(code);
-  props.setProperty(k, String(parseInt(props.getProperty(k) || "0", 10) + 1));
+  var n = parseInt(props.getProperty(k) || "0", 10);
+  props.setProperty(k, String(n + 1));
+  if (n === 0) pruneAiCounters_(props); // first write of a new day → tidy old keys
   try {
     lock.releaseLock();
+  } catch (e) {}
+}
+
+// Delete ai_<code>_<date> counters older than 2 days so Script Properties don't
+// grow forever. Cheap: only runs on the first AI call of a new day.
+function pruneAiCounters_(props) {
+  try {
+    var cutoff = Utilities.formatDate(
+      new Date(Date.now() - 2 * 86400000),
+      Session.getScriptTimeZone(),
+      "yyyy-MM-dd",
+    );
+    var all = props.getKeys();
+    for (var i = 0; i < all.length; i++) {
+      var m = all[i].match(/^ai_.+_(\d{4}-\d{2}-\d{2})$/);
+      if (m && m[1] < cutoff) props.deleteProperty(all[i]);
+    }
   } catch (e) {}
 }
 
@@ -296,6 +318,8 @@ function callClaude_(model, system, userText, maxTokens) {
     .filter(function (b) { return b.type === "text"; })
     .map(function (b) { return b.text; })
     .join("\n");
+  // Be honest when the reply was cut off by the token limit.
+  if (body.stop_reason === "max_tokens") text += "\n\n…(cut off — ask me to continue)";
   return { ok: true, text: text };
 }
 
@@ -363,6 +387,44 @@ var RESOURCE_BLOCK_MIME = {
   "application/vnd.google-apps.spreadsheet": 1,
   "application/vnd.google-apps.script": 1,
 };
+
+// Maintenance: revoke link-sharing on any previously-shared file that no longer
+// matches a current student (renamed, deleted, or flagged [private]). Run this
+// occasionally from the editor, or add a weekly time-driven trigger.
+function unshareStale_() {
+  var props = PropertiesService.getScriptProperties();
+  var cached = {};
+  try {
+    JSON.parse(props.getProperty("shared_ids") || "[]").forEach(function (id) { cached[id] = 1; });
+  } catch (e) {}
+  var current = {};
+  STUDENTS.forEach(function (s) {
+    var esc = s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var re = new RegExp("(^|[^A-Za-z])" + esc + "([^A-Za-z]|$)", "i");
+    var it = DriveApp.searchFiles(
+      "title contains '" + s.name.replace(/'/g, "\\'") + "' and trashed = false and 'me' in owners",
+    );
+    while (it.hasNext()) {
+      var f = it.next();
+      if (RESOURCE_BLOCK_MIME[f.getMimeType()]) continue;
+      if (/\[private\]/i.test(f.getName())) continue;
+      if (re.test(f.getName())) current[f.getId()] = 1;
+    }
+  });
+  var keep = [], revoked = 0;
+  Object.keys(cached).forEach(function (id) {
+    if (current[id]) {
+      keep.push(id);
+      return;
+    }
+    try {
+      DriveApp.getFileById(id).setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
+      revoked++;
+    } catch (e) {}
+  });
+  props.setProperty("shared_ids", JSON.stringify(keep));
+  Logger.log("unshareStale_: revoked " + revoked + ", kept " + keep.length);
+}
 
 // Collect metadata only (no Drive writes). Filters out risky / non-lesson files.
 function collectResource_(f, cands, seen, student) {

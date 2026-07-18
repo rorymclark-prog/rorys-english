@@ -22,6 +22,24 @@ This file is the working backlog; MASTERPLAN.md remains the source of truth for 
 
 ---
 
+## ✅ Done — third pass (this session)
+
+- **Record-and-compare speaking tool** (was #8). New `/s/<code>/speak` screen (Study-tab card):
+  hear a model sentence (TTS) → record yourself (`MediaRecorder`, mic audio stays in-memory,
+  never leaves the device) → play both back to self-compare. No scoring. Seeded 6 B1 lines per
+  unit (`speakingLines` in units.json). Verified live.
+- **Vary the example sentence (was #6).** Both tools: each vocab word now carries 2–3 example
+  sentences, rotated on repeat encounters. Back-compatible with the old single-string slot.
+- **TTS reads parentheticals fix.** `speak()` strips `(...)` so "racist (adj.)" isn't spoken "adj".
+- **Study-tool drift fixed** — Valentin's due-badge updates per answer; example word bolded in both.
+- **Apps Script hardening:** AI is now **student-code-only** (parent codes can read progress but
+  can't spend the quota — verified); rate slot charged under a lock and only on success; a
+  `max_tokens` cut-off adds a "…(cut off — ask me to continue)" note; old `ai_<code>_<date>`
+  counters auto-pruned; `unshareStale_()` maintenance function revokes sharing on files that no
+  longer match a student.
+- **deploy-pages.sh** now uses portable `perl -i` (was BSD-only `sed -i ''`).
+- **Docs** (README, HANDOVER, apps-script README) updated to the current system.
+
 ## ✅ Done — second pass (this session)
 
 - **CORS POST migration (was #7, the headline).** Verified live that Apps Script returns

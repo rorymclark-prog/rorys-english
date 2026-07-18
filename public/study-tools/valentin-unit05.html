@@ -403,7 +403,9 @@ function speak(text, lang) {
   try {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text);
+    // Strip parenthetical notes (e.g. "(money)") before speaking — they read badly aloud.
+    var spoken = text.replace(/\([^)]*\)/g,' ').replace(/\s+/g,' ').trim();
+    var u = new SpeechSynthesisUtterance(spoken);
     u.lang = lang || 'en-GB';
     u.rate = 0.95;
     window.speechSynthesis.speak(u);
@@ -446,28 +448,29 @@ function syncQuiz(section, score, total) {
 ═══════════════════════════════════════════════════════════════ */
 
 // 20 EN-DE pairs for Unit 5 — Trends & Choices
-// Each entry: [english, german, exampleSentence]
+// Each entry: [english, german, exampleSentences] — exampleSentences is an
+// array of 2–3 short sentences (back-compat: a plain string also still works).
 const VOCAB = [
-  ["influence",    "der Einfluss",             "Social media has a big influence on what we buy."],
-  ["sustainable",  "nachhaltig",               "Buying sustainable clothes helps protect the environment."],
-  ["trendsetter",  "der Trendsetter",          "She is a trendsetter who always wears something new."],
-  ["advertising",  "die Werbung",              "Advertising on social media can reach millions of people."],
-  ["persuade",     "\xFCberreden",             "The ad tried to persuade me to buy the new trainers."],
-  ["promote",      "bewerben",                 "Companies promote their products with catchy slogans."],
-  ["compare",      "vergleichen",              "Always compare prices before you make a decision."],
-  ["responsible",  "verantwortungsbewusst",    "A responsible consumer thinks about where products come from."],
-  ["reputation",   "der Ruf",                  "That brand has a great reputation for quality."],
-  ["waste (money)","verschwenden",             "Don’t waste money on things you don’t really need."],
-  ["consumer",     "der Konsument",            "Every consumer can make a difference by choosing wisely."],
-  ["brand",        "die Marke",                "Some people only buy one brand because they trust it."],
-  ["affordable",   "erschwinglich",            "Second-hand shops offer affordable clothes for students."],
-  ["quality",      "die Qualit\xE4t",          "Good quality items last much longer than cheap ones."],
-  ["decision",     "die Entscheidung",         "Choosing what to buy can be a difficult decision."],
-  ["second-hand",  "gebraucht",                "I found a second-hand jacket in perfect condition."],
-  ["bargain",      "das Schn\xE4ppchen",       "She got a great bargain at the end-of-season sale."],
-  ["trend",        "der Trend",                "The trend for vintage fashion is growing every year."],
-  ["choice",       "die Auswahl",              "There is a huge choice of smartphones on the market."],
-  ["purchase",     "der Kauf",                 "Think carefully before every online purchase you make."]
+  ["influence",    "der Einfluss",             ["Social media has a big influence on what we buy.","Influencers have a strong influence on teenage fashion choices."]],
+  ["sustainable",  "nachhaltig",               ["Buying sustainable clothes helps protect the environment.","More brands now sell sustainable shoes made from recycled plastic."]],
+  ["trendsetter",  "der Trendsetter",          ["She is a trendsetter who always wears something new.","Being a trendsetter means shopping before everyone else does."]],
+  ["advertising",  "die Werbung",              ["Advertising on social media can reach millions of people.","Clever advertising makes us want things we don't need."]],
+  ["persuade",     "\xFCberreden",             ["The ad tried to persuade me to buy the new trainers.","Influencers often persuade fans to buy the same products."]],
+  ["promote",      "bewerben",                 ["Companies promote their products with catchy slogans.","Stars promote new trainers on their social media pages."]],
+  ["compare",      "vergleichen",              ["Always compare prices before you make a decision.","It's smart to compare online prices before every purchase."]],
+  ["responsible",  "verantwortungsbewusst",    ["A responsible consumer thinks about where products come from.","A responsible shopper checks where their clothes were made."]],
+  ["reputation",   "der Ruf",                  ["That brand has a great reputation for quality.","One bad review can damage a brand's whole reputation."]],
+  ["waste (money)","verschwenden",             ["Don’t waste money on things you don’t really need.","It's easy to waste money on things you saw online."]],
+  ["consumer",     "der Konsument",            ["Every consumer can make a difference by choosing wisely.","Each consumer decision sends a message to big companies."]],
+  ["brand",        "die Marke",                ["Some people only buy one brand because they trust it.","She only trusts one brand for running shoes."]],
+  ["affordable",   "erschwinglich",            ["Second-hand shops offer affordable clothes for students.","Thrift stores sell affordable clothes that still look stylish."]],
+  ["quality",      "die Qualit\xE4t",          ["Good quality items last much longer than cheap ones.","Cheap trends rarely match the quality of classic pieces."]],
+  ["decision",     "die Entscheidung",         ["Choosing what to buy can be a difficult decision.","Buying secondhand can be a smart financial decision."]],
+  ["second-hand",  "gebraucht",                ["I found a second-hand jacket in perfect condition.","Second-hand fashion is becoming popular with younger shoppers."]],
+  ["bargain",      "das Schn\xE4ppchen",       ["She got a great bargain at the end-of-season sale.","He found a real bargain during the online sale."]],
+  ["trend",        "der Trend",                ["The trend for vintage fashion is growing every year.","This year's trend is wearing bold, bright colours."]],
+  ["choice",       "die Auswahl",              ["There is a huge choice of smartphones on the market.","Shoppers now have endless choice thanks to online stores."]],
+  ["purchase",     "der Kauf",                 ["Think carefully before every online purchase you make.","She regretted the purchase after seeing a cheaper option."]]
 ];
 
 // 7 comparative / superlative sentences
@@ -568,6 +571,17 @@ function lsSet(k, v) {
   try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch(e) {}
 }
 
+/* ════════════════════════════════════════════════════════════════
+   WORD SEEN COUNTER — rotates which example sentence is shown.
+   Unrelated to the SR schedule below; stored under its own PRE key.
+═══════════════════════════════════════════════════════════════ */
+function bumpSeenCount(vocabIdx) {
+  var counts = lsGet("seenCounts", {});
+  counts[vocabIdx] = (counts[vocabIdx] || 0) + 1;
+  lsSet("seenCounts", counts);
+  return counts[vocabIdx];
+}
+
 // SR data stored under its own top-level key (not PRE-prefixed)
 function srLoad() {
   try { var v = localStorage.getItem(SR_KEY); return v ? JSON.parse(v) : {}; }
@@ -663,6 +677,14 @@ function srDueCount() {
     if (data[idx] && data[idx].d <= today) count++;
   });
   return count;
+}
+
+// Refresh the "N words due for review" badge from the current SR data.
+function updateSrBadge() {
+  var due = srDueCount();
+  var srSpan = document.getElementById("srDue");
+  if (!srSpan) return;
+  srSpan.textContent = due > 0 ? (due + " word" + (due === 1 ? "" : "s") + " due for review") : "";
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -809,6 +831,7 @@ function answerS1(chosen, correct, chosenBtn) {
 
   // Update SR record
   srUpdate(vocabIdx, isCorrect);
+  updateSrBadge();
 
   if (isCorrect) {
     s1Score++;
@@ -826,13 +849,21 @@ function answerS1(chosen, correct, chosenBtn) {
     fb.appendChild(makeSpeakBtn(q.englishWord));
   }
 
-  // Example sentence block — shown on every answer (correct or wrong)
-  var example = VOCAB[vocabIdx] && VOCAB[vocabIdx][2];
-  if (example) {
+  // Example sentence block — shown on every answer (correct or wrong).
+  // VOCAB[i][2] may be an array of 2–3 sentences (preferred) or a plain string (back-compat).
+  var exRaw = VOCAB[vocabIdx] && VOCAB[vocabIdx][2];
+  var exArr = Array.isArray(exRaw) ? exRaw : (typeof exRaw === "string" && exRaw ? [exRaw] : []);
+  if (exArr.length) {
+    // Rotate through the available sentences so repeat encounters show a different one.
+    var seenN = bumpSeenCount(vocabIdx);
+    var example = exArr[(seenN - 1) % exArr.length];
     var exDiv = document.createElement("div");
     exDiv.style.cssText = "margin-top:10px;font-size:0.85rem;color:var(--navy);font-style:italic;display:flex;align-items:center;gap:4px;flex-wrap:wrap;";
+    // Bold the target English word inside the sentence (case-insensitive, first match)
+    var wordRe = new RegExp("(" + q.englishWord.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + ")", "i");
+    var highlighted = example.replace(wordRe, "<strong>$1</strong>");
     var exText = document.createElement("span");
-    exText.textContent = "“" + example + "”";
+    exText.innerHTML = "“" + highlighted + "”";
     exDiv.appendChild(exText);
     exDiv.appendChild(makeSpeakBtn(example));
     fb.appendChild(exDiv);
