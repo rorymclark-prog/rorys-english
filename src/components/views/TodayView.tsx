@@ -144,7 +144,7 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
           className="flex items-center justify-between gap-3 rounded-card border border-amber/40 bg-amber/10 p-4 active:scale-[.99]"
         >
           <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
-            <span className="text-lg" aria-hidden>✨</span> Word help &amp; writing coach
+            <span className="text-lg" aria-hidden>✨</span> Ask the English tutor
           </span>
           <ChevronRightIcon className="text-amber-deep dark:text-amber" />
         </Link>

@@ -269,8 +269,9 @@ Turn the Sheet from "homework + quizzes" into a full learner record, and surface
 - Each surfaced file is set **link-viewable once** (cached in Script Property `shared_ids` so repeat loads are fast — first load ~9s while sharing, then ~4s). ⚠️ **Naming rule:** any Drive file named with a student's name becomes link-viewable in their app — name genuinely-private files *without* the student's name.
 - App: `fetchResources()` → **Lessons & feedback** screen (`/s/<code>/resources`, Today card). Student or parent code.
 
-### Phase 3.6 — AI helper (word lookup + writing coach) ✅ DONE (needs 1-time key)
-- **Word help** (Haiku) and **Writing coach** (Sonnet, practice-not-graded) at `/s/<code>/coach` (Today card). App → `fetchAi()` (JSONP) → Apps Script `doGet?action=ai`.
+### Phase 3.6 — AI helper (tutor chat + word lookup + writing coach) ✅ DONE (needs 1-time key)
+- **Ask the tutor** (Haiku): a chat-style Q&A mode — bubbles, on-device history (`re_tutor_chat_<code>`, last 30 msgs), last ~6 turns sent as context (1200-char budget) so follow-ups work; B1-simple answers with German glosses; steers off-topic chat back to English; wellbeing-safety line in all AI prompts (suggests talking to Rory/a trusted adult, never counsels).
+- **Word help** (Haiku) and **Writing coach** (Sonnet, practice-not-graded) — same screen, `/s/<code>/coach` ("Ask the English tutor" Today card). App → `fetchAi()` (JSONP) → Apps Script `doGet?action=ai&kind=tutor|word|writing`.
 - **Key stays server-side:** the Anthropic key lives in Script Property `ANTHROPIC_API_KEY`, never in the app bundle. Rate-limited to **40 calls/student/day** (`ai_<code>_<date>` counters) so a leaked secret can't run up the bill; input capped at 2000 chars; generic errors.
 - **To switch on (1-time, Rory):** (1) Apps Script editor → Project Settings → Script Properties → add `ANTHROPIC_API_KEY`. (2) Run any function (e.g. `setup`) once to approve the new `script.external_request` scope. Until then the app shows a friendly "isn't switched on yet" (verified live).
 - Models: `claude-haiku-4-5` (word), `claude-sonnet-4-6` (writing).

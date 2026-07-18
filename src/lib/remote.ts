@@ -83,8 +83,12 @@ export interface AiResult {
   error?: string;
 }
 
-/** Ask the AI helper. kind "word" = quick lookup; "writing" = writing coach. */
-export function fetchAi(code: string, kind: "word" | "writing", q: string): Promise<AiResult> {
+/** Ask the AI helper. "word" = lookup; "writing" = coach; "tutor" = Q&A chat. */
+export function fetchAi(
+  code: string,
+  kind: "word" | "writing" | "tutor",
+  q: string,
+): Promise<AiResult> {
   return jsonp<AiResult>({ action: "ai", code, kind, q });
 }
 
