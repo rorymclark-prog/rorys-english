@@ -49,6 +49,21 @@ NEXT_PUBLIC_SYNC_SECRET=change-me-rory-english-2026
 npm run deploy
 ```
 
+## Teacher dashboard (one-time setup, needed to switch on)
+
+`/teacher/` is a single password-gated page showing every student at a
+glance (homework/quiz/writing counts, last updated) with drill-down into
+full per-student progress — same data as each student's own Progress tab,
+aggregated. It's POST-only end to end (no GET/JSONP path anywhere), so the
+password can never end up in a URL, browser history, or a server log.
+
+Same one-time-paste pattern as `ANTHROPIC_API_KEY`: Apps Script editor →
+**Project Settings → Script Properties → add key `TEACHER_PASSWORD`** with a
+password only you know. Until it's set, the endpoint fails closed (rejects
+every attempt) rather than falling back to any default. Then visit
+`/teacher/` and enter it — the app remembers you on that device (signed in
+via a browser-stored token, not cookies) until you tap "Sign out."
+
 Done — completing a homework week or finishing a quiz round now appends a row to
 that student's Sheet within a second or two.
 

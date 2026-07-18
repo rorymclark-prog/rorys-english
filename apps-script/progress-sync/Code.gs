@@ -138,6 +138,10 @@ function doPost(e) {
     if (data.action === "progress") return getProgress_(data);
     if (data.action === "resources") return getResources_(data);
     if (data.action === "ai") return getAi_(data);
+    // Teacher dashboard is POST-only, on purpose: no doGet/JSONP branch exists
+    // for it anywhere in this file, so the password can never end up in a URL
+    // (browser history, server access logs, a shared-link screenshot).
+    if (data.action === "teacherDashboard") return getTeacherDashboard_(data);
 
     // WRITES (homework/quiz/writing). One generic auth error: no oracle.
     var sheetId =
@@ -522,6 +526,61 @@ function rows_(ss, name) {
     return r.join("").trim() !== "";
   });
   return { headers: v[0], rows: rows };
+}
+
+// ── Teacher dashboard ─────────────────────────────────────────────────────
+// One password gates ALL students' data at once — much higher value than any
+// single student's SECRET — so it lives in its own Script Property, set by
+// Rory directly in the Apps Script editor (Project Settings → Script
+// Properties → TEACHER_PASSWORD), the same one-time-paste pattern as
+// ANTHROPIC_API_KEY. Never set a default here; an unset property means the
+// endpoint always rejects (fails closed, not open).
+var TEACHER_PASSWORD_PROP = "TEACHER_PASSWORD";
+
+function getTeacherDashboard_(p) {
+  var out;
+  try {
+    var expected = PropertiesService.getScriptProperties().getProperty(TEACHER_PASSWORD_PROP);
+    if (!expected || p.teacherSecret !== expected) {
+      out = { ok: false, error: "unauthorized" };
+    } else {
+      var props = PropertiesService.getScriptProperties();
+      var students = STUDENTS.map(function (s) {
+        var sheetId = props.getProperty("sheet_" + s.code);
+        var ss = sheetId ? safeOpen_(sheetId) : null;
+        return { code: s.code, name: s.name, summary: ss ? studentSummary_(ss) : null };
+      });
+      out = { ok: true, generatedAt: now_(), students: students };
+    }
+  } catch (err) {
+    console.error("getTeacherDashboard_ error: " + err);
+    out = { ok: false, error: "internal error" };
+  }
+  // Plain JSON only (json_, not reply_) — this endpoint has no callback/JSONP
+  // path, so a teacherSecret can never leak into a URL.
+  return json_(out);
+}
+
+// Reads the Dashboard tab's already-computed formula values (COUNTIF/MAX over
+// the other tabs) instead of recomputing from raw rows — reuses the exact
+// numbers a tutor sees opening the Sheet directly, and stays correct if Rory
+// ever hand-edits a row.
+function studentSummary_(ss) {
+  var d = ss.getSheetByName("Dashboard");
+  if (!d || d.getLastRow() < 7) return null;
+  var v = d.getRange("A2:B7").getValues(); // fixed order: see writeDashboard_
+  var val = function (i) {
+    var x = v[i][1];
+    return x instanceof Date ? x.toISOString() : x;
+  };
+  return {
+    homeworkDone: val(0),
+    quizRounds: val(1),
+    bestQuizPct: val(2),
+    schoolTests: val(3),
+    writingSamples: val(4),
+    lastUpdated: val(5),
+  };
 }
 
 // JSON when no callback; JSONP (text/javascript) when a callback is given.

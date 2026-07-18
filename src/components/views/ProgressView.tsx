@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { StudyTool } from "@/lib/types";
 import { fetchProgress, remoteEnabled, type Progress, type Section } from "@/lib/remote";
-import { GearIcon, ExternalIcon } from "@/components/Icons";
+import { GearIcon, ExternalIcon, ChevronLeftIcon } from "@/components/Icons";
 
-type Mode = "student" | "parent";
+type Mode = "student" | "parent" | "teacher";
 
 export default function ProgressView({
   fetchCode,
@@ -14,6 +14,7 @@ export default function ProgressView({
   displayName,
   mode,
   links = [],
+  onBack,
 }: {
   /** student code OR parent code — what we query the Sheet with */
   fetchCode: string;
@@ -22,6 +23,8 @@ export default function ProgressView({
   displayName: string;
   mode: Mode;
   links?: StudyTool[];
+  /** teacher mode only: inline "back to dashboard" instead of a route change */
+  onBack?: () => void;
 }) {
   const [state, setState] = useState<"loading" | "ok" | "error" | "off">("loading");
   const [data, setData] = useState<Progress | null>(null);
@@ -55,13 +58,29 @@ export default function ProgressView({
         className="sticky top-0 z-10 flex items-start justify-between gap-3 bg-cream px-5 pb-3 dark:bg-navy"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
       >
-        <div className="min-w-0">
-          <h1 className="display text-2xl text-navy dark:text-cream">
-            {mode === "parent" ? `${displayName}'s progress` : "Progress"}
-          </h1>
-          <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">
-            {mode === "parent" ? "A snapshot for parents" : "Everything you've done so far"}
-          </p>
+        <div className="flex min-w-0 items-start gap-2">
+          {mode === "teacher" && onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Back to dashboard"
+              className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-navy-soft transition hover:bg-black/5 active:scale-[.97] dark:text-navy-mist dark:hover:bg-white/10"
+            >
+              <ChevronLeftIcon />
+            </button>
+          )}
+          <div className="min-w-0">
+            <h1 className="display text-2xl text-navy break-words dark:text-cream">
+              {mode === "parent" || mode === "teacher" ? `${displayName}'s progress` : "Progress"}
+            </h1>
+            <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">
+              {mode === "parent"
+                ? "A snapshot for parents"
+                : mode === "teacher"
+                  ? "Full detail"
+                  : "Everything you've done so far"}
+            </p>
+          </div>
         </div>
         {mode === "student" && studentCode && (
           <Link

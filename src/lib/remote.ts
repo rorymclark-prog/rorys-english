@@ -126,3 +126,43 @@ export interface Resources {
 export function fetchResources(code: string): Promise<Resources> {
   return call<Resources>({ action: "resources", code });
 }
+
+// ── Teacher dashboard ────────────────────────────────────────────────────────
+// POST-only, no JSONP fallback (deliberately NOT using call()) — the teacher
+// password gates every student's data at once, so it must never be able to
+// end up in a URL (browser history, server logs), not even as a resilience
+// fallback on a flaky network.
+export interface TeacherStudentSummary {
+  homeworkDone: number | string;
+  quizRounds: number | string;
+  bestQuizPct: number | string;
+  schoolTests: number | string;
+  writingSamples: number | string;
+  lastUpdated: string;
+}
+export interface TeacherStudent {
+  code: string;
+  name: string;
+  summary: TeacherStudentSummary | null;
+}
+export interface TeacherDashboard {
+  ok: boolean;
+  generatedAt?: string;
+  students?: TeacherStudent[];
+  error?: string;
+}
+
+export async function fetchTeacherDashboard(teacherSecret: string): Promise<TeacherDashboard> {
+  if (!URL) return { ok: false, error: "sync not configured" };
+  try {
+    const res = await fetch(URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "teacherDashboard", teacherSecret }),
+    });
+    if (!res.ok) return { ok: false, error: `http ${res.status}` };
+    return (await res.json()) as TeacherDashboard;
+  } catch {
+    return { ok: false, error: "network error" };
+  }
+}
