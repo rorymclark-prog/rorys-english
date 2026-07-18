@@ -928,7 +928,7 @@ function checkS2() {
       } else {
         inp.classList.remove("correct-input");
         inp.classList.add("wrong-input");
-        feedback.push("Blank " + (bi + 1) + ": “" + (inp.value.trim() || "?") + "” → should be “<strong>" + escHtml(item.answers[bi]) + "</strong>”");
+        feedback.push("Blank " + (bi + 1) + ": “" + escHtml(inp.value.trim() || "?") + "” → should be “<strong>" + escHtml(item.answers[bi]) + "</strong>”");
         rowOk = false;
       }
       total++;

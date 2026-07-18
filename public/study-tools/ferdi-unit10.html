@@ -874,7 +874,7 @@ function buildS2() {
 
 function normalise(s) {
   return s.toLowerCase()
-           .replace(/['']/g, "'")
+           .replace(/[‘’ʼ]/g, "'")
            .replace(/[,.!?;:]/g, "")
            .trim();
 }
@@ -909,7 +909,7 @@ function checkS2() {
       } else {
         inp.classList.remove("correct-input");
         inp.classList.add("wrong-input");
-        feedback.push(`Blank ${bi+1}: "${inp.value.trim() || '?'}" → should be "<strong>${item.answers[bi]}</strong>"`);
+        feedback.push(`Blank ${bi+1}: "${escHtml(inp.value.trim() || '?')}" → should be "<strong>${escHtml(item.answers[bi])}</strong>"`);
         rowOk = false;
       }
       total++;
@@ -1078,7 +1078,7 @@ function renderS4() {
     msg.textContent = "Complete the sections above to see your results here.";
   } else {
     msg.textContent = scoreMsg(grandOk, grandTot)
-      + (weakest ? ` Your weakest area is "${weakest}" — worth an extra round!` : "");
+      + (weakestName ? ` Your weakest area is "${weakestName}" — worth an extra round!` : "");
   }
 }
 

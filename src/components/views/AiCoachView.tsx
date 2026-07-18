@@ -65,7 +65,12 @@ export default function AiCoachView({ code }: { code: string }) {
 
   const ask = async () => {
     const q = input.trim();
-    if (!q || !remoteEnabled() || status === "loading") return;
+    if (!q || status === "loading") return;
+    if (!remoteEnabled()) {
+      setErrMsg("The tutor isn't switched on yet.");
+      setStatus("error");
+      return;
+    }
     setStatus("loading");
     setErrMsg("");
     if (mode === "tutor") {
@@ -117,6 +122,9 @@ export default function AiCoachView({ code }: { code: string }) {
         <h1 className="text-2xl font-extrabold text-navy dark:text-cream">English tutor</h1>
         <p className="mt-0.5 text-sm text-burgundy dark:text-amber/80">
           Ask questions, look up words, or get feedback on your writing. Just for practice — never graded.
+        </p>
+        <p className="mt-1 text-xs text-navy-soft dark:text-cream/50">
+          Keep it about English — please don&apos;t share personal or private information here.
         </p>
       </header>
 

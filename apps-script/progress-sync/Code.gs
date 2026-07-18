@@ -216,7 +216,7 @@ function getAi_(p) {
     var student = p.secret === SECRET ? studentByAnyCode_(p.code) : null;
     if (!student) {
       out = { ok: false, error: "unauthorized" };
-    } else if (!aiRateOk_(student.code)) {
+    } else if (aiCount_(student.code) >= AI_DAILY_CAP) {
       out = { ok: false, error: "That's enough practice with the helper for today — try again tomorrow!" };
     } else {
       var q = String(p.q || "").slice(0, AI_MAX_INPUT).trim();
@@ -229,6 +229,10 @@ function getAi_(p) {
       } else {
         out = callClaude_("claude-haiku-4-5", WORD_SYSTEM, q, 350);
       }
+      // Only spend a daily slot when Claude actually answered (not on a missing
+      // key / error), and take a lock so concurrent calls can't both slip past
+      // the cap. localStorage is the source of truth so nothing is lost.
+      if (out && out.ok) aiInc_(student.code);
     }
   } catch (err) {
     console.error("getAi_ error: " + err);
@@ -237,13 +241,25 @@ function getAi_(p) {
   return reply_(p.callback, out);
 }
 
-function aiRateOk_(code) {
+function aiKey_(code) {
+  return "ai_" + code + "_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+}
+function aiCount_(code) {
+  return parseInt(PropertiesService.getScriptProperties().getProperty(aiKey_(code)) || "0", 10);
+}
+// Atomic increment under a script lock so concurrent requests can't both bypass
+// the daily cap. Best-effort: if the lock can't be taken, still count.
+function aiInc_(code) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(5000);
+  } catch (e) {}
   var props = PropertiesService.getScriptProperties();
-  var k = "ai_" + code + "_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
-  var n = parseInt(props.getProperty(k) || "0", 10);
-  if (n >= AI_DAILY_CAP) return false;
-  props.setProperty(k, String(n + 1));
-  return true;
+  var k = aiKey_(code);
+  props.setProperty(k, String(parseInt(props.getProperty(k) || "0", 10) + 1));
+  try {
+    lock.releaseLock();
+  } catch (e) {}
 }
 
 function callClaude_(model, system, userText, maxTokens) {
@@ -329,13 +345,30 @@ function getResources_(p) {
   return reply_(p.callback, out);
 }
 
-// Collect metadata only (no Drive writes). Skips the app's own artifacts.
+// Files we WON'T auto-surface even if the name matches:
+//  - Sheets (financial/business docs — invoices, trackers — are usually Sheets)
+//  - Apps Script projects
+// Everything a lesson/assessment normally is (Docs, Slides, PDF, images) stays.
+var RESOURCE_BLOCK_MIME = {
+  "application/vnd.google-apps.spreadsheet": 1,
+  "application/vnd.google-apps.script": 1,
+};
+
+// Collect metadata only (no Drive writes). Filters out risky / non-lesson files.
 function collectResource_(f, cands, seen, student) {
   var id = f.getId();
   if (seen[id]) return;
   var mt = f.getMimeType();
-  if (mt === "application/vnd.google-apps.script") return;
-  if (mt === "application/vnd.google-apps.spreadsheet" && f.getName() === student.name + " — Progress") return;
+  if (RESOURCE_BLOCK_MIME[mt]) return;
+  var name = f.getName();
+  // Name-token match: the student's name not flanked by other LETTERS. This
+  // allows "Ferdi_ESA…" / "Ferdi Unit 9" (underscore/space are fine) but rejects
+  // "Valentina's…" / "Ferdinand…" (a following letter = a different word).
+  var esc = student.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  var re = new RegExp("(^|[^A-Za-z])" + esc + "([^A-Za-z]|$)", "i");
+  if (!re.test(name)) return;
+  // Opt-out marker: name a file "…[private]…" to keep it out of the student's app.
+  if (/\[private\]/i.test(name)) return;
   seen[id] = 1;
   cands.push({
     id: id,

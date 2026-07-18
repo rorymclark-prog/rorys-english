@@ -40,13 +40,31 @@ self.addEventListener("fetch", (event) => {
     (req.headers.get("accept") || "").includes("text/html");
 
   if (isPageNavigation) {
-    // Network-first: fresh when online, cached page (or the app root) offline.
-    // Use the SW's own scope as the root so this works under a sub-path host
-    // (e.g. GitHub Pages /rorys-english/), not just at the domain root.
+    // Network-first: fresh when online; offline, fall back to (in order) the
+    // exact page, then that student's own Today page (/s/<code>/), then the SW
+    // root, then a minimal inline offline notice — never resolve to undefined
+    // (which the Fetch spec treats as a hard navigation error).
     event.respondWith(
       fetch(req)
         .then((res) => cachePut(req, res))
-        .catch(() => caches.match(req).then((c) => c || caches.match(self.registration.scope))),
+        .catch(async () => {
+          const exact = await caches.match(req);
+          if (exact) return exact;
+          const m = req.url.match(/\/s\/[^/]+\//);
+          if (m) {
+            const studentHome = await caches.match(m[0]);
+            if (studentHome) return studentHome;
+          }
+          const root = await caches.match(self.registration.scope);
+          if (root) return root;
+          return new Response(
+            "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>" +
+              "<body style='font-family:-apple-system,sans-serif;background:#FDF6EC;color:#1E3A5F;text-align:center;padding:3rem 1.5rem'>" +
+              "<p style='font-size:2rem'>📚</p><h1>You're offline</h1>" +
+              "<p>Your saved work is safe. Reconnect to load this page.</p></body>",
+            { headers: { "Content-Type": "text/html; charset=utf-8" } },
+          );
+        }),
     );
     return;
   }

@@ -27,7 +27,10 @@ export default function ServiceWorkerRegister() {
         /* offline support is a progressive enhancement; ignore failures */
       });
     };
-    window.addEventListener("load", onLoad);
+    // On a fast/cached repeat visit the 'load' event can fire before this effect
+    // attaches its listener, so register immediately if the page is already done.
+    if (document.readyState === "complete") onLoad();
+    else window.addEventListener("load", onLoad);
     return () => {
       window.removeEventListener("load", onLoad);
       navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
@@ -37,7 +40,10 @@ export default function ServiceWorkerRegister() {
   if (!updated) return null;
 
   return (
-    <div className="fixed inset-x-0 top-2 z-40 mx-auto max-w-md px-4">
+    <div
+      className="fixed inset-x-0 z-40 mx-auto max-w-md px-4"
+      style={{ top: "calc(env(safe-area-inset-top) + 0.5rem)" }}
+    >
       <button
         onClick={() => window.location.reload()}
         className="flex w-full items-center justify-center gap-2 rounded-card bg-navy p-3 text-sm font-bold text-cream shadow-card active:scale-[.99] dark:bg-amber dark:text-navy"
