@@ -237,7 +237,22 @@ rorys-english/
 | Wrong-password round-trip verified live against deploy v18 | ✅ | real authenticated view (with the actual password) not yet screenshotted |
 | Built wide (`max-w-3xl`), unlike the phone-locked student shell | ✅ | the one screen meant for laptop/iPad, not just phone |
 
-### 7.6 Live coordinates
+### 7.6 Connected teacher/student features (research-driven, this session)
+Built from a deep-research pass (research: dashboard writes should land directly in the
+same data the student app reads, not sync as a separate step — Preply's "next lesson
+objective", Duolingo for Schools' one-click Assign). All four ship together as one set.
+| Item | Status | Notes |
+|---|---|---|
+| **Roster Sheet** replaces the hardcoded `STUDENTS` array as the server's source of truth | ✅ | `getRoster_()`, cached 5 min (`CacheService`); falls back to the seed array if the Roster Sheet isn't provisioned yet — never breaks existing students |
+| **Add student** from `/teacher/` — provisions Drive folder + Sheet + Roster row at request time | ✅ | `action=teacherAddStudent`; codes are shown ONCE in the UI (copy them) |
+| `scripts/add-student.mjs "Name" <code> <parentCode>` — scaffolds the STATIC half | ✅ | the app is a static export, so a brand-new student's `/s/<code>/` route still needs one `npm run deploy` — this script is the "no hand-editing JSON" fix for that step |
+| **Assign homework** from the dashboard → appears in the student's Homework tab immediately | ✅ | new `Assignments` Sheet tab per student (Date/Title/Details/Due/Status/Id), fully dynamic — unlike static unit homework, no redeploy needed per assignment |
+| **Focus note** — tutor sets a short note from the dashboard | ✅ | shown on the student's Today screen ("From Rory") AND woven into the AI system prompt (`getAi_`) as soft context, never forced or mentioned to the student |
+| **Triage badge** — "Quiet Nd" flag on the dashboard grid | ✅ | derived from the existing Dashboard-tab "Last updated" value, ≥7 days |
+| Self-heal: `assignHomework_` calls `ensureTabs_` before writing | ✅ | Ferdi/Valentin's Sheets predate the `Assignments` tab and `setup()` can't be re-run remotely (`clasp run` needs an API-executable deployment this project doesn't have) — first assign silently creates the tab instead of throwing |
+| Adversarially reviewed (5 lenses: auth boundaries, injection, races, frontend wiring, error UX) | 🟡 | see session notes for verdict |
+
+### 7.7 Live coordinates
 - **Live app:** https://rorymclark-prog.github.io/rorys-english/
 - **Ferdi:** …/s/ferdi-7h3k/ · **Valentin:** …/s/valentin-q9m2/
 - **Teacher dashboard:** …/teacher/ (needs `TEACHER_PASSWORD` set — see §7.5)
@@ -254,7 +269,7 @@ rorys-english/
 4. **No Progress section or parent view yet** — decided this session, now in the backlog (§10).
 5. **Sync is best-effort with a retry queue** — uses `no-cors`, so HTTP-level failures are invisible, but network-level failures (offline) now queue in localStorage (`re_sync_queue`) and replay on the `online` event / app load. `localStorage` remains the source of truth regardless.
 6. **Secret is client-visible** — it ships in the page source (light anti-abuse, not real security). Acceptable for this low-stakes data, by design. The Apps Script is hardened against what a secret-holder could do: cell sanitization (formula-injection: leading `= + - @` get a `'` prefix), 20KB payload cap + 2K per-cell cap, a script lock against duplicate-row races, generic `unauthorized`/`internal error` responses (no code-enumeration oracle, no stack traces).
-7. **Cross-origin browser automation is flaky** in the dev preview harness — not a product issue, just a note for whoever tests live URLs (use `curl` for live checks; use the local dev server for browser checks).
+7. **`curl` cannot reliably test the Apps Script POST endpoints** — a POST gets a 302 redirect to a `script.googleusercontent.com/macros/echo?...` URL that only resolves correctly inside a real browser's `fetch()` (session/cookie context curl doesn't replicate); curl returns a generic Google Drive error page instead. Always verify live behavior via a real browser (the Browser pane tools), never curl, for anything beyond "is the deploy live" (plain GET checks are fine).
 
 ---
 

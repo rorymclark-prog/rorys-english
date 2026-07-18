@@ -6,6 +6,7 @@ import type { Unit } from "@/lib/types";
 import { useStudent } from "@/components/StudentContext";
 import Screen from "@/components/Screen";
 import { ChevronRightIcon } from "@/components/Icons";
+import { completeAssignmentRemote, fetchAssignments, remoteEnabled, rowToAssignment, type Assignment } from "@/lib/remote";
 import { getTaskChecked, isWeekComplete } from "@/lib/storage";
 
 export default function HomeworkListView({ unit }: { unit: Unit | null }) {
@@ -13,6 +14,8 @@ export default function HomeworkListView({ unit }: { unit: Unit | null }) {
   const [done, setDone] = useState<Record<number, boolean>>({});
   const [progress, setProgress] = useState<Record<number, { done: number; total: number }>>({});
   const [mounted, setMounted] = useState(false);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -31,8 +34,68 @@ export default function HomeworkListView({ unit }: { unit: Unit | null }) {
     setProgress(prog);
   }, [studentId, unit]);
 
+  useEffect(() => {
+    if (!remoteEnabled()) return;
+    let live = true;
+    fetchAssignments(code)
+      .then((d) => {
+        if (live && d.ok && d.assignments) setAssignments(d.assignments.rows.map(rowToAssignment));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [code]);
+
+  async function completeAssignment(a: Assignment) {
+    setAssignmentError(null);
+    setAssignments((prev) => prev.filter((x) => x.id !== a.id)); // optimistic
+    const r = await completeAssignmentRemote(code, a.id);
+    if (!r.ok) {
+      // Roll back — Assignments have no local fallback truth, so a failed
+      // write must not silently vanish the task from view.
+      setAssignments((prev) => (prev.some((x) => x.id === a.id) ? prev : [...prev, a]));
+      setAssignmentError("Couldn't mark that done — check your connection and try again.");
+    }
+  }
+
   return (
     <Screen title="Homework" subtitle={unit?.title}>
+      {mounted && assignments.length > 0 && (
+        <section className="mt-2">
+          <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">
+            Assigned by Rory
+          </h2>
+          <ul className="space-y-3">
+            {assignments.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-start gap-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark"
+              >
+                <button
+                  type="button"
+                  onClick={() => completeAssignment(a)}
+                  aria-label={`Mark "${a.title}" done`}
+                  className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 border-amber-deep transition active:scale-[.9] dark:border-amber"
+                />
+                <div className="min-w-0">
+                  <p className="font-bold text-navy dark:text-cream">{a.title}</p>
+                  {a.details && <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">{a.details}</p>}
+                  {a.due && (
+                    <p className="tnum mt-1 inline-block rounded-full bg-warn-soft px-2 py-0.5 text-xs font-bold text-warn dark:bg-warn-dusk dark:text-warn-bright">
+                      Due {a.due}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {assignmentError && (
+            <p className="mt-2 text-sm text-bad dark:text-bad-bright">{assignmentError}</p>
+          )}
+        </section>
+      )}
+
       {!unit || unit.homework.length === 0 ? (
         <p className="mt-6 rounded-card bg-surface p-5 text-center text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark">
           No homework yet — check back soon.

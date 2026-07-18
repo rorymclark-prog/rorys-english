@@ -199,3 +199,11 @@ export function syncQuiz(
 ): void {
   post({ type: "quiz", code, tool, section, score, total });
 }
+
+// Note: assignment completion (a tutor-assigned task, see remote.ts
+// Assignment) is deliberately NOT synced through this file's fire-and-forget
+// no-cors post() — that pattern is safe here only because localStorage is
+// the source of truth for homework/quiz, so an unreadable response is fine.
+// Assignments have no local fallback (the Sheet IS the truth), so a failed
+// write must be visible to roll back the UI, not silently swallowed. See
+// remote.ts completeAssignmentRemote() and HomeworkListView's use of it.

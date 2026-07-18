@@ -1,12 +1,12 @@
 /**
  * Rory's English — Progress Sync
  * ------------------------------------------------------------------------
- * One Apps Script that does two jobs:
- *   1. setup()  — run ONCE: builds a Drive folder + a Progress Sheet per
- *                 student (with all the tabs), and remembers each Sheet's id.
- *   2. doPost() — the Web App endpoint the PWA + study tools POST to. It
- *                 validates the shared secret + student code and writes the
- *                 row into the right tab of that student's Sheet.
+ * One Apps Script that does several jobs:
+ *   1. setup()  — run ONCE: builds the Roster spreadsheet + a Drive folder +
+ *                 Progress Sheet per student, and remembers each Sheet's id.
+ *   2. doPost() — the Web App endpoint the PWA + study tools + teacher
+ *                 dashboard POST to. Validates the shared secret (or teacher
+ *                 password) + student code and reads/writes the right Sheet.
  *
  * No student passwords; the student CODE (same one in their app link) is the
  * key, and SECRET is light anti-abuse. Data lands straight in Google Sheets,
@@ -17,16 +17,84 @@
  */
 
 // ── Config ────────────────────────────────────────────────────────────────
-// Keep this list in step with content/students.json (code → display name).
+// Seed roster — used ONLY to bootstrap the Roster Sheet the first time
+// setup() runs. After that, the Roster Sheet (not this array) is the source
+// of truth, so new students added via the teacher dashboard show up without
+// a code change. Keep content/students.json in step for the STATIC app shell
+// (per-student PWA route) — see scripts/add-student.mjs.
 var STUDENTS = [
   { code: "ferdi-7h3k", parentCode: "ferdi-fam-3p9k", name: "Ferdi" },
   { code: "valentin-q9m2", parentCode: "valentin-fam-8w2d", name: "Valentin" },
 ];
 
+// Roster Sheet: one spreadsheet, one tab, one row per student. Cached in
+// CacheService (not a plain global — Apps Script has no persistent memory
+// across separate web-app executions) so normal requests don't cost a Sheets
+// read every time; a 5-minute TTL means a freshly-added student is visible
+// everywhere within minutes with no redeploy.
+var ROSTER_SHEET_ID_PROP = "ROSTER_SHEET_ID";
+var ROSTER_CACHE_KEY = "roster_v1";
+var ROSTER_CACHE_TTL = 300; // seconds
+
+function getRoster_() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get(ROSTER_CACHE_KEY);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      /* fall through to a fresh read */
+    }
+  }
+  var roster = loadRosterFromSheet_();
+  try {
+    cache.put(ROSTER_CACHE_KEY, JSON.stringify(roster), ROSTER_CACHE_TTL);
+  } catch (e) {
+    /* value too large or cache unavailable — reads just cost a bit more */
+  }
+  return roster;
+}
+
+function invalidateRosterCache_() {
+  try {
+    CacheService.getScriptCache().remove(ROSTER_CACHE_KEY);
+  } catch (e) {}
+}
+
+function loadRosterFromSheet_() {
+  var id = PropertiesService.getScriptProperties().getProperty(ROSTER_SHEET_ID_PROP);
+  var ss = id ? safeOpen_(id) : null;
+  if (!ss) return STUDENTS; // roster not provisioned yet — fall back to the seed array
+  var sh = ss.getSheetByName("Roster");
+  if (!sh || sh.getLastRow() < 2) return STUDENTS;
+  var v = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues(); // Code, Parent Code, Name
+  return v
+    .filter(function (r) {
+      return String(r[0] || "").trim() !== "";
+    })
+    .map(function (r) {
+      return { code: String(r[0]), parentCode: String(r[1]), name: String(r[2]) };
+    });
+}
+
+function appendRosterRow_(student) {
+  var id = PropertiesService.getScriptProperties().getProperty(ROSTER_SHEET_ID_PROP);
+  var ss = id ? safeOpen_(id) : null;
+  if (!ss) throw new Error("roster not provisioned — run setup() first");
+  var sh = ss.getSheetByName("Roster");
+  // Sanitize here too (not just at the caller) — defense in depth, matching
+  // every other write site in this file. addStudent_'s name regex currently
+  // rules out formula-injection characters, but that safety shouldn't live
+  // three call-frames away from the write.
+  sh.appendRow([sanitize_(student.code), sanitize_(student.parentCode), sanitize_(student.name)]);
+  invalidateRosterCache_();
+}
+
 // Resolve a student record from either their own code or their parent code.
 function studentByAnyCode_(code) {
-  for (var i = 0; i < STUDENTS.length; i++) {
-    if (STUDENTS[i].code === code || STUDENTS[i].parentCode === code) return STUDENTS[i];
+  var roster = getRoster_();
+  for (var i = 0; i < roster.length; i++) {
+    if (roster[i].code === code || roster[i].parentCode === code) return roster[i];
   }
   return null;
 }
@@ -46,36 +114,74 @@ var TABS = {
   Writing: ["Date", "Title", "CEFR", "Grammar", "Vocab", "Coherence", "Key errors", "Feedback", "Link"],
   Speaking: ["Date", "Recording", "Fluency", "Pronunciation", "Grammar", "Vocab range", "Notes", "Link"],
   "Mock Tests": ["Date", "Paper", "Reading", "Listening", "Writing", "Speaking", "Use of English", "Total", "Notes"],
+  // Tutor-assigned tasks — separate from Homework because these are pushed
+  // dynamically from the teacher dashboard, not tied to static unit content.
+  Assignments: ["Date", "Title", "Details", "Due", "Status", "Id"],
 };
 
 // ── 1. One-time provisioning ───────────────────────────────────────────────
 /**
  * Run this ONCE from the Apps Script editor (authorise when prompted).
- * Idempotent: re-running reuses existing folders/sheets, just ensures tabs.
+ * Idempotent: re-running reuses existing folders/sheets/roster, just ensures
+ * tabs and seeds the Roster Sheet if it's still empty.
  */
 function setup() {
+  ensureRoster_();
   var root = getOrCreateFolder_(DriveApp.getRootFolder(), ROOT_FOLDER_NAME);
-  var props = PropertiesService.getScriptProperties();
-
   STUDENTS.forEach(function (s) {
-    var folder = getOrCreateFolder_(root, s.name);
-    getOrCreateFolder_(folder, "recordings");
-    getOrCreateFolder_(folder, "writing");
-
-    var key = "sheet_" + s.code;
-    var sheetId = props.getProperty(key);
-    var ss = sheetId ? safeOpen_(sheetId) : null;
-
-    if (!ss) {
-      ss = SpreadsheetApp.create(s.name + " — Progress");
-      DriveApp.getFileById(ss.getId()).moveTo(folder);
-      props.setProperty(key, ss.getId());
-    }
-    ensureTabs_(ss);
-    Logger.log(s.name + " → " + ss.getUrl());
+    provisionStudent_(s, root);
   });
-
   Logger.log("Setup complete. Sheet ids stored in Script Properties.");
+}
+
+// Creates the Roster spreadsheet if missing, and seeds it from the STUDENTS
+// array the first time only (never overwrites rows already added — by hand
+// or via the teacher dashboard's "add student" action).
+function ensureRoster_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty(ROSTER_SHEET_ID_PROP);
+  var ss = id ? safeOpen_(id) : null;
+  if (!ss) {
+    var root = getOrCreateFolder_(DriveApp.getRootFolder(), ROOT_FOLDER_NAME);
+    ss = SpreadsheetApp.create("Rory's English — Roster");
+    DriveApp.getFileById(ss.getId()).moveTo(root);
+    props.setProperty(ROSTER_SHEET_ID_PROP, ss.getId());
+  }
+  var sh = ss.getSheetByName("Roster") || ss.insertSheet("Roster");
+  if (sh.getLastRow() === 0) {
+    sh.getRange(1, 1, 1, 3).setValues([["Code", "Parent Code", "Name"]]).setFontWeight("bold");
+    sh.setFrozenRows(1);
+    STUDENTS.forEach(function (s) {
+      sh.appendRow([s.code, s.parentCode, s.name]);
+    });
+  }
+  var def = ss.getSheetByName("Sheet1");
+  if (def && ss.getSheets().length > 1) ss.deleteSheet(def);
+  invalidateRosterCache_();
+}
+
+// Creates (or reuses) a student's Drive folder + Progress Sheet. Factored out
+// of setup()'s loop so the teacher-dashboard "add student" endpoint can call
+// the exact same provisioning logic at request time.
+function provisionStudent_(s, root) {
+  root = root || getOrCreateFolder_(DriveApp.getRootFolder(), ROOT_FOLDER_NAME);
+  var folder = getOrCreateFolder_(root, s.name);
+  getOrCreateFolder_(folder, "recordings");
+  getOrCreateFolder_(folder, "writing");
+
+  var props = PropertiesService.getScriptProperties();
+  var key = "sheet_" + s.code;
+  var sheetId = props.getProperty(key);
+  var ss = sheetId ? safeOpen_(sheetId) : null;
+
+  if (!ss) {
+    ss = SpreadsheetApp.create(s.name + " — Progress");
+    DriveApp.getFileById(ss.getId()).moveTo(folder);
+    props.setProperty(key, ss.getId());
+  }
+  ensureTabs_(ss);
+  Logger.log(s.name + " → " + ss.getUrl());
+  return ss;
 }
 
 function ensureTabs_(ss) {
@@ -138,12 +244,18 @@ function doPost(e) {
     if (data.action === "progress") return getProgress_(data);
     if (data.action === "resources") return getResources_(data);
     if (data.action === "ai") return getAi_(data);
-    // Teacher dashboard is POST-only, on purpose: no doGet/JSONP branch exists
-    // for it anywhere in this file, so the password can never end up in a URL
-    // (browser history, server access logs, a shared-link screenshot).
-    if (data.action === "teacherDashboard") return getTeacherDashboard_(data);
+    if (data.action === "assignments") return getAssignments_(data);
+    if (data.action === "note") return getNote_(data);
 
-    // WRITES (homework/quiz/writing). One generic auth error: no oracle.
+    // Teacher-only actions are POST-only, on purpose: no doGet/JSONP branch
+    // exists for ANY of these anywhere in this file, so the teacher password
+    // can never end up in a URL (browser history, server access logs).
+    if (data.action === "teacherDashboard") return getTeacherDashboard_(data);
+    if (data.action === "teacherAddStudent") return addStudent_(data);
+    if (data.action === "teacherAssignHomework") return assignHomework_(data);
+    if (data.action === "teacherSetFocusNote") return setFocusNote_(data);
+
+    // WRITES (homework/quiz/writing/assignment). One generic auth error: no oracle.
     var sheetId =
       data.secret === SECRET
         ? PropertiesService.getScriptProperties().getProperty("sheet_" + data.code)
@@ -162,6 +274,8 @@ function doPost(e) {
         appendQuiz_(ss, data);
       } else if (data.type === "writing") {
         appendWriting_(ss, data);
+      } else if (data.type === "assignment") {
+        setAssignmentStatus_(ss, data);
       } else {
         return json_({ ok: false, error: "unknown type" });
       }
@@ -176,15 +290,18 @@ function doPost(e) {
   }
 }
 
-// doGet serves a read-only progress snapshot as JSONP (so the static app +
-// parent pages can read it cross-origin without CORS). Accepts either the
-// student code or the parent code; both resolve to the same Sheet.
+// doGet serves read-only snapshots as JSONP (so the static app + parent pages
+// can read cross-origin without CORS). Accepts either the student code or the
+// parent code; both resolve to the same Sheet. Teacher-only actions are
+// deliberately absent here — see the doPost comment above.
 //   ?action=progress&code=<student-or-parent-code>&secret=<SECRET>&callback=<fn>
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.action === "progress") return getProgress_(p);
   if (p.action === "resources") return getResources_(p);
   if (p.action === "ai") return getAi_(p);
+  if (p.action === "assignments") return getAssignments_(p);
+  if (p.action === "note") return getNote_(p);
   return json_({ ok: true, service: "rorys-english progress-sync" });
 }
 
@@ -194,6 +311,7 @@ function doGet(e) {
 // up the bill. Returns the model's text via JSONP.
 var AI_DAILY_CAP = 40; // model calls per student per day
 var AI_MAX_INPUT = 6000; // chars (POST body, not URL — full short essays fit)
+var FOCUS_NOTE_MAX_CHARS = 500; // injected into the AI system prompt — keep it short
 
 var WORD_SYSTEM =
   "You are a warm English tutor for a German-speaking teenager (A2–B1). " +
@@ -239,12 +357,24 @@ function getAi_(p) {
       var q = String(p.q || "").slice(0, AI_MAX_INPUT).trim();
       if (!q) {
         out = { ok: false, error: "empty" };
-      } else if (p.kind === "writing") {
-        out = callClaude_("claude-sonnet-4-6", WRITING_SYSTEM, q, 800);
-      } else if (p.kind === "tutor") {
-        out = callClaude_("claude-haiku-4-5", TUTOR_SYSTEM, q, 500);
       } else {
-        out = callClaude_("claude-haiku-4-5", WORD_SYSTEM, q, 350);
+        // A tutor-flagged focus point (set from the dashboard) is woven into
+        // the system prompt as soft context — never forced, never mentioned
+        // as "your teacher is watching" (would undercut the practice-not-
+        // graded framing already established for writing/tutor chat).
+        var note = focusNoteFor_(student.code);
+        var focusSuffix = note
+          ? "\n\nThe student's tutor (Rory) flagged this as a current focus area for them — " +
+            "weave it in naturally if relevant to what they ask, but don't force it or mention " +
+            "that Rory flagged it: " + note
+          : "";
+        if (p.kind === "writing") {
+          out = callClaude_("claude-sonnet-4-6", WRITING_SYSTEM + focusSuffix, q, 800);
+        } else if (p.kind === "tutor") {
+          out = callClaude_("claude-haiku-4-5", TUTOR_SYSTEM + focusSuffix, q, 500);
+        } else {
+          out = callClaude_("claude-haiku-4-5", WORD_SYSTEM + focusSuffix, q, 350);
+        }
       }
       // Only spend a daily slot when Claude actually answered (not on a missing
       // key / error), and take a lock so concurrent calls can't both slip past
@@ -402,7 +532,7 @@ function unshareStale_() {
     JSON.parse(props.getProperty("shared_ids") || "[]").forEach(function (id) { cached[id] = 1; });
   } catch (e) {}
   var current = {};
-  STUDENTS.forEach(function (s) {
+  getRoster_().forEach(function (s) {
     var esc = s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     var re = new RegExp("(^|[^A-Za-z])" + esc + "([^A-Za-z]|$)", "i");
     var it = DriveApp.searchFiles(
@@ -528,6 +658,155 @@ function rows_(ss, name) {
   return { headers: v[0], rows: rows };
 }
 
+// ── Assignments (tutor-pushed tasks — the "assign from the dashboard" pair) ──
+// Unlike Homework (static per-unit content, Sheet only logs completion),
+// Assignments are fully Sheet-driven both ways: the dashboard appends a row,
+// the student app reads open ones, and the student's completion writes back
+// to the same row (matched by a generated Id, not by title — two assignments
+// can share a title).
+function getAssignments_(p) {
+  var out;
+  try {
+    if (p.secret !== SECRET) {
+      out = { ok: false, error: "unauthorized" };
+    } else {
+      var student = studentByAnyCode_(p.code);
+      var sheetId = student
+        ? PropertiesService.getScriptProperties().getProperty("sheet_" + student.code)
+        : null;
+      if (!sheetId) {
+        out = { ok: false, error: "unauthorized" };
+      } else {
+        var ss = SpreadsheetApp.openById(sheetId);
+        var all = rows_(ss, "Assignments");
+        // Status column index 4 (0-based) per TABS.Assignments header order.
+        var open = all.rows.filter(function (r) {
+          return String(r[4]).toLowerCase() !== "done";
+        });
+        out = { ok: true, assignments: { headers: all.headers, rows: open } };
+      }
+    }
+  } catch (err) {
+    out = { ok: false, error: "internal error" };
+  }
+  return reply_(p.callback, out);
+}
+
+// Student-side write: mark one assignment done/open by Id (Assignments!F).
+function setAssignmentStatus_(ss, d) {
+  var sheet = ss.getSheetByName("Assignments");
+  if (!sheet) return; // tab doesn't exist yet — nothing to update, fail silently
+  var values = sheet.getDataRange().getValues();
+  var id = String(d.id || "");
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][5]) === id) {
+      sheet.getRange(i + 1, 5).setValue(sanitize_(d.status));
+      return;
+    }
+  }
+  // Id not found (stale/edited row) — fail silently, matches the "generic,
+  // no oracle" posture used everywhere else in this file.
+}
+
+// Teacher-only: push a new assignment into a student's Assignments tab.
+function assignHomework_(p) {
+  var out;
+  try {
+    var expected = PropertiesService.getScriptProperties().getProperty(TEACHER_PASSWORD_PROP);
+    if (!expected || p.teacherSecret !== expected) {
+      out = { ok: false, error: "unauthorized" };
+    } else {
+      var student = studentByAnyCode_(p.code);
+      var sheetId = student
+        ? PropertiesService.getScriptProperties().getProperty("sheet_" + student.code)
+        : null;
+      var title = String(p.title || "").trim().slice(0, MAX_CELL_CHARS);
+      if (!sheetId || !title) {
+        out = { ok: false, error: !sheetId ? "unknown student" : "title required" };
+      } else {
+        var ss = SpreadsheetApp.openById(sheetId);
+        // Self-heal: students provisioned before the Assignments tab existed
+        // (Ferdi/Valentin's original Sheets) won't have it yet, and setup()
+        // can't be re-run remotely to add it. ensureTabs_ only creates tabs
+        // that are MISSING — never touches existing data — so this is safe
+        // to call on every assign, not just once.
+        ensureTabs_(ss);
+        var lock = LockService.getScriptLock();
+        lock.waitLock(10000);
+        try {
+          var id = Utilities.getUuid().slice(0, 8);
+          ss.getSheetByName("Assignments").appendRow([
+            now_(),
+            sanitize_(title),
+            sanitize_(p.details || ""),
+            sanitize_(p.due || ""),
+            "open",
+            id,
+          ]);
+        } finally {
+          lock.releaseLock();
+        }
+        out = { ok: true };
+      }
+    }
+  } catch (err) {
+    console.error("assignHomework_ error: " + err);
+    out = { ok: false, error: "internal error" };
+  }
+  return json_(out); // POST-only, same as every teacher* action
+}
+
+// ── Focus note (the "flag a focus point" pair — surfaces in-app AND in AI) ──
+// One short note per student, settable from the dashboard. Shown on the
+// student's Today screen ("From Rory") and woven into the AI system prompt
+// (see getAi_). Stored in Script Properties, not a Sheet — short-lived,
+// frequently overwritten, no history needed.
+function focusNoteKey_(code) {
+  return "focus_" + code;
+}
+function focusNoteFor_(code) {
+  return PropertiesService.getScriptProperties().getProperty(focusNoteKey_(code)) || "";
+}
+
+function getNote_(p) {
+  var out;
+  try {
+    var student = p.secret === SECRET ? studentByAnyCode_(p.code) : null;
+    out = student ? { ok: true, note: focusNoteFor_(student.code) } : { ok: false, error: "unauthorized" };
+  } catch (err) {
+    out = { ok: false, error: "internal error" };
+  }
+  return reply_(p.callback, out);
+}
+
+function setFocusNote_(p) {
+  var out;
+  try {
+    var expected = PropertiesService.getScriptProperties().getProperty(TEACHER_PASSWORD_PROP);
+    if (!expected || p.teacherSecret !== expected) {
+      out = { ok: false, error: "unauthorized" };
+    } else {
+      var student = studentByAnyCode_(p.code);
+      if (!student) {
+        out = { ok: false, error: "unknown student" };
+      } else {
+        var note = String(p.note || "").trim().slice(0, FOCUS_NOTE_MAX_CHARS);
+        var key = focusNoteKey_(student.code);
+        if (note) {
+          PropertiesService.getScriptProperties().setProperty(key, note);
+        } else {
+          PropertiesService.getScriptProperties().deleteProperty(key); // empty = clear
+        }
+        out = { ok: true };
+      }
+    }
+  } catch (err) {
+    console.error("setFocusNote_ error: " + err);
+    out = { ok: false, error: "internal error" };
+  }
+  return json_(out); // POST-only
+}
+
 // ── Teacher dashboard ─────────────────────────────────────────────────────
 // One password gates ALL students' data at once — much higher value than any
 // single student's SECRET — so it lives in its own Script Property, set by
@@ -545,10 +824,15 @@ function getTeacherDashboard_(p) {
       out = { ok: false, error: "unauthorized" };
     } else {
       var props = PropertiesService.getScriptProperties();
-      var students = STUDENTS.map(function (s) {
+      var students = getRoster_().map(function (s) {
         var sheetId = props.getProperty("sheet_" + s.code);
         var ss = sheetId ? safeOpen_(sheetId) : null;
-        return { code: s.code, name: s.name, summary: ss ? studentSummary_(ss) : null };
+        return {
+          code: s.code,
+          name: s.name,
+          summary: ss ? studentSummary_(ss) : null,
+          focusNote: focusNoteFor_(s.code),
+        };
       });
       out = { ok: true, generatedAt: now_(), students: students };
     }
@@ -561,10 +845,81 @@ function getTeacherDashboard_(p) {
   return json_(out);
 }
 
+// Teacher-only: provision a brand-new student (Drive folder + Sheet + Roster
+// row) at request time — no code change, no redeploy needed for their data
+// infrastructure to work. The STATIC app shell (their /s/<code>/ route) still
+// needs one `npm run deploy` — see scripts/add-student.mjs, which scaffolds
+// the content/ files from the code+name this returns.
+function addStudent_(p) {
+  var out;
+  try {
+    var expected = PropertiesService.getScriptProperties().getProperty(TEACHER_PASSWORD_PROP);
+    if (!expected || p.teacherSecret !== expected) {
+      out = { ok: false, error: "unauthorized" };
+    } else {
+      var name = String(p.name || "").trim().slice(0, 60);
+      if (!name || !/^[A-Za-z][A-Za-z '-]*$/.test(name)) {
+        out = { ok: false, error: "enter a valid first name" };
+      } else {
+        var lock = LockService.getScriptLock();
+        lock.waitLock(10000);
+        try {
+          ensureRoster_(); // idempotent — safe even if setup() was never run; also
+                            // invalidates the cache, so the check below is fresh.
+          // Reject same-name duplicates INSIDE the lock (not just before it) —
+          // two near-simultaneous "Add student" submits (double-tap, a retried
+          // request) would otherwise both pass a pre-lock check and each
+          // provision their own folder/Sheet/Roster row for what's meant to be
+          // one student. Same name also matters beyond the race: Drive folders
+          // and the Lessons&feedback name-search are keyed by display name, so
+          // two same-named students would collide there regardless of code.
+          var existing = getRoster_().some(function (s) {
+            return s.name.toLowerCase() === name.toLowerCase();
+          });
+          if (existing) {
+            out = { ok: false, error: "a student named " + name + " already exists — try adding a last initial" };
+          } else {
+            var code = uniqueCode_(name);
+            var parentCode = uniqueCode_(name + "-fam");
+            var student = { code: code, parentCode: parentCode, name: name };
+            provisionStudent_(student);
+            appendRosterRow_(student);
+            out = { ok: true, code: code, parentCode: parentCode, name: name };
+          }
+        } finally {
+          lock.releaseLock();
+        }
+      }
+    }
+  } catch (err) {
+    console.error("addStudent_ error: " + err);
+    out = { ok: false, error: "internal error" };
+  }
+  return json_(out); // POST-only
+}
+
+// "ferdi-7h3k" style: lowercase first name + a random 4-char suffix, retried
+// until it doesn't collide with an existing code (collision is astronomically
+// unlikely at this scale, but the loop makes it a non-issue either way).
+function uniqueCode_(name) {
+  var base = name
+    .toLowerCase()
+    .replace(/[^a-z]+/g, "")
+    .slice(0, 20) || "student";
+  for (var i = 0; i < 20; i++) {
+    var suffix = Utilities.getUuid().replace(/-/g, "").slice(0, 4);
+    var candidate = base + "-" + suffix;
+    if (!studentByAnyCode_(candidate)) return candidate;
+  }
+  throw new Error("could not generate a unique code");
+}
+
 // Reads the Dashboard tab's already-computed formula values (COUNTIF/MAX over
 // the other tabs) instead of recomputing from raw rows — reuses the exact
 // numbers a tutor sees opening the Sheet directly, and stays correct if Rory
-// ever hand-edits a row.
+// ever hand-edits a row. Also derives a simple triage signal (days since any
+// activity) from the same "Last updated" value, so the dashboard can flag a
+// quiet student without a second Sheet read.
 function studentSummary_(ss) {
   var d = ss.getSheetByName("Dashboard");
   if (!d || d.getLastRow() < 7) return null;
@@ -573,13 +928,27 @@ function studentSummary_(ss) {
     var x = v[i][1];
     return x instanceof Date ? x.toISOString() : x;
   };
+  var lastUpdated = val(5);
+  // Only trust a REAL Date cell. The "Last updated" formula is
+  // =IFERROR(MAX(Homework!A2:A,'Vocab & Quizzes'!A2:A),"—") — MAX() over two
+  // genuinely empty ranges (a brand-new student, or one whose only activity
+  // is in School Tests/Writing/Speaking/Mock Tests, which this formula
+  // doesn't cover) evaluates to the NUMBER 0, not an error, so IFERROR never
+  // fires and it's never the "—" string either. `new Date(0)` is a VALID
+  // Date (the Unix epoch) — coercing that would flag every such student as
+  // "quiet" for ~20,000 days. Anything that isn't a Date cell means "no
+  // activity yet", not "epoch", so daysSinceActivity stays null.
+  var daysSinceActivity = v[5][1] instanceof Date
+    ? Math.floor((Date.now() - v[5][1].getTime()) / 86400000)
+    : null;
   return {
     homeworkDone: val(0),
     quizRounds: val(1),
     bestQuizPct: val(2),
     schoolTests: val(3),
     writingSamples: val(4),
-    lastUpdated: val(5),
+    lastUpdated: lastUpdated,
+    daysSinceActivity: daysSinceActivity,
   };
 }
 

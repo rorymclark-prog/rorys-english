@@ -6,6 +6,7 @@ import type { Unit } from "@/lib/types";
 import { useStudent } from "@/components/StudentContext";
 import Screen from "@/components/Screen";
 import { BookIcon, ChevronRightIcon, FlameIcon, ChartIcon } from "@/components/Icons";
+import { fetchNote, remoteEnabled } from "@/lib/remote";
 import {
   bestStreak,
   countWordsDue,
@@ -24,6 +25,7 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
   const [dueWeek, setDueWeek] = useState<Unit["homework"][number] | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [wordsDue, setWordsDue] = useState(0);
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -39,8 +41,31 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
     }
   }, [studentId, code, unit]);
 
+  useEffect(() => {
+    if (!remoteEnabled()) return;
+    let live = true;
+    fetchNote(code)
+      .then((d) => live && d.ok && setNote(d.note ?? ""))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [code]);
+
   return (
     <Screen title={`${greeting ?? "Hi"} 👋`} subtitle={unit ? unit.title : undefined}>
+      {/* A short note from the tutor — set from the teacher dashboard, meant
+          as encouraging context (e.g. "great job with past tenses — let's
+          keep at conditionals"), never a nag. */}
+      {mounted && note && (
+        <section className="mt-2 flex items-start gap-3 rounded-card bg-amber-soft p-4 dark:bg-amber-dusk">
+          <span className="text-lg" aria-hidden>📌</span>
+          <p className="text-sm font-medium text-navy dark:text-cream">
+            <span className="font-bold">From Rory:</span> {note}
+          </p>
+        </section>
+      )}
+
       {/* Due-now card */}
       {unit && (
         <section className="mt-2">

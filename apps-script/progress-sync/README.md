@@ -24,8 +24,10 @@ Drive / Rory's English — Progress /
 1. Go to <https://script.google.com> → **New project**.
 2. Paste `Code.gs` into the editor. Then **Project Settings → check "Show
    appsscript.json"**, open it, and paste the contents of `appsscript.json`.
-3. (Optional) edit `STUDENTS` and `SECRET` at the top of `Code.gs`. Keep
-   `STUDENTS` in step with `content/students.json`.
+3. (Optional) edit `STUDENTS` and `SECRET` at the top of `Code.gs`. `STUDENTS`
+   is only a one-time SEED for the Roster Sheet (created by `setup()`) — after
+   that, the Roster Sheet is the real source of truth; see "Adding a student"
+   below for how new students actually get added day to day.
 4. Run the **`setup`** function once. Authorise when prompted (it needs Drive +
    Sheets access — that's your own account). Check the execution log: it prints
    each student's Sheet URL.
@@ -106,6 +108,31 @@ Called via `doPost` with `action="ai"` (CORS POST, secret + student code in body
 - **Key setup (1-time, needed to switch on):** Apps Script editor → **Project Settings → Script Properties → add key `ANTHROPIC_API_KEY` with value from Anthropic dashboard.** Then run any function (e.g., `setup`) once to approve the new `script.external_request` scope. Until then the app shows "isn't switched on yet." 
 - **Transport:** CORS POST (request body carries secret + text, no length limit); JSONP GET as fallback for read endpoints.
 
+### 4. **Teacher-only endpoints** (dashboard actions — POST-only, no GET/JSONP path)
+
+All gated by `TEACHER_PASSWORD` (see "Teacher dashboard" above). None of these
+can ever be reached via a URL parameter — the password would leak into
+browser history/server logs otherwise.
+
+- `action=teacherAddStudent` `{name}` → provisions Drive folder + Sheet + a
+  Roster row at request time, returns `{code, parentCode, name}` **once** —
+  copy them immediately, they aren't shown again. The static app shell still
+  needs one deploy; run `node scripts/add-student.mjs "Name" <code> <parentCode>`
+  (using the exact codes just returned) then `npm run deploy`.
+- `action=teacherAssignHomework` `{code, title, details, due}` → appends a row
+  to that student's **Assignments** tab; shows in their Homework tab on next
+  load, no redeploy.
+- `action=teacherSetFocusNote` `{code, note}` → sets (or clears, with an empty
+  string) a short note shown on the student's Today screen and woven into
+  their next AI-tutor/writing-coach reply as soft context.
+
+### 5. **Assignments** (student-side, reachable by student or parent code)
+
+- `action=assignments` — open (not-done) tutor-assigned tasks for a student.
+- The student's completion write (`type: "assignment"` in the sync endpoint)
+  marks one row done by its generated `Id`, not by title (two assignments can
+  share a title).
+
 ### Note on sync behavior
 
 - The student **code** is the key (same one in their app link); `SECRET` is light
@@ -113,4 +140,8 @@ Called via `doPost` with `action="ai"` (CORS POST, secret + student code in body
   — fine for this low-stakes data, not a vault.
 - The app's localStorage stays the source of truth, so a missed sync is never lost
   progress — re-completing re-sends.
-- To add a student later: add them to `STUDENTS`, re-run `setup()`.
+- **Adding a student:** use `/teacher/`'s "Add student" button (provisions
+  everything server-side instantly), then run
+  `node scripts/add-student.mjs "Name" <code> <parentCode>` with the codes it
+  gives you, then `npm run deploy` — one command instead of hand-editing
+  `STUDENTS` + `content/students.json` + redeploying separately.
