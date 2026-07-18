@@ -41,12 +41,14 @@ export default function ServiceWorkerRegister() {
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       className="animate-sheet fixed inset-x-0 z-40 mx-auto max-w-md px-4"
       style={{ top: "calc(env(safe-area-inset-top) + 0.5rem)" }}
     >
       <button
         onClick={() => window.location.reload()}
-        className="flex w-full items-center justify-center gap-2 rounded-card bg-[linear-gradient(135deg,#4F46E5,#4338CA)] p-3 text-sm font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition ease-out2026 active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-card-dark"
+        className="flex w-full items-center justify-center gap-2 rounded-card bg-amber-deep p-3 text-sm font-bold text-white shadow-card transition ease-out2026 active:scale-[.97] dark:bg-amber dark:text-navy dark:shadow-card-dark"
       >
         ✨ New version available — tap to refresh
       </button>

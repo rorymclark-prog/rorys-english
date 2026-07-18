@@ -29,17 +29,40 @@
     --amber-bg:#ECEAFD;   /* highlight wash (example sentences) */
     --radius:  12px;
     --radius-card: 20px;
-    --shadow:  0 1px 2px rgba(23,22,28,.04), 0 6px 16px -6px rgba(23,22,28,.10);
-    --ease:    cubic-bezier(0.22, 1, 0.36, 1);
+    --shadow:  inset 0 1px 0 rgba(255,255,255,.7), 0 1px 2px rgba(23,22,28,.04), 0 12px 32px -16px rgba(23,22,28,.12);
+    --ease:    cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* ── VOLTSTONE dark mode (spec §6 flagship) — matches valentin-unit05 ──
+     NOTE: ferdi uses --navy as BOTH text ink and the header/nav background,
+     so the charcoal header band is pinned explicitly below. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --cream:   #17161C;   /* page bg → charcoal base */
+      --white:   #201E26;   /* card → navy-raised */
+      --navy:    #FAF8F5;   /* text ink flips to cream */
+      --ink-soft:#B3B1BD;   /* muted → navy-mist */
+      --accent:  #A2A4FC;   /* dark ALWAYS accents bright — never #4F46E5 */
+      --accent-press: #C7C9FD;
+      --accent-soft:  #262347;  /* amber-dusk wash */
+      --burgundy:#F59D6E;   /* ember-bright numerals */
+      --green:   #4ADE80;  --green-bg: #16281C;
+      --warn:    #FBBF24;  --warn-bg:  #2E2413;
+      --bad:     #FDA4AF;  --bad-bg:   #2E1A1E;
+      --amber-bg:#262347;
+      --shadow:  0 1px 2px rgba(0,0,0,.2), 0 12px 32px -16px rgba(0,0,0,.5);
+    }
   }
 
   body {
-    font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: var(--cream);
     color: var(--navy);
     min-height: 100vh;
     padding-bottom: 40px;
   }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* ── Header ── */
   header {
@@ -296,7 +319,7 @@
   }
   .disclaimer {
     font-size: 0.72rem;
-    color: #6E6A78;
+    color: var(--ink-soft);
     margin-top: 10px;
     font-style: italic;
   }
@@ -348,6 +371,26 @@
     from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: none; }
   }
+
+  /* ── Dark-mode rule overrides (after base rules so they win) ── */
+  @media (prefers-color-scheme: dark) {
+    /* --navy doubles as the header/nav bg in this file — pin the charcoal band */
+    header, nav { background: #17161C; }
+    header { color: #FAF8F5; }
+    /* Spotify pattern: dark primary = bright indigo fill + ink text (never the #4F46E5 gradient on dark) */
+    .btn-amber { background: var(--amber); color: #17161C; box-shadow: none; }
+    .btn-navy  { background: rgba(255,255,255,.07); }
+    .opt-btn   { background: #2A2833; border-color: rgba(255,255,255,.08); }
+    .opt-btn:active { background: #34313E; }
+    .opt-btn.correct { background: var(--green-bg); border-color: rgba(74,222,128,.4); }
+    .opt-btn.wrong   { background: var(--bad-bg); border-color: rgba(253,164,175,.35); }
+    .gap-input { border-bottom-color: rgba(255,255,255,.3); }
+    .type-input { background: #2A2833; border-color: rgba(255,255,255,.12); }
+    .type-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(162,164,252,.2); }
+    .summary-row { border-bottom-color: rgba(255,255,255,.07); }
+    .weak-badge  { border-color: rgba(251,191,36,.35); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
@@ -374,7 +417,7 @@
 <section id="s1" class="active">
   <div class="section-label">Section 1</div>
   <h2 class="card-title mt8">Vocabulary Quiz</h2>
-  <p style="font-size:0.82rem;color:#5A5662;margin-bottom:12px;">10 random questions each round — both directions.</p>
+  <p style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:12px;">10 random questions each round — both directions.</p>
   <p style="font-size:0.8rem;color:var(--burgundy);margin-bottom:8px;font-weight:600;"><span id="srDue"></span></p>
 
   <div id="s1-quiz"></div>
@@ -393,7 +436,7 @@
 <section id="s2">
   <div class="section-label">Section 2</div>
   <h2 class="card-title mt8">Conditionals Gap-Fill</h2>
-  <p style="font-size:0.82rem;color:#5A5662;margin-bottom:12px;">Type the correct verb form in each blank.</p>
+  <p style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:12px;">Type the correct verb form in each blank.</p>
   <div id="s2-items"></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;" class="mt12">
     <button class="btn btn-amber" onclick="checkS2()">Check answers</button>
@@ -408,7 +451,7 @@
 <section id="s3">
   <div class="section-label">Section 3</div>
   <h2 class="card-title mt8">German Trap Drill</h2>
-  <p style="font-size:0.82rem;color:#5A5662;margin-bottom:12px;">Spot the mistake and type the correct sentence.</p>
+  <p style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:12px;">Spot the mistake and type the correct sentence.</p>
   <div id="s3-items"></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;" class="mt12">
     <button class="btn btn-amber" onclick="checkS3()">Check answers</button>
@@ -863,7 +906,7 @@ function answerS1(chosen, correct, chosenBtn) {
     var seenN = bumpSeenCount(q.vocabIdx);
     var exSentence = exArr[(seenN - 1) % exArr.length];
     var exDiv = document.createElement("div");
-    exDiv.style.cssText = "margin-top:10px;font-size:0.88rem;color:var(--navy);background:var(--amber-bg);border-radius:6px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;";
+    exDiv.style.cssText = "margin-top:10px;font-size:0.88rem;color:var(--navy);background:var(--amber-bg);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;";
     // Bold the target English word inside the sentence (case-insensitive, first match)
     var wordRe = new RegExp("(" + q.englishWord.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + ")", "i");
     var highlighted = exSentence.replace(wordRe, "<strong>$1</strong>");
@@ -1034,12 +1077,12 @@ function checkS3() {
     const fb  = document.getElementById(`s3-fb-${idx}`);
 
     if (val === exp) {
-      inp.style.borderColor = "#166534";
+      inp.style.borderColor = "var(--green)";
       fb.className = "feedback correct show";
       fb.innerHTML = `✓ Exactly right! — ${trap.why}`;
       correct++;
     } else {
-      inp.style.borderColor = "#BE123C";
+      inp.style.borderColor = "var(--bad)";
       fb.className = "feedback wrong show";
       fb.innerHTML = `Not quite. The correct version: "<strong>${escHtml(trap.right)}</strong>" — ${trap.why}`;
     }

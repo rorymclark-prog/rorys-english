@@ -98,13 +98,20 @@ If you change anything material, **update this file** and bump the date.
 | Layer | Choice | Notes |
 |---|---|---|
 | Framework | **Next.js 15 (App Router) + React + TypeScript** | `output: "export"` → pure static |
-| Styling | **Tailwind CSS** | palette: amber `#F59E0B`, navy `#1E3A5F`, burgundy `#7C2D3B`, cream `#FDF6EC`; system fonts |
+| Styling | **Tailwind CSS** | **VOLTSTONE 2026** palette (see §5.1 + `design/MODERN-2026-SPEC.md`): electric indigo `#4F46E5`/`#A2A4FC` accent, warm stone `#FAF8F5`, charcoal `#17161C` dark base, ember `#C2410C` reward channel — legacy Tailwind names (`amber`/`navy`/`burgundy`/`cream`) kept, values remapped; **Manrope + JetBrains Mono** via next/font |
 | Storage | **localStorage** | source of truth on the device |
 | PWA | hand-rolled **service worker** + per-student **manifests** + generated icons | offline + installable |
 | Study tools | **plain self-contained HTML** (inline CSS/JS, no deps) | one file per unit, in `public/study-tools/` |
 | Sync | **Google Apps Script Web App** → **Google Sheets** | optional, opt-in |
 | Hosting | **GitHub Pages** (repo `rorymclark-prog/rorys-english`, branch `gh-pages`) | free; deploy via `npm run deploy` |
 | Tooling | Node 25, npm; `clasp` for Apps Script; `gh` CLI (authed as `rorymclark-prog`); Pillow for icon gen |
+
+### 5.1 Design system — "VOLTSTONE" (2026)
+
+- **Source of truth: `design/MODERN-2026-SPEC.md`** — read it before touching any styling.
+- Palette: electric indigo accent (`#4F46E5` light / `#A2A4FC` dark), warm stone `#FAF8F5` page bg, charcoal `#17161C` dark base, ember `#C2410C` reward-only channel (streaks/progress). Legacy Tailwind names (`amber`, `navy`, `burgundy`, `cream`) kept — only the values changed.
+- Type: **Manrope** (UI) + **JetBrains Mono** (data labels). PWA `themeColor` = `#17161C`; icons = charcoal tile + indigo "RE" monogram; floating glass tab bar (glass has exactly two uses: tab bar + AI tutor surface).
+- **Hard rule:** `#4F46E5` never on the dark base (fails contrast) — dark mode always accents with `#A2A4FC`.
 
 ---
 
@@ -115,6 +122,7 @@ rorys-english/
 ├─ MASTERPLAN.md                  ← THIS FILE (the source of truth)
 ├─ HANDOVER.md                    ← operational handover / sync runbook
 ├─ README.md                      ← how-to (add student/unit/tool, deploy)
+├─ design/MODERN-2026-SPEC.md     ← VOLTSTONE design system (styling source of truth)
 │
 ├─ content/                       ← ALL TUTOR CONTENT (edit JSON, no code)
 │  ├─ students.json               ← id, displayName, code, profile, units[]

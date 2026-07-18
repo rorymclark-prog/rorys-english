@@ -20,8 +20,8 @@
     --accent-bright: #A2A4FC;  /* bright indigo — dark surfaces + bright fills w/ ink text */
     --ember:         #C2410C;  /* reward channel only (SR counter, score values) */
     --good-text:     #166534;  --good-bg: #F0FDF4;  --good-border: #166534;
-    --warn-text:     #92400E;  --warn-bg: #FFFBEB;  --warn-border: #FBBF24;
-    --bad-text:      #BE123C;
+    --warn-text:     #92400E;  --warn-bg: #FFFBEB;  --warn-border: #92400E;
+    --bad-text:      #BE123C;  --bad-bg:  #FFF1F2;  --bad-border: #BE123C;
     --chip:          #F4F1EB;  /* tonal option row */
     --chip-press:    #ECE8E0;
     --field-line:    #E7E3DB;
@@ -50,7 +50,7 @@
       --ember:         #F59D6E;  /* ember-bright numerals */
       --good-text:     #4ADE80;  --good-bg: #16281C;  --good-border: #4ADE80;
       --warn-text:     #FBBF24;  --warn-bg: #2E2413;  --warn-border: #FBBF24;
-      --bad-text:      #FDA4AF;
+      --bad-text:      #FDA4AF;  --bad-bg:  #2E1A1E;  --bad-border: #FDA4AF;
       --chip:          #2A2833;
       --chip-press:    #34313E;
       --field-line:    #34313E;
@@ -200,7 +200,7 @@
   }
   .opt-btn:active { background: var(--chip-press); transform: scale(.985); }
   .opt-btn.correct  { background: var(--good-bg); border-color: var(--good-border); color: var(--good-text); font-weight: 700; }
-  .opt-btn.wrong    { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+  .opt-btn.wrong    { background: var(--bad-bg); border-color: var(--bad-border); color: var(--bad-text); }
   .opt-btn:disabled { cursor: default; }
 
   /* ── Feedback ── */
@@ -215,7 +215,7 @@
   }
   .feedback.show { display: block; animation: sheetUp 260ms cubic-bezier(0.175,0.885,0.32,1.1); }
   .feedback.correct { background: var(--good-bg); color: var(--good-text); }
-  .feedback.wrong   { background: var(--warn-bg); color: var(--warn-text); }
+  .feedback.wrong   { background: var(--bad-bg); color: var(--bad-text); }
   @keyframes sheetUp {
     from { transform: translateY(10px); opacity: .4; }
     to   { transform: none; opacity: 1; }
@@ -275,7 +275,7 @@
   }
   .gap-input:focus { border-bottom-color: var(--accent-press); }
   .gap-input.correct-input { border-bottom-color: var(--good-border); background: var(--good-bg); border-radius: 4px 4px 0 0; }
-  .gap-input.wrong-input   { border-bottom-color: var(--warn-border); background: var(--warn-bg); border-radius: 4px 4px 0 0; }
+  .gap-input.wrong-input   { border-bottom-color: var(--bad-border); background: var(--bad-bg); border-radius: 4px 4px 0 0; }
 
   /* ── Section 3 type-it ── */
   .trap-sentence {
@@ -849,6 +849,9 @@ function renderS1Question() {
 
   var card = document.createElement("div");
   card.className = "card";
+  // NOTE: inline color below (var(--muted)) is JS-embedded template-string markup, not reachable
+  // from <style> alone, so it was intentionally touched during the CSS-token restyle to stay
+  // dark-mode aware. Documented exception to the CSS-only pass scope.
   card.innerHTML =
     '<div class="q-counter">Question ' + (s1Current + 1) + ' of 10</div>' +
     '<div style="font-size:0.82rem;color:var(--muted);font-weight:600;margin-bottom:6px;">' + escHtml(q.prompt) + '</div>' +
@@ -1092,13 +1095,16 @@ function checkS3() {
     var exp = normalise(trap.right);
     var fb  = document.getElementById("s3-fb-" + idx);
 
+    // NOTE: inline borderColor below is JS-set (not reachable from <style> alone), so it was
+    // intentionally touched during the CSS-token restyle to stay dark-mode aware. Documented
+    // exception to the CSS-only pass scope — values match --good-border/--bad-border in <style>.
     if (val === exp) {
       inp.style.borderColor = "var(--good-border)";
       fb.className = "feedback correct show";
       fb.innerHTML = "✓ Exactly right! — " + trap.why;
       correct++;
     } else {
-      inp.style.borderColor = "var(--warn-border)";
+      inp.style.borderColor = "var(--bad-border)";
       fb.className = "feedback wrong show";
       fb.innerHTML = "Not quite. The correct version: “<strong>" + escHtml(trap.right) + "</strong>” — " + trap.why;
     }

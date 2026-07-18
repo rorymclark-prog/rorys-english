@@ -187,8 +187,8 @@ function SummaryTiles({ data }: { data: Progress }) {
           key={t.label}
           className="rounded-card bg-surface p-3 text-center shadow-card dark:bg-navy-raised dark:shadow-card-dark"
         >
-          <div className="tnum text-2xl font-extrabold text-amber-deep dark:text-amber">{t.value}</div>
-          <div className="mt-1 text-[11px] font-medium leading-tight text-navy-soft dark:text-navy-mist">
+          <div className="tnum text-2xl font-extrabold text-navy dark:text-cream">{t.value}</div>
+          <div className="mt-1 text-[0.6875rem] font-medium leading-tight text-navy-soft dark:text-navy-mist">
             {t.label}
           </div>
         </div>
@@ -222,11 +222,11 @@ function SectionCard({ title, section }: { title: string; section?: Section }) {
       <div className="max-h-[70vh] overflow-auto rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark">
         <table className="w-full min-w-max text-left text-sm">
           <thead>
-            <tr className="border-b border-black/[.06] dark:border-white/[.08]">
+            <tr>
               {section.headers.map((h, i) => (
                 <th
                   key={i}
-                  className={`sticky top-0 z-[1] whitespace-nowrap bg-surface px-3 py-2 font-bold text-navy dark:bg-navy-raised dark:text-cream ${
+                  className={`sticky top-0 z-[1] whitespace-nowrap bg-surface px-3 py-2 font-bold text-navy shadow-[inset_0_-1px_0_rgba(0,0,0,.06)] dark:bg-navy-raised dark:text-cream dark:shadow-[inset_0_-1px_0_rgba(255,255,255,.08)] ${
                     numericCols[i] ? "text-right" : ""
                   }`}
                 >
@@ -241,16 +241,22 @@ function SectionCard({ title, section }: { title: string; section?: Section }) {
               .reverse()
               .map((row, ri) => (
                 <tr key={ri} className="border-b border-black/[.04] last:border-0 dark:border-white/[.04]">
-                  {row.map((cell, ci) => (
-                    <td
-                      key={ci}
-                      className={`whitespace-nowrap px-3 py-2 text-navy-soft dark:text-navy-mist ${
-                        numericCols[ci] ? "tnum text-right" : ""
-                      }`}
-                    >
-                      {String(cell)}
-                    </td>
-                  ))}
+                  {row.map((cell, ci) => {
+                    const v = String(cell);
+                    const d = /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v) : null;
+                    return (
+                      <td
+                        key={ci}
+                        className={`whitespace-nowrap px-3 py-2 text-navy-soft dark:text-navy-mist ${
+                          numericCols[ci] ? "tnum text-right" : ""
+                        }`}
+                      >
+                        {d
+                          ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                          : v}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
           </tbody>

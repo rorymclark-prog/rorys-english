@@ -63,20 +63,25 @@ const config: Config = {
         glow: "0 0 0 6px rgba(79,70,229,.12), 0 8px 24px rgba(79,70,229,.35)",
         "glow-dark": "0 0 0 6px rgba(162,164,252,.14), 0 8px 24px rgba(162,164,252,.25)",
       },
+      // Spec motion default (ease-out2026 @ 200ms) as the framework DEFAULT so
+      // bare `transition` utilities comply everywhere without per-site opt-in.
       transitionTimingFunction: {
+        DEFAULT: "cubic-bezier(0.16, 1, 0.3, 1)",
         out2026: "cubic-bezier(0.16, 1, 0.3, 1)",
         spring: "cubic-bezier(0.175, 0.885, 0.32, 1.1)",
       },
+      transitionDuration: { DEFAULT: "200ms" },
       keyframes: {
         pop: {
           "0%": { transform: "scale(0.85)", opacity: "0" },
           "60%": { transform: "scale(1.04)" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
+        // Completion wash uses good-bright (#4ADE80) — VOLTSTONE status family.
         flash: {
-          "0%": { backgroundColor: "rgba(34,197,94,0.0)" },
-          "30%": { backgroundColor: "rgba(34,197,94,0.18)" },
-          "100%": { backgroundColor: "rgba(34,197,94,0.0)" },
+          "0%": { backgroundColor: "rgba(74,222,128,0.0)" },
+          "30%": { backgroundColor: "rgba(74,222,128,0.18)" },
+          "100%": { backgroundColor: "rgba(74,222,128,0.0)" },
         },
         sheetUp: {
           from: { transform: "translateY(24px)", opacity: "0.6" },

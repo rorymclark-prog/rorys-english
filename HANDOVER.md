@@ -37,6 +37,7 @@ A mobile-first **PWA** the students install on their phones for **homework + pro
 ## 2. Tech stack & key decisions (read before changing anything)
 
 - **Next.js 15 (App Router) + TypeScript + Tailwind**, `output: "export"` → pure static site. No backend, no accounts.
+- **Design system = "VOLTSTONE" (2026)** — `design/MODERN-2026-SPEC.md` is the styling source of truth; read it before changing any UI. Electric indigo accent (`#4F46E5` light / `#A2A4FC` dark), warm stone `#FAF8F5`, charcoal `#17161C` dark base (also the PWA `themeColor`), ember `#C2410C` reward channel; legacy Tailwind names (`amber`/`navy`/`burgundy`/`cream`) kept with new values. Fonts: Manrope + JetBrains Mono. Charcoal/indigo "RE" icon; floating glass tab bar. **Hard rule: `#4F46E5` never on the dark base — dark accents with `#A2A4FC`.**
 - **Progress = `localStorage`** on the device. localStorage is the source of truth; sync is best-effort on top.
 - **Hosting = GitHub Pages** under a sub-path `/rorys-english`. This is why `basePath` matters (see §6, Gotcha A).
 - **Sync (optional) = Google Apps Script Web App.** The static app can't hold Google credentials, so it POSTs events to an Apps Script `/exec` URL that writes into a Google Sheet. Free, no server, matches Rory's existing Apps Script workflow.
@@ -48,6 +49,7 @@ A mobile-first **PWA** the students install on their phones for **homework + pro
 
 ```
 rorys-english/
+├─ design/MODERN-2026-SPEC.md       # VOLTSTONE design system (styling source of truth)
 ├─ content/                         # ALL tutor content (edit JSON, no code changes)
 │  ├─ students.json                 # id, displayName, code, profile, units[]
 │  ├─ ferdi/units.json              # units + studyTools[] (title,url,blurb)

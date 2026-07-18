@@ -30,7 +30,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#17161C",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FAF8F5" },
+    { media: "(prefers-color-scheme: dark)", color: "#17161C" },
+  ],
   width: "device-width",
   initialScale: 1,
   // Allow pinch-zoom (accessibility) — the in-app text-size setting is a

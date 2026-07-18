@@ -120,7 +120,7 @@ export default function SpeakView({ lines }: { lines: string[] }) {
           </p>
         )}
 
-        {err && <p className="mt-3 text-center text-sm font-medium text-bad dark:text-bad-bright">{err}</p>}
+        {err && <p role="status" className="mt-3 text-center text-sm font-medium text-bad dark:text-bad-bright">{err}</p>}
 
         {myAudio && !recording && (
           <div className="mt-4">
@@ -144,7 +144,7 @@ export default function SpeakView({ lines }: { lines: string[] }) {
         </button>
         <button
           onClick={() => go(i + 1)}
-          className="min-h-[48px] flex-1 rounded-xl bg-navy px-4 font-bold text-cream transition active:scale-[.97] dark:bg-white/10 dark:text-cream"
+          className="min-h-[48px] flex-1 rounded-xl bg-navy px-4 font-bold text-cream transition active:scale-[.97] dark:bg-cream dark:text-navy"
         >
           Next →
         </button>

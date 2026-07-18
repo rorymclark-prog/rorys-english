@@ -17,7 +17,7 @@ export default function Home() {
 
       <div className="text-5xl">📚</div>
       <h1 className="display text-3xl text-navy dark:text-cream">Rory&apos;s English</h1>
-      <p className="rounded-card bg-amber-soft p-5 text-navy-soft dark:bg-amber-dusk dark:text-navy-mist">
+      <p className="rounded-card bg-amber-soft p-5 text-navy dark:bg-amber-dusk dark:text-cream">
         This is a private study app. Open it with your own personal link — the one Rory sent you —
         then tap <strong className="text-amber-deep dark:text-amber">Share → Add to Home Screen</strong> to install it.
       </p>

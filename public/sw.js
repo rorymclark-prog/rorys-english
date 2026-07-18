@@ -59,6 +59,7 @@ self.addEventListener("fetch", (event) => {
           if (root) return root;
           return new Response(
             "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>" +
+              "<style>@media (prefers-color-scheme:dark){body{background:#17161C!important;color:#FAF8F5!important}}</style>" +
               "<body style='font-family:-apple-system,sans-serif;background:#FAF8F5;color:#17161C;text-align:center;padding:3rem 1.5rem'>" +
               "<p style='font-size:2rem'>📚</p><h1>You're offline</h1>" +
               "<p>Your saved work is safe. Reconnect to load this page.</p></body>",

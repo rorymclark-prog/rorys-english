@@ -1,15 +1,13 @@
-"use client";
-
-import { useEffect } from "react";
-
-// Parent pages have no Settings provider, so they simply follow the OS theme.
+// Parent pages have no Settings provider and no stored theme preference, so
+// they get the app default: dark. Rendered as an inline script (server
+// component, ends up in the static HTML) so the `dark` class lands while the
+// document is still parsing — before first paint, no light flash.
 export default function ThemeInit() {
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => document.documentElement.classList.toggle("dark", mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, []);
-  return null;
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `document.documentElement.classList.add("dark");`,
+      }}
+    />
+  );
 }

@@ -16,7 +16,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="mt-2 rounded-xl bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-5 py-2.5 font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
+        className="mt-2 rounded-xl bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-5 py-2.5 font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition ease-out2026 active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
       >
         Go to start
       </Link>

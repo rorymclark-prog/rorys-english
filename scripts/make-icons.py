@@ -46,8 +46,19 @@ def draw_icon(size, maskable=False):
     return img
 
 
+APP_ICON = os.path.join(os.path.dirname(__file__), "..", "src", "app", "icon.png")
+
 draw_icon(512, maskable=True).save(os.path.join(OUT, "icon-512.png"))
 draw_icon(192, maskable=True).save(os.path.join(OUT, "icon-192.png"))
 # Apple touch icon: opaque, iOS applies its own rounding.
 draw_icon(180, maskable=False).save(os.path.join(OUT, "apple-touch-icon.png"))
-print("Wrote icon-512.png, icon-192.png, apple-touch-icon.png to", os.path.normpath(OUT))
+# Next.js file-convention favicon (App Router auto-serves src/app/icon.png as an
+# additional icon route). Not a maskable PWA icon, so match the apple-touch-icon
+# framing (non-maskable padding) rather than the maskable icons above.
+draw_icon(192, maskable=False).save(os.path.normpath(APP_ICON))
+print(
+    "Wrote icon-512.png, icon-192.png, apple-touch-icon.png to",
+    os.path.normpath(OUT),
+    "and icon.png to",
+    os.path.normpath(APP_ICON),
+)

@@ -16,7 +16,13 @@ export function confettiBurst(): void {
   if (typeof document === "undefined") return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-  const colors = ["#F59E0B", "#1E3A5F", "#7C2D3B", "#22C55E", "#FBBF24"];
+  // VOLTSTONE bright-tier tokens only (safe on the #17161C dark base AND on cream):
+  // amber #A2A4FC, burgundy-bright #F59D6E (ember reward), good-bright #4ADE80,
+  // warn-bright #FBBF24. NOTE: #4F46E5 deliberately excluded — spec hard rule 1
+  // bans it on the dark base (2.86:1) and this helper is mode-unaware.
+  // Spec §6 prefers no confetti at all; removing the call site is owned by
+  // HomeworkWeekView (delete this function once that call is gone).
+  const colors = ["#A2A4FC", "#F59D6E", "#4ADE80", "#FBBF24"];
   const root = document.createElement("div");
   root.setAttribute("aria-hidden", "true");
   Object.assign(root.style, {

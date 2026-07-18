@@ -1,6 +1,6 @@
 # Rory's English
 
-Mobile-first PWA for Rory Clark's English students. Built with Next.js 15 App Router, TypeScript, and Tailwind CSS. Output is a fully static export (`output: "export"`) — no server, no backend, no accounts. All content is shipped as JSON at build time; progress lives in localStorage on the student's device. Study tools are **external HTML pages** linked by URL — there is no in-app quiz engine.
+Mobile-first PWA for Rory Clark's English students. Built with Next.js 15 App Router, TypeScript, and Tailwind CSS. Output is a fully static export (`output: "export"`) — no server, no backend, no accounts. All content is shipped as JSON at build time; progress lives in localStorage on the student's device. Study tools are **external HTML pages** linked by URL — there is no in-app quiz engine. Styling follows the **VOLTSTONE 2026 design system** — electric indigo accent (`#4F46E5`, `#A2A4FC` in dark mode) on warm stone `#FAF8F5`, charcoal `#17161C` dark base and PWA theme color, ember `#C2410C` for streaks/rewards, Manrope + JetBrains Mono, floating glass tab bar — see `design/MODERN-2026-SPEC.md` for the full spec (legacy Tailwind color names are kept; only the values changed).
 
 ### What students get
 
@@ -210,4 +210,4 @@ python3 scripts/make-icons.py
 # writes icon-512.png, icon-192.png, apple-touch-icon.png to public/icons/
 ```
 
-The script draws an amber tile with a navy "RE" monogram. It is not part of the normal build.
+The script draws a charcoal tile with an indigo plate and a stone "RE" monogram (VOLTSTONE palette — see `design/MODERN-2026-SPEC.md`). It is not part of the normal build.

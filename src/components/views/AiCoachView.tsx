@@ -38,7 +38,8 @@ export default function AiCoachView({ code }: { code: string }) {
     } catch {
       /* ignore */
     }
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    chatEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" });
   }, [chat, chatKey]);
 
   const placeholder =
@@ -154,14 +155,18 @@ export default function AiCoachView({ code }: { code: string }) {
 
       {/* Tutor chat history */}
       {mode === "tutor" && chat.length > 0 && (
-        <div className="glass mt-4 space-y-2 rounded-card p-3 shadow-card dark:shadow-card-dark">
+        <div
+          role="log"
+          aria-label="Tutor conversation"
+          className="glass mt-4 space-y-2 rounded-card p-3 shadow-card dark:shadow-card-dark"
+        >
           {chat.map((m, i) => (
             <div key={i} className={`flex ${m.role === "you" ? "justify-end" : "justify-start"}`}>
               <div
-                className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-[0.95rem] leading-relaxed ${
+                className={`max-w-[85%] whitespace-pre-wrap rounded-card px-4 py-2.5 text-[0.95rem] leading-relaxed ${
                   m.role === "you"
-                    ? "rounded-br-md bg-surface text-navy shadow-card dark:bg-navy-raised dark:text-cream dark:shadow-card-dark"
-                    : "rounded-bl-md bg-[linear-gradient(135deg,#4F46E5,#4338CA)] text-white shadow-glow dark:shadow-glow-dark"
+                    ? "rounded-br-lg bg-surface text-navy shadow-card dark:bg-navy-raised dark:text-cream dark:shadow-card-dark"
+                    : "rounded-bl-lg bg-[linear-gradient(135deg,#4F46E5,#4338CA)] text-white shadow-glow dark:shadow-glow-dark"
                 }`}
               >
                 {m.text}
@@ -169,8 +174,8 @@ export default function AiCoachView({ code }: { code: string }) {
             </div>
           ))}
           {status === "loading" && (
-            <div className="flex justify-start">
-              <div className="rounded-2xl rounded-bl-md bg-surface px-4 py-2.5 text-sm text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark">
+            <div role="status" className="flex justify-start">
+              <div className="rounded-card rounded-bl-lg bg-surface px-4 py-2.5 text-sm text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark">
                 <span className="ai-shimmer">Thinking…</span>
               </div>
             </div>
@@ -178,7 +183,7 @@ export default function AiCoachView({ code }: { code: string }) {
           <div ref={chatEndRef} />
           <button
             onClick={clearChat}
-            className="mx-auto block pt-1 text-xs font-semibold text-navy-soft underline transition active:scale-[.97] dark:text-navy-mist"
+            className="mx-auto flex min-h-[44px] items-center justify-center px-4 text-xs font-semibold text-navy-soft underline transition active:scale-[.97] dark:text-navy-mist"
           >
             Clear conversation
           </button>
@@ -214,10 +219,12 @@ export default function AiCoachView({ code }: { code: string }) {
       <button
         onClick={ask}
         disabled={status === "loading" || !input.trim()}
-        className="mt-2 min-h-[52px] w-full rounded-xl bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-4 text-base font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition active:scale-[.97] disabled:opacity-50 dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
+        className={`mt-2 min-h-[52px] w-full rounded-xl bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-4 text-base font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none ${
+          status === "loading" ? "" : "disabled:opacity-50"
+        }`}
       >
         {status === "loading"
-          ? <span className="ai-shimmer">Thinking…</span>
+          ? "Thinking…"
           : mode === "tutor"
             ? "Ask the tutor"
             : mode === "word"
@@ -226,13 +233,19 @@ export default function AiCoachView({ code }: { code: string }) {
       </button>
 
       {status === "error" && (
-        <p className="mt-4 animate-sheet rounded-card bg-bad-soft p-4 text-center text-sm font-medium text-bad dark:bg-bad-dusk dark:text-bad-bright">
+        <p
+          role="status"
+          className="mt-4 animate-sheet rounded-card bg-bad-soft p-4 text-center text-sm font-medium text-bad dark:bg-bad-dusk dark:text-bad-bright"
+        >
           {errMsg}
         </p>
       )}
 
       {mode !== "tutor" && answer && (
-        <section className="glass mt-4 animate-sheet rounded-card p-5 shadow-card dark:shadow-card-dark">
+        <section
+          role="status"
+          className="glass mt-4 animate-sheet rounded-card p-5 shadow-card dark:shadow-card-dark"
+        >
           <p className="whitespace-pre-wrap text-[0.95rem] leading-relaxed text-navy dark:text-cream">
             {answer}
           </p>

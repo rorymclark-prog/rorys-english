@@ -25,7 +25,7 @@ export default function SettingsView() {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
 
-  const [shareNote, setShareNote] = useState("");
+  const [shareNote, setShareNote] = useState<{ text: string; ok: boolean } | null>(null);
 
   const doReset = () => {
     resetProgress(studentId);
@@ -45,9 +45,9 @@ export default function SettingsView() {
         return;
       }
       await navigator.clipboard.writeText(text);
-      setShareNote("Copied! Paste it to Rory on WhatsApp.");
+      setShareNote({ text: "Copied! Paste it to Rory on WhatsApp.", ok: true });
     } catch {
-      setShareNote("Couldn't open share — copy your progress manually.");
+      setShareNote({ text: "Couldn't open share — copy your progress manually.", ok: false });
     }
   };
 
@@ -59,7 +59,7 @@ export default function SettingsView() {
         </Row>
 
         <div>
-          <p className="mb-2 text-sm font-bold text-navy-soft dark:text-navy-mist">Progress</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Progress</p>
           <button
             onClick={shareProgress}
             className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-4 font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
@@ -67,12 +67,18 @@ export default function SettingsView() {
             Send my progress to Rory
           </button>
           {shareNote && (
-            <p className="mt-2 text-center text-sm text-navy-soft dark:text-navy-mist">{shareNote}</p>
+            <p
+              className={`mt-2 text-center text-sm ${
+                shareNote.ok ? "text-good dark:text-good-bright" : "text-bad dark:text-bad-bright"
+              }`}
+            >
+              {shareNote.text}
+            </p>
           )}
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-bold text-navy-soft dark:text-navy-mist">Text size</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Text size</p>
           <SegmentedControl
             options={TEXT_SIZES}
             value={settings.textScale}
@@ -81,7 +87,7 @@ export default function SettingsView() {
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-bold text-navy-soft dark:text-navy-mist">Appearance</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Appearance</p>
           <SegmentedControl
             options={THEMES}
             value={settings.theme}
@@ -90,7 +96,7 @@ export default function SettingsView() {
         </div>
 
         <div className="pt-2">
-          <p className="mb-2 text-sm font-bold text-navy-soft dark:text-navy-mist">Start fresh</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Start fresh</p>
           {!confirming ? (
             <button
               onClick={() => setConfirming(true)}

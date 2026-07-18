@@ -13,7 +13,7 @@ import {
   setTaskValue,
   setWeekComplete,
 } from "@/lib/storage";
-import { confettiBurst, haptic } from "@/lib/celebrate";
+import { haptic } from "@/lib/celebrate";
 import { buildHomeworkIcs, downloadIcs, parseDueDate } from "@/lib/ics";
 import { syncHomework } from "@/lib/sync";
 
@@ -42,7 +42,6 @@ export default function HomeworkWeekView({
     if (next) {
       setFlash(true);
       window.setTimeout(() => setFlash(false), 700);
-      confettiBurst();
       haptic([10, 40, 20]);
     }
   };
@@ -93,7 +92,7 @@ export default function HomeworkWeekView({
         {canAddCalendar && (
           <button
             onClick={addToCalendar}
-            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-black/[.06] bg-surface px-4 text-sm font-bold text-navy shadow-card transition active:scale-[.97] dark:border-white/[.06] dark:bg-navy-raised dark:text-cream dark:shadow-card-dark"
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-black/[.06] bg-surface px-4 text-sm font-bold text-navy shadow-card transition active:scale-[.97] dark:border-transparent dark:bg-navy-raised dark:text-cream dark:shadow-card-dark"
           >
             📅 Add due date to my calendar
           </button>

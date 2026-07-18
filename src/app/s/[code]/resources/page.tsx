@@ -15,7 +15,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ code
         <Link
           href={`/s/${code}/`}
           aria-label="Back to today"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft hover:bg-black/5 dark:text-cream/70 dark:hover:bg-white/10"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft transition hover:bg-black/5 active:scale-[.97] dark:text-navy-mist dark:hover:bg-white/10"
         >
           <ChevronLeftIcon />
         </Link>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Unit } from "@/lib/types";
 import { useStudent } from "@/components/StudentContext";
 import Screen from "@/components/Screen";
-import { ChevronRightIcon, FlameIcon, ChartIcon } from "@/components/Icons";
+import { BookIcon, ChevronRightIcon, FlameIcon, ChartIcon } from "@/components/Icons";
 import {
   bestStreak,
   countWordsDue,
@@ -58,7 +58,7 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-lg font-bold text-navy dark:text-cream">{dueWeek.title}</p>
-                  <p className="tnum mt-1 text-sm text-warn dark:text-warn-bright">Due {dueWeek.due}</p>
+                  <p className="tnum mt-1 inline-block w-fit rounded-full bg-warn-soft px-2 py-0.5 text-xs font-bold text-warn dark:bg-warn-dusk dark:text-warn-bright">Due {dueWeek.due}</p>
                 </div>
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-soft text-amber-deep dark:bg-amber-dusk dark:text-amber">
                   <ChevronRightIcon />
@@ -102,15 +102,20 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
           <div className="mt-3 flex items-center justify-between gap-1.5">
             {activity.map(({ day, active }, i) => (
               <div key={day} className="flex flex-1 flex-col items-center gap-1">
+                <span className="sr-only">
+                  {(i === activity.length - 1
+                    ? "Today"
+                    : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][
+                        new Date(day + "T00:00").getDay()
+                      ]) + ": " + (active ? "practiced" : "no activity")}
+                </span>
                 <span
                   className={`relative h-7 w-7 rounded-full transition ${
                     active ? "bg-burgundy dark:bg-burgundy-bright" : "bg-navy/10 dark:bg-white/10"
                   } ${i === activity.length - 1 ? "ring-2 ring-burgundy/50 dark:ring-burgundy-bright/60" : ""}`}
                   aria-hidden
-                >
-                  {i === activity.length - 1 && <span className="sr-only">Today</span>}
-                </span>
-                <span className="font-mono text-[10px] font-medium text-navy-soft dark:text-navy-mist">
+                />
+                <span className="font-mono text-[0.625rem] font-medium text-navy-soft dark:text-navy-mist" aria-hidden>
                   {/* Sun=0 … Sat=6 → both ends are "S" */}
                   {"SMTWTFS"[new Date(day + "T00:00").getDay()]}
                 </span>
@@ -128,7 +133,7 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
             className="flex items-center justify-between gap-3 rounded-card bg-amber-soft p-4 transition active:scale-[.97] dark:bg-amber-dusk"
           >
             <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-deep/10 text-lg dark:bg-amber/15" aria-hidden>
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-soft text-lg dark:bg-amber-dusk" aria-hidden>
                 🔁
               </span>
               <span>
@@ -144,12 +149,12 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
       <section className="mt-5">
         <Link
           href={`/s/${code}/coach/`}
-          className="flex items-center justify-between gap-3 rounded-card bg-[linear-gradient(135deg,#4F46E5,#4338CA)] p-5 text-white shadow-glow transition active:scale-[.97] dark:shadow-glow-dark"
+          className="flex items-center justify-between gap-3 rounded-card bg-[linear-gradient(135deg,#4F46E5,#4338CA)] p-5 text-white shadow-glow transition active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-glow-dark"
         >
           <span className="flex items-center gap-3 font-semibold">
             <span className="text-lg" aria-hidden>✨</span> Ask the English tutor
           </span>
-          <ChevronRightIcon className="text-white/80" />
+          <ChevronRightIcon className="text-white/80 dark:text-navy/60" />
         </Link>
       </section>
 
@@ -159,7 +164,7 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
           href={`/s/${code}/resources/`}
           className="flex flex-col items-center gap-1 rounded-card bg-surface p-4 text-center shadow-card transition active:scale-[.97] dark:bg-navy-raised dark:shadow-card-dark"
         >
-          <span className="text-2xl" aria-hidden>📚</span>
+          <BookIcon className="text-amber-deep dark:text-amber" />
           <span className="text-sm font-semibold text-navy dark:text-cream">Lessons &amp; feedback</span>
         </Link>
         <Link

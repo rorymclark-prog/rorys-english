@@ -49,7 +49,7 @@ export default function StudyView({ unit }: { unit: Unit | null }) {
                 href={resolve(tool.url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-4 text-base font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
+                className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-amber-soft px-4 text-base font-bold text-amber-deep transition active:scale-[.97] dark:bg-amber-dusk dark:text-amber"
               >
                 Open <ExternalIcon width={20} height={20} />
               </a>
