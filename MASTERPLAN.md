@@ -228,9 +228,19 @@ rorys-english/
 | **Writing tab pipeline** (`scripts/analyse-writing.py` → Claude → Writing tab) | ✅ write/read plumbing verified; needs `ANTHROPIC_API_KEY` to run the AI step |
 | Sheet tabs awaiting pipelines (School Tests, Speaking, Mock Tests) | 🟡 created, empty (Phase 2c–2d) |
 
-### 7.5 Live coordinates
+### 7.5 Teacher dashboard
+| Item | Status | Notes |
+|---|---|---|
+| `/teacher/` — password-gated, all-students overview + drill-down | ✅ | Rory has no login anywhere else in the app (student/parent codes only) — this is the one exception, because it exposes every student's data at once. |
+| `action=teacherDashboard` (Apps Script), POST-only, no JSONP/GET path | ✅ | password can never land in a URL |
+| Gated by `TEACHER_PASSWORD` Script Property, fails closed if unset | 🟡 | **Rory's one open action** — same one-time-paste pattern as `ANTHROPIC_API_KEY`; see apps-script/progress-sync/README.md |
+| Wrong-password round-trip verified live against deploy v18 | ✅ | real authenticated view (with the actual password) not yet screenshotted |
+| Built wide (`max-w-3xl`), unlike the phone-locked student shell | ✅ | the one screen meant for laptop/iPad, not just phone |
+
+### 7.6 Live coordinates
 - **Live app:** https://rorymclark-prog.github.io/rorys-english/
 - **Ferdi:** …/s/ferdi-7h3k/ · **Valentin:** …/s/valentin-q9m2/
+- **Teacher dashboard:** …/teacher/ (needs `TEACHER_PASSWORD` set — see §7.5)
 - **Repo:** https://github.com/rorymclark-prog/rorys-english
 - **Apps Script /exec:** `https://script.google.com/macros/s/AKfycbxzo-IunYLs8JA6R-ZCCrzIiB7Gt1gONgFJvYbnOc119XEnmaFaHp4AW2DYnJRS_lNsxQ/exec`
 
@@ -381,6 +391,7 @@ That, plus repo access (and Rory's Google login for any Apps Script change), is 
 | Valentin link | …/s/valentin-q9m2/ |
 | Ferdi PARENT link | …/p/ferdi-fam-3p9k/ |
 | Valentin PARENT link | …/p/valentin-fam-8w2d/ |
+| Teacher dashboard | …/teacher/ (set `TEACHER_PASSWORD` in Apps Script first) |
 | GitHub repo | https://github.com/rorymclark-prog/rorys-english (account `rorymclark-prog`) |
 | Apps Script /exec | `https://script.google.com/macros/s/AKfycbxzo-IunYLs8JA6R-ZCCrzIiB7Gt1gONgFJvYbnOc119XEnmaFaHp4AW2DYnJRS_lNsxQ/exec` |
 | Apps Script scriptId | `1wATmdmLpg5EfE8f3Ub5BL7HtObWg1RkYVR7WqvMAWNwUQZ3_5zVB8S8_` |
