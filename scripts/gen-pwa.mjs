@@ -27,8 +27,8 @@ for (const s of students) {
     scope: `${base}/s/${s.code}/`,
     display: "standalone",
     orientation: "portrait",
-    background_color: "#FDF6EC",
-    theme_color: "#1E3A5F",
+    background_color: "#FAF8F5",
+    theme_color: "#17161C",
     icons,
     // Long-press the installed icon → jump straight to a section.
     shortcuts: [
@@ -49,8 +49,8 @@ writeFileSync(
       start_url: `${base}/`,
       scope: `${base}/`,
       display: "standalone",
-      background_color: "#FDF6EC",
-      theme_color: "#1E3A5F",
+      background_color: "#FAF8F5",
+      theme_color: "#17161C",
       icons,
     },
     null,

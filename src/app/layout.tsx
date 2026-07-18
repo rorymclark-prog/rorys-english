@@ -1,6 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+
+// Self-hosted at build time (static export downloads them once) — no runtime
+// requests to Google, works offline like the rest of the PWA.
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-sans" });
+const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 // Next does NOT auto-prefix metadata icon/manifest URLs with basePath, so we
 // add it ourselves (empty for root hosts, "/rorys-english" for GitHub Pages).
@@ -24,7 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1E3A5F",
+  themeColor: "#17161C",
   width: "device-width",
   initialScale: 1,
   // Allow pinch-zoom (accessibility) — the in-app text-size setting is a
@@ -35,8 +41,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
+    <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${jetbrains.variable}`}>
+      <body className="font-sans">
         {children}
         <ServiceWorkerRegister />
       </body>
