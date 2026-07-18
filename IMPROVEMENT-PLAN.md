@@ -22,6 +22,19 @@ This file is the working backlog; MASTERPLAN.md remains the source of truth for 
 
 ---
 
+## ✅ Done — second pass (this session)
+
+- **CORS POST migration (was #7, the headline).** Verified live that Apps Script returns
+  CORS-readable JSON on a simple `text/plain` POST. `remote.ts` now POSTs (JSONP kept as
+  fallback); `Code.gs doPost` routes `action=progress|resources|ai`. Result: **no URL-length
+  limit** (writing coach raised 1500→4000 chars; `AI_MAX_INPUT` 2000→6000), secret + student
+  text now travel in the **body not the URL**, and multi-turn is unconstrained. Verified: a
+  2,626-char AI body delivered; resources/progress read via POST live.
+- **Writing feedback → one focus-error (was #2).** `WRITING_SYSTEM` rewritten: one win, the
+  single most useful fix framed as a reusable strategy, effort-based praise — not a list.
+- **Today screen trimmed (was #3).** Dropped the redundant "Open a study tool" card; Lessons +
+  Progress now a compact 2-up row under the prominent tutor card. Verified live above the fold.
+
 ## 🔜 Next — high value, low/med effort
 
 1. **Cross-unit spaced repetition (before Unit 11 ships).** *Research: high impact / M.*

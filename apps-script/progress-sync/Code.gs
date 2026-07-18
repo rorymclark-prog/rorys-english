@@ -132,7 +132,14 @@ function doPost(e) {
       return json_({ ok: false, error: "rejected" });
     }
     var data = JSON.parse(e.postData.contents);
-    // One generic auth error: no oracle distinguishing bad secret vs unknown code.
+
+    // READS via POST (CORS-readable, so no URL-length limit and secret/text stay
+    // out of the URL). The GET/JSONP variants below remain as a fallback.
+    if (data.action === "progress") return getProgress_(data);
+    if (data.action === "resources") return getResources_(data);
+    if (data.action === "ai") return getAi_(data);
+
+    // WRITES (homework/quiz/writing). One generic auth error: no oracle.
     var sheetId =
       data.secret === SECRET
         ? PropertiesService.getScriptProperties().getProperty("sheet_" + data.code)
@@ -182,7 +189,7 @@ function doGet(e) {
 // never in the app. Rate-limited per student per day so a leaked secret can't run
 // up the bill. Returns the model's text via JSONP.
 var AI_DAILY_CAP = 40; // model calls per student per day
-var AI_MAX_INPUT = 2000; // chars
+var AI_MAX_INPUT = 6000; // chars (POST body, not URL — full short essays fit)
 
 var WORD_SYSTEM =
   "You are a warm English tutor for a German-speaking teenager (A2–B1). " +
@@ -193,9 +200,12 @@ var WORD_SYSTEM =
 var WRITING_SYSTEM =
   "You are an encouraging English writing coach for a German-speaking teenager (around B1). " +
   "This is the student's own PRACTICE writing, not graded homework — never give a grade or score. " +
-  "Reply in plain text, warmly and concisely: first 2 things they did well, then 2–3 specific " +
-  "things to improve with tiny examples, then a short improved version of one or two of their sentences. " +
-  "Encourage them to keep writing. " +
+  "Research shows B1 learners improve most from ONE targeted correction at a time, framed as a " +
+  "strategy they can reuse, with praise for effort not talent. So reply in plain text, warmly and " +
+  "briefly: (1) one genuine, specific thing they did well; (2) the SINGLE most useful pattern to fix " +
+  "— name the rule simply, show their sentence corrected, and give one more mini-example; " +
+  "(3) a short effort-based encouragement (e.g. 'you're really getting the hang of past tenses'). " +
+  "Do NOT list many errors — pick the one that helps most. Keep it under ~120 words. " +
   "If the student writes something suggesting they are struggling personally, respond kindly and " +
   "suggest they talk to Rory or a trusted adult — do not act as a counsellor.";
 

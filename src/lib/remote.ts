@@ -1,12 +1,12 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REMOTE PROGRESS READ (JSONP)
+// REMOTE READS (progress / resources / AI)
 //
-// Reads a student's progress snapshot from the Apps Script doGet endpoint.
-// Apps Script can't send CORS headers, so we use JSONP (inject a <script> with a
-// callback) to read cross-origin. Same URL + secret as the write sync.
-// Works on ANY device (this is what powers the parent view).
+// Primary path: a "simple" (text/plain, no preflight) POST that Apps Script now
+// answers with CORS-readable JSON — so the request body carries the secret + any
+// long text (essays) instead of the URL, with no length limit. If that ever
+// fails (network / a deploy that breaks CORS), we fall back to JSONP GET.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const URL = process.env.NEXT_PUBLIC_SYNC_URL || "";
@@ -14,6 +14,22 @@ const SECRET = process.env.NEXT_PUBLIC_SYNC_SECRET || "";
 
 export function remoteEnabled(): boolean {
   return URL.length > 0;
+}
+
+// POST-first read; falls back to JSONP on failure.
+async function call<T>(params: Record<string, string>): Promise<T> {
+  if (!URL) throw new Error("sync not configured");
+  try {
+    const res = await fetch(URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ ...params, secret: SECRET }),
+    });
+    if (!res.ok) throw new Error(`http ${res.status}`);
+    return (await res.json()) as T;
+  } catch {
+    return jsonp<T>(params); // resilience fallback
+  }
 }
 
 export interface Section {
@@ -73,7 +89,7 @@ function jsonp<T>(params: Record<string, string>): Promise<T> {
 
 /** Fetch a progress snapshot by student code OR parent code. */
 export function fetchProgress(code: string): Promise<Progress> {
-  return jsonp<Progress>({ action: "progress", code });
+  return call<Progress>({ action: "progress", code });
 }
 
 // ── AI helper (word lookup + writing coach) ──────────────────────────────────
@@ -89,7 +105,7 @@ export function fetchAi(
   kind: "word" | "writing" | "tutor",
   q: string,
 ): Promise<AiResult> {
-  return jsonp<AiResult>({ action: "ai", code, kind, q });
+  return call<AiResult>({ action: "ai", code, kind, q });
 }
 
 // ── Shared Drive resources (lesson slides, feedback, assessments) ────────────
@@ -108,5 +124,5 @@ export interface Resources {
 
 /** Fetch the student's shared Drive files by student code OR parent code. */
 export function fetchResources(code: string): Promise<Resources> {
-  return jsonp<Resources>({ action: "resources", code });
+  return call<Resources>({ action: "resources", code });
 }

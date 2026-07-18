@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Unit } from "@/lib/types";
 import { useStudent } from "@/components/StudentContext";
 import Screen from "@/components/Screen";
-import { ChevronRightIcon, FlameIcon, ExternalIcon, ChartIcon } from "@/components/Icons";
+import { ChevronRightIcon, FlameIcon, ChartIcon } from "@/components/Icons";
 import {
   bestStreak,
   countWordsDue,
@@ -137,7 +137,7 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
         </section>
       )}
 
-      {/* AI helper: word lookup + writing coach */}
+      {/* AI tutor — the flagship helper, kept prominent */}
       <section className="mt-5">
         <Link
           href={`/s/${code}/coach/`}
@@ -150,46 +150,23 @@ export default function TodayView({ unit }: { unit: Unit | null }) {
         </Link>
       </section>
 
-      {/* Lessons & feedback (Drive-shared files) */}
-      <section className="mt-5">
+      {/* Compact secondary row so these aren't pushed below the fold */}
+      <section className="mt-3 grid grid-cols-2 gap-3">
         <Link
           href={`/s/${code}/resources/`}
-          className="flex items-center justify-between gap-3 rounded-card border border-navy/10 bg-white p-4 shadow-card dark:border-white/10 dark:bg-white/5"
+          className="flex flex-col items-center gap-1 rounded-card border border-navy/10 bg-white p-4 text-center shadow-card active:scale-[.98] dark:border-white/10 dark:bg-white/5"
         >
-          <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
-            <span className="text-lg" aria-hidden>📚</span> Lessons &amp; feedback
-          </span>
-          <ChevronRightIcon className="text-navy-soft dark:text-cream/60" />
+          <span className="text-2xl" aria-hidden>📚</span>
+          <span className="text-sm font-semibold text-navy dark:text-cream">Lessons &amp; feedback</span>
         </Link>
-      </section>
-
-      {/* Progress section */}
-      <section className="mt-5">
         <Link
           href={`/s/${code}/progress/`}
-          className="flex items-center justify-between gap-3 rounded-card border border-navy/10 bg-white p-4 shadow-card dark:border-white/10 dark:bg-white/5"
+          className="flex flex-col items-center gap-1 rounded-card border border-navy/10 bg-white p-4 text-center shadow-card active:scale-[.98] dark:border-white/10 dark:bg-white/5"
         >
-          <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
-            <ChartIcon className="text-amber-deep dark:text-amber" /> See my progress
-          </span>
-          <ChevronRightIcon className="text-navy-soft dark:text-cream/60" />
+          <ChartIcon className="text-amber-deep dark:text-amber" />
+          <span className="text-sm font-semibold text-navy dark:text-cream">My progress</span>
         </Link>
       </section>
-
-      {/* Quick link to study tools */}
-      {unit && unit.studyTools.length > 0 && (
-        <section className="mt-5">
-          <Link
-            href={`/s/${code}/study/`}
-            className="flex items-center justify-between gap-3 rounded-card border border-navy/10 bg-white p-4 shadow-card dark:border-white/10 dark:bg-white/5"
-          >
-            <span className="flex items-center gap-3 font-semibold text-navy dark:text-cream">
-              <ExternalIcon className="text-amber-deep dark:text-amber" /> Open a study tool
-            </span>
-            <ChevronRightIcon className="text-navy-soft dark:text-cream/60" />
-          </Link>
-        </section>
-      )}
     </Screen>
   );
 }

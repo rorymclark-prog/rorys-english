@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchAi, remoteEnabled } from "@/lib/remote";
 
-const WRITING_MAX = 1500;
-const TUTOR_MAX = 400; // per question (URL-transport limit)
+const WRITING_MAX = 4000; // POST body now — full short essays fit
+const TUTOR_MAX = 1000;
 const CONTEXT_BUDGET = 1200; // chars of prior conversation sent for continuity
 
 type Mode = "tutor" | "word" | "writing";

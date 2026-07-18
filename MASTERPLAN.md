@@ -271,7 +271,8 @@ Turn the Sheet from "homework + quizzes" into a full learner record, and surface
 
 ### Phase 3.6 — AI helper (tutor chat + word lookup + writing coach) ✅ DONE (needs 1-time key)
 - **Ask the tutor** (Haiku): a chat-style Q&A mode — bubbles, on-device history (`re_tutor_chat_<code>`, last 30 msgs), last ~6 turns sent as context (1200-char budget) so follow-ups work; B1-simple answers with German glosses; steers off-topic chat back to English; wellbeing-safety line in all AI prompts (suggests talking to Rory/a trusted adult, never counsels).
-- **Word help** (Haiku) and **Writing coach** (Sonnet, practice-not-graded) — same screen, `/s/<code>/coach` ("Ask the English tutor" Today card). App → `fetchAi()` (JSONP) → Apps Script `doGet?action=ai&kind=tutor|word|writing`.
+- **Word help** (Haiku) and **Writing coach** (Sonnet, practice-not-graded, one-focus-error feedback) — same screen, `/s/<code>/coach` ("Ask the English tutor" Today card).
+- **Transport: CORS POST** (`Code.gs doPost` routes `action=progress|resources|ai`), JSONP GET kept as a fallback. So the secret + student text ride in the request **body not the URL**, with **no length limit** (writing up to 4000 chars, `AI_MAX_INPUT` 6000). Verified live.
 - **Key stays server-side:** the Anthropic key lives in Script Property `ANTHROPIC_API_KEY`, never in the app bundle. Rate-limited to **40 calls/student/day** (`ai_<code>_<date>` counters) so a leaked secret can't run up the bill; input capped at 2000 chars; generic errors.
 - **To switch on (1-time, Rory):** (1) Apps Script editor → Project Settings → Script Properties → add `ANTHROPIC_API_KEY`. (2) Run any function (e.g. `setup`) once to approve the new `script.external_request` scope. Until then the app shows a friendly "isn't switched on yet" (verified live).
 - Models: `claude-haiku-4-5` (word), `claude-sonnet-4-6` (writing).
