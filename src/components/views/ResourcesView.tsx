@@ -54,16 +54,16 @@ export default function ResourcesView({
         className="mb-2 pt-4"
         style={{ paddingTop: mode === "parent" ? "calc(env(safe-area-inset-top) + 1rem)" : undefined }}
       >
-        <h1 className="text-2xl font-extrabold text-navy dark:text-cream">Lessons &amp; feedback</h1>
-        <p className="mt-0.5 text-sm text-burgundy dark:text-amber/80">
+        <h1 className="display text-2xl text-navy dark:text-cream">Lessons &amp; feedback</h1>
+        <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">
           Slides, marked work and assessments Rory has shared with you.
         </p>
       </header>
 
       {state === "loading" && (
         <div className="mt-4 space-y-3">
-          <div className="h-16 animate-pulse rounded-card bg-white/70 shadow-card dark:bg-white/5" />
-          <div className="h-16 animate-pulse rounded-card bg-white/70 shadow-card dark:bg-white/5" />
+          <div className="h-16 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark" />
+          <div className="h-16 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark" />
         </div>
       )}
 
@@ -83,15 +83,18 @@ export default function ResourcesView({
                   href={it.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-card bg-white p-4 shadow-card active:scale-[.99] dark:bg-white/5"
+                  className="flex items-center gap-3 rounded-card bg-surface p-4 shadow-card transition active:scale-[.97] dark:bg-navy-raised dark:shadow-card-dark"
                 >
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber/15 text-xl" aria-hidden>
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-soft text-xl dark:bg-amber-dusk" aria-hidden>
                     {k.icon}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-bold text-navy dark:text-cream">{it.name}</span>
-                    <span className="block text-xs text-burgundy dark:text-amber/80">
-                      {k.label} · {it.modified}
+                    <span className="mt-0.5 flex items-center gap-1.5 text-xs">
+                      <span className="rounded-full bg-amber-soft px-2 py-0.5 font-semibold text-amber-deep dark:bg-amber-dusk dark:text-amber">
+                        {k.label}
+                      </span>
+                      <span className="tnum text-navy-soft dark:text-navy-mist">{it.modified}</span>
                     </span>
                   </span>
                   <ExternalIcon className="shrink-0 text-amber-deep dark:text-amber" />
@@ -107,7 +110,7 @@ export default function ResourcesView({
 
 function Note({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-6 rounded-card bg-white p-5 text-center text-burgundy shadow-card dark:bg-white/5 dark:text-amber/80">
+    <p className="mt-6 rounded-card bg-surface p-5 text-center text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark">
       {children}
     </p>
   );

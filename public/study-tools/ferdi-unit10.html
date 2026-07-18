@@ -9,20 +9,32 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --amber:   #F59E0B;
-    --navy:    #1E3A5F;
-    --burgundy:#7C2D3B;
-    --cream:   #FDF6EC;
-    --white:   #FFFFFF;
-    --green:   #166534;
-    --green-bg:#DCFCE7;
-    --amber-bg:#FEF3C7;
-    --radius:  8px;
-    --shadow:  0 2px 8px rgba(30,58,95,.12);
+    /* VOLTSTONE 2026 — electric indigo on warm stone */
+    --amber:   #A2A4FC;   /* bright indigo — dark surfaces (header/nav) only */
+    --accent:  #4F46E5;   /* electric indigo — light-mode accent */
+    --accent-press: #4338CA;
+    --accent-soft:  #ECEAFD;
+    --navy:    #17161C;   /* ink */
+    --ink-soft:#5A5662;   /* muted text on light */
+    --mist:    #B3B1BD;   /* muted text on dark */
+    --burgundy:#C2410C;   /* ember — reward/progress only */
+    --cream:   #FAF8F5;   /* warm stone page bg */
+    --white:   #FEFDFB;   /* surface card (never pure #fff) */
+    --green:   #166534;   /* good */
+    --green-bg:#F0FDF4;   /* good-soft */
+    --bad:     #BE123C;
+    --bad-bg:  #FFF1F2;
+    --warn:    #92400E;
+    --warn-bg: #FFFBEB;
+    --amber-bg:#ECEAFD;   /* highlight wash (example sentences) */
+    --radius:  12px;
+    --radius-card: 20px;
+    --shadow:  0 1px 2px rgba(23,22,28,.04), 0 6px 16px -6px rgba(23,22,28,.10);
+    --ease:    cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: var(--cream);
     color: var(--navy);
     min-height: 100vh;
@@ -32,7 +44,7 @@
   /* ── Header ── */
   header {
     background: var(--navy);
-    color: var(--white);
+    color: var(--cream);
     padding: 14px 16px 10px;
     position: sticky;
     top: 0;
@@ -51,17 +63,17 @@
   .back-link:active { opacity: .7; }
   header h1 {
     font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -.3px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
-  header p { font-size: 0.8rem; color: #cbd5e1; margin-top: 2px; }
+  header p { font-size: 0.8rem; color: var(--mist); margin-top: 2px; }
 
   /* ── Nav tabs ── */
   nav {
     display: flex;
     overflow-x: auto;
     background: var(--navy);
-    border-top: 1px solid rgba(255,255,255,.12);
+    border-top: 1px solid rgba(255,255,255,.08);
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
@@ -72,7 +84,7 @@
     padding: 10px 12px;
     background: none;
     border: none;
-    color: #94a3b8;
+    color: var(--mist);
     font-size: 0.78rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -80,7 +92,7 @@
     cursor: pointer;
     border-bottom: 3px solid transparent;
     white-space: nowrap;
-    transition: color .15s, border-color .15s;
+    transition: color .18s var(--ease), border-color .18s var(--ease);
     min-height: 44px;
   }
   nav button.active {
@@ -95,21 +107,23 @@
   /* ── Cards ── */
   .card {
     background: var(--white);
-    border-radius: var(--radius);
+    border: 1px solid rgba(0,0,0,.05);
+    border-radius: var(--radius-card);
     box-shadow: var(--shadow);
     padding: 20px 18px;
     margin-bottom: 16px;
   }
   .card-title {
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     color: var(--navy);
     margin-bottom: 12px;
   }
   .section-label {
     font-size: 0.72rem;
     font-weight: 700;
-    color: var(--burgundy);
+    color: var(--ink-soft);
     text-transform: uppercase;
     letter-spacing: .6px;
     margin-bottom: 4px;
@@ -127,12 +141,16 @@
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    transition: opacity .15s, transform .1s;
+    transition: opacity .15s var(--ease), transform .12s var(--ease), box-shadow .15s var(--ease);
     -webkit-tap-highlight-color: transparent;
   }
-  .btn:active { opacity: .8; transform: scale(.98); }
-  .btn-amber  { background: var(--amber); color: var(--navy); }
-  .btn-navy   { background: var(--navy);  color: var(--white); }
+  .btn:active { transform: scale(.97); }
+  .btn-amber  {
+    background: linear-gradient(135deg, #4F46E5, #4338CA);
+    color: #FFFFFF;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 12px -4px #4F46E5;
+  }
+  .btn-navy   { background: rgba(23,22,28,.06); color: var(--navy); }
   .btn-full   { width: 100%; margin-top: 12px; }
   .btn-sm     { min-height: 40px; padding: 8px 16px; font-size: 0.875rem; }
 
@@ -145,19 +163,20 @@
     padding: 12px 16px;
     text-align: left;
     background: var(--cream);
-    border: 2px solid #e2cfa0;
+    border: 2px solid rgba(23,22,28,.08);
     border-radius: var(--radius);
     font-size: 0.95rem;
     color: var(--navy);
     cursor: pointer;
-    transition: background .12s, border-color .12s;
+    transition: background .12s var(--ease), border-color .12s var(--ease), transform .12s var(--ease);
     line-height: 1.35;
     -webkit-tap-highlight-color: transparent;
   }
-  .opt-btn:active { background: #f0e4c8; }
-  .opt-btn.correct  { background: var(--green-bg); border-color: #16a34a; color: var(--green); font-weight: 700; }
-  .opt-btn.wrong    { background: var(--amber-bg); border-color: var(--amber); color: #78350f; }
+  .opt-btn:active { background: #F1EEE9; transform: scale(.97); }
+  .opt-btn.correct  { background: var(--green-bg); border-color: rgba(22,101,52,.4); color: var(--green); font-weight: 700; }
+  .opt-btn.wrong    { background: var(--bad-bg); border-color: rgba(190,18,60,.35); color: var(--bad); }
   .opt-btn:disabled { cursor: default; }
+  .opt-btn:disabled:active { transform: none; }
 
   /* ── Feedback ── */
   .feedback {
@@ -168,13 +187,13 @@
     line-height: 1.45;
     display: none;
   }
-  .feedback.show { display: block; }
+  .feedback.show { display: block; animation: rise .2s var(--ease); }
   .feedback.correct { background: var(--green-bg); color: var(--green); }
-  .feedback.wrong   { background: var(--amber-bg); color: #78350f; }
+  .feedback.wrong   { background: var(--bad-bg); color: var(--bad); }
 
   /* ── Progress bar ── */
   .progress-bar-wrap {
-    background: #e2cfa0;
+    background: var(--accent-soft);
     border-radius: 99px;
     height: 6px;
     margin-bottom: 16px;
@@ -182,9 +201,9 @@
   }
   .progress-bar-fill {
     height: 100%;
-    background: var(--amber);
+    background: var(--accent);
     border-radius: 99px;
-    transition: width .3s;
+    transition: width .3s var(--ease);
   }
 
   /* ── Score card ── */
@@ -195,10 +214,12 @@
   .score-big {
     font-size: 3rem;
     font-weight: 800;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
     color: var(--navy);
     line-height: 1;
   }
-  .score-sub { font-size: 1rem; color: var(--burgundy); margin-top: 6px; }
+  .score-sub { font-size: 1rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-top: 6px; }
   .score-msg { font-size: 0.95rem; color: var(--navy); margin-top: 14px; line-height: 1.5; }
 
   /* ── Text inputs (section 2) ── */
@@ -211,7 +232,7 @@
   .gap-input {
     display: inline-block;
     border: none;
-    border-bottom: 2px solid var(--amber);
+    border-bottom: 2px solid rgba(23,22,28,.25);
     background: transparent;
     font-size: 0.95rem;
     color: var(--navy);
@@ -221,22 +242,23 @@
     font-family: inherit;
     vertical-align: baseline;
     min-height: 32px;
+    transition: border-color .15s var(--ease);
   }
-  .gap-input:focus { border-bottom-color: var(--navy); }
-  .gap-input.correct-input { border-bottom-color: #16a34a; background: var(--green-bg); border-radius: 4px 4px 0 0; }
-  .gap-input.wrong-input   { border-bottom-color: #f59e0b; background: var(--amber-bg); border-radius: 4px 4px 0 0; }
+  .gap-input:focus { border-bottom-color: var(--accent); }
+  .gap-input.correct-input { border-bottom-color: var(--green); background: var(--green-bg); border-radius: 4px 4px 0 0; }
+  .gap-input.wrong-input   { border-bottom-color: var(--bad); background: var(--bad-bg); border-radius: 4px 4px 0 0; }
 
   /* ── Section 3 type-it ── */
   .trap-sentence {
     font-size: 0.97rem;
-    color: var(--burgundy);
+    color: var(--bad);
     font-style: italic;
     margin-bottom: 10px;
     line-height: 1.5;
   }
   .type-input {
     width: 100%;
-    border: 2px solid #e2cfa0;
+    border: 2px solid rgba(23,22,28,.10);
     border-radius: var(--radius);
     padding: 12px;
     font-size: 0.95rem;
@@ -245,9 +267,9 @@
     background: var(--cream);
     outline: none;
     min-height: 52px;
-    transition: border-color .15s;
+    transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
   }
-  .type-input:focus { border-color: var(--amber); }
+  .type-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
 
   /* ── Section 4 summary ── */
   .summary-row {
@@ -255,16 +277,17 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
-    border-bottom: 1px solid #f0e4c8;
+    border-bottom: 1px solid rgba(23,22,28,.06);
     font-size: 0.9rem;
   }
   .summary-row:last-child { border-bottom: none; }
   .summary-row .label { color: var(--navy); }
-  .summary-row .val   { font-weight: 700; color: var(--burgundy); }
+  .summary-row .val   { font-weight: 700; color: var(--burgundy); font-variant-numeric: tabular-nums; }
   .weak-badge {
     display: inline-block;
-    background: var(--amber-bg);
-    color: #78350f;
+    background: var(--warn-bg);
+    color: var(--warn);
+    border: 1px solid rgba(146,64,14,.25);
     border-radius: 99px;
     padding: 2px 10px;
     font-size: 0.75rem;
@@ -273,7 +296,7 @@
   }
   .disclaimer {
     font-size: 0.72rem;
-    color: #9ca3af;
+    color: #6E6A78;
     margin-top: 10px;
     font-style: italic;
   }
@@ -286,8 +309,9 @@
   .hidden { display: none !important; }
   .q-counter {
     font-size: 0.78rem;
-    color: var(--burgundy);
+    color: var(--ink-soft);
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
     margin-bottom: 8px;
   }
 
@@ -299,8 +323,8 @@
     min-width: 44px;
     min-height: 44px;
     padding: 0 8px;
-    background: var(--amber);
-    color: var(--navy);
+    background: var(--accent-soft);
+    color: var(--accent);
     border: none;
     border-radius: var(--radius);
     font-size: 1.1rem;
@@ -309,14 +333,23 @@
     margin-left: 8px;
     flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
-    transition: opacity .15s;
+    transition: opacity .15s var(--ease), transform .12s var(--ease);
   }
-  .speak-btn:active { opacity: .7; }
+  .speak-btn:active { transform: scale(.97); }
   .prompt-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 0;
+  }
+
+  /* ── Motion ── */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -341,7 +374,7 @@
 <section id="s1" class="active">
   <div class="section-label">Section 1</div>
   <h2 class="card-title mt8">Vocabulary Quiz</h2>
-  <p style="font-size:0.82rem;color:#6b7280;margin-bottom:12px;">10 random questions each round — both directions.</p>
+  <p style="font-size:0.82rem;color:#5A5662;margin-bottom:12px;">10 random questions each round — both directions.</p>
   <p style="font-size:0.8rem;color:var(--burgundy);margin-bottom:8px;font-weight:600;"><span id="srDue"></span></p>
 
   <div id="s1-quiz"></div>
@@ -360,7 +393,7 @@
 <section id="s2">
   <div class="section-label">Section 2</div>
   <h2 class="card-title mt8">Conditionals Gap-Fill</h2>
-  <p style="font-size:0.82rem;color:#6b7280;margin-bottom:12px;">Type the correct verb form in each blank.</p>
+  <p style="font-size:0.82rem;color:#5A5662;margin-bottom:12px;">Type the correct verb form in each blank.</p>
   <div id="s2-items"></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;" class="mt12">
     <button class="btn btn-amber" onclick="checkS2()">Check answers</button>
@@ -375,7 +408,7 @@
 <section id="s3">
   <div class="section-label">Section 3</div>
   <h2 class="card-title mt8">German Trap Drill</h2>
-  <p style="font-size:0.82rem;color:#6b7280;margin-bottom:12px;">Spot the mistake and type the correct sentence.</p>
+  <p style="font-size:0.82rem;color:#5A5662;margin-bottom:12px;">Spot the mistake and type the correct sentence.</p>
   <div id="s3-items"></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;" class="mt12">
     <button class="btn btn-amber" onclick="checkS3()">Check answers</button>
@@ -760,7 +793,7 @@ function renderS1Question() {
   card.className = "card";
   card.innerHTML = `
     <div class="q-counter">Question ${s1Current+1} of 10</div>
-    <div style="font-size:0.82rem;color:var(--burgundy);font-weight:600;margin-bottom:6px;">${q.prompt}</div>
+    <div style="font-size:0.82rem;color:var(--ink-soft);font-weight:600;margin-bottom:6px;">${q.prompt}</div>
     <div class="prompt-row" style="margin-bottom:4px;">
       <span style="font-size:1.3rem;font-weight:700;color:var(--navy);">${escHtml(q.question)}</span>
     </div>
@@ -1001,12 +1034,12 @@ function checkS3() {
     const fb  = document.getElementById(`s3-fb-${idx}`);
 
     if (val === exp) {
-      inp.style.borderColor = "#16a34a";
+      inp.style.borderColor = "#166534";
       fb.className = "feedback correct show";
       fb.innerHTML = `✓ Exactly right! — ${trap.why}`;
       correct++;
     } else {
-      inp.style.borderColor = "#f59e0b";
+      inp.style.borderColor = "#BE123C";
       fb.className = "feedback wrong show";
       fb.innerHTML = `Not quite. The correct version: "<strong>${escHtml(trap.right)}</strong>" — ${trap.why}`;
     }

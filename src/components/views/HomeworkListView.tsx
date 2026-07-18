@@ -34,7 +34,7 @@ export default function HomeworkListView({ unit }: { unit: Unit | null }) {
   return (
     <Screen title="Homework" subtitle={unit?.title}>
       {!unit || unit.homework.length === 0 ? (
-        <p className="mt-6 rounded-card bg-white p-5 text-center text-burgundy shadow-card dark:bg-white/5 dark:text-amber/80">
+        <p className="mt-6 rounded-card bg-surface p-5 text-center text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark">
           No homework yet — check back soon.
         </p>
       ) : (
@@ -45,14 +45,14 @@ export default function HomeworkListView({ unit }: { unit: Unit | null }) {
               <li key={h.week}>
                 <Link
                   href={`/s/${code}/homework/${h.week}/`}
-                  className="flex items-center justify-between gap-3 rounded-card bg-white p-4 shadow-card active:scale-[.99] dark:bg-white/5"
+                  className="flex items-center justify-between gap-3 rounded-card bg-surface p-4 shadow-card transition active:scale-[.97] dark:bg-navy-raised dark:shadow-card-dark"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <span
-                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold ${
+                      className={`tnum grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold transition-colors ${
                         complete
-                          ? "bg-green-500 text-white"
-                          : "bg-amber/15 text-amber-deep dark:text-amber"
+                          ? "bg-good-soft text-good dark:bg-good-dusk dark:text-good-bright"
+                          : "bg-amber-soft text-amber-deep dark:bg-amber-dusk dark:text-amber"
                       }`}
                       aria-hidden
                     >
@@ -60,17 +60,23 @@ export default function HomeworkListView({ unit }: { unit: Unit | null }) {
                     </span>
                     <div className="min-w-0">
                       <p className="truncate font-bold text-navy dark:text-cream">{h.title}</p>
-                      <p className="text-sm text-burgundy dark:text-amber/80">
-                        Due {h.due}
+                      <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                        {complete ? (
+                          <span className="tnum text-navy-soft dark:text-navy-mist">Due {h.due}</span>
+                        ) : (
+                          <span className="tnum rounded-full bg-warn-soft px-2 py-0.5 text-xs font-bold text-warn dark:bg-warn-dusk dark:text-warn-bright">
+                            Due {h.due}
+                          </span>
+                        )}
                         {mounted && !complete && progress[h.week]?.total > 0 && (
-                          <span className="ml-2 text-navy-soft dark:text-cream/60">
-                            · {progress[h.week].done}/{progress[h.week].total} ticked
+                          <span className="tnum text-navy-soft dark:text-navy-mist">
+                            {progress[h.week].done}/{progress[h.week].total} ticked
                           </span>
                         )}
                       </p>
                     </div>
                   </div>
-                  <ChevronRightIcon className="shrink-0 text-navy-soft dark:text-cream/60" />
+                  <ChevronRightIcon className="shrink-0 text-navy-soft dark:text-navy-mist" />
                 </Link>
               </li>
             );

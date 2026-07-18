@@ -66,13 +66,21 @@ export default function HomeworkWeekView({
         <Link
           href={backHref}
           aria-label="Back to homework"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft hover:bg-black/5 dark:text-cream/70 dark:hover:bg-white/10"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft transition hover:bg-black/5 active:scale-[.97] dark:text-navy-mist dark:hover:bg-white/10"
         >
           <ChevronLeftIcon />
         </Link>
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-extrabold text-navy dark:text-cream">{week.title}</h1>
-          <p className="text-sm text-burgundy dark:text-amber/80">Due {week.due}</p>
+          <h1 className="display truncate text-xl text-navy dark:text-cream">{week.title}</h1>
+          <p
+            className={`tnum mt-0.5 inline-block w-fit rounded-full px-2 py-0.5 text-xs font-bold ${
+              complete
+                ? "bg-good-soft text-good dark:bg-good-dusk dark:text-good-bright"
+                : "bg-warn-soft text-warn dark:bg-warn-dusk dark:text-warn-bright"
+            }`}
+          >
+            Due {week.due}
+          </p>
         </div>
       </header>
 
@@ -85,7 +93,7 @@ export default function HomeworkWeekView({
         {canAddCalendar && (
           <button
             onClick={addToCalendar}
-            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-navy/15 bg-white px-4 text-sm font-bold text-navy active:scale-[.99] dark:border-white/15 dark:bg-white/5 dark:text-cream"
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-black/[.06] bg-surface px-4 text-sm font-bold text-navy shadow-card transition active:scale-[.97] dark:border-white/[.06] dark:bg-navy-raised dark:text-cream dark:shadow-card-dark"
           >
             📅 Add due date to my calendar
           </button>
@@ -94,14 +102,16 @@ export default function HomeworkWeekView({
         {/* Mark complete */}
         <button
           onClick={toggleComplete}
-          className={`mt-2 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-bold transition-colors active:scale-[.99] ${
-            complete ? "bg-green-500 text-white" : "bg-navy text-cream dark:bg-amber dark:text-navy"
+          className={`mt-2 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-bold transition active:scale-[.97] ${
+            complete
+              ? "bg-good-soft text-good dark:bg-good-dusk dark:text-good-bright"
+              : "bg-[linear-gradient(135deg,#4F46E5,#4338CA)] text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
           }`}
         >
           {complete ? "✓ Completed" : "Mark as complete"}
         </button>
         {complete && (
-          <p className="pb-2 text-center text-sm text-burgundy dark:text-amber/80">
+          <p className="pb-2 text-center text-sm font-medium text-burgundy dark:text-burgundy-bright">
             {week.tasks.some((t) => t.type === "voice")
               ? "Nice one. Don't forget to send Rory your voice memos on WhatsApp."
               : "Nice one — that's this week done!"}
@@ -127,9 +137,9 @@ function TaskCard({
   task: HomeworkTask;
 }) {
   return (
-    <section className="rounded-card bg-white p-5 shadow-card dark:bg-white/5">
+    <section className="rounded-card bg-surface p-5 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
       <div className="mb-3 flex items-baseline gap-2">
-        <span className="text-sm font-bold text-amber-deep dark:text-amber">{index + 1}</span>
+        <span className="tnum text-sm font-bold text-amber-deep dark:text-amber">{index + 1}</span>
         <p className="font-semibold leading-snug text-navy dark:text-cream">{task.prompt}</p>
       </div>
 
@@ -140,7 +150,7 @@ function TaskCard({
         <WrittenTask studentId={studentId} unitId={unitId} week={week} task={task} />
       )}
       {task.type === "voice" && (
-        <p className="rounded-lg bg-burgundy/10 px-3 py-2 text-sm text-burgundy dark:text-amber/80">
+        <p className="rounded-lg bg-amber-soft px-3 py-2 text-sm font-medium text-amber-deep dark:bg-amber-dusk dark:text-amber">
           🎙️ Record this on your phone&apos;s voice recorder and send it to Rory on WhatsApp.
         </p>
       )}
@@ -176,19 +186,23 @@ function CheckTask({
       onClick={toggle}
       aria-pressed={checked}
       aria-label={`${task.prompt} — ${checked ? "done" : "tap when done"}`}
-      className="flex min-h-[44px] w-full items-center gap-3 text-left"
+      className="flex min-h-[44px] w-full items-center gap-3 text-left transition active:scale-[.97]"
     >
       <span
         className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border-2 transition-colors ${
           checked
-            ? "border-green-500 bg-green-500 text-white"
+            ? "border-transparent bg-good-soft text-good dark:bg-good-dusk dark:text-good-bright"
             : "border-navy/30 bg-transparent dark:border-cream/30"
         }`}
         aria-hidden
       >
         {checked ? "✓" : ""}
       </span>
-      <span className="text-sm font-medium text-navy-soft dark:text-cream/80">
+      <span
+        className={`text-sm font-medium transition-colors ${
+          checked ? "text-good dark:text-good-bright" : "text-navy-soft dark:text-navy-mist"
+        }`}
+      >
         {checked ? "Done" : "Tap when done"}
       </span>
     </button>
@@ -243,7 +257,7 @@ function WrittenTask({
       rows={lines}
       placeholder="Write your answer here…"
       aria-label={task.prompt}
-      className="lined-paper w-full rounded-lg border border-navy/15 p-3 text-base leading-8 text-navy outline-none focus:border-amber dark:border-white/15 dark:text-cream"
+      className="lined-paper w-full rounded-lg border border-navy/15 p-3 text-base leading-8 text-navy outline-none transition-colors focus:border-amber-deep dark:border-white/15 dark:text-cream dark:focus:border-amber"
     />
   );
 }

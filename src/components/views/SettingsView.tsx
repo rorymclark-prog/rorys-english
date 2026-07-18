@@ -59,20 +59,20 @@ export default function SettingsView() {
         </Row>
 
         <div>
-          <p className="mb-2 text-sm font-bold text-burgundy dark:text-amber/80">Progress</p>
+          <p className="mb-2 text-sm font-bold text-navy-soft dark:text-navy-mist">Progress</p>
           <button
             onClick={shareProgress}
-            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-navy px-4 font-bold text-cream active:scale-[.99] dark:bg-amber dark:text-navy"
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-4 font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
           >
             Send my progress to Rory
           </button>
           {shareNote && (
-            <p className="mt-2 text-center text-sm text-burgundy dark:text-amber/80">{shareNote}</p>
+            <p className="mt-2 text-center text-sm text-navy-soft dark:text-navy-mist">{shareNote}</p>
           )}
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-bold text-burgundy dark:text-amber/80">Text size</p>
+          <p className="mb-2 text-sm font-bold text-navy-soft dark:text-navy-mist">Text size</p>
           <SegmentedControl
             options={TEXT_SIZES}
             value={settings.textScale}
@@ -81,7 +81,7 @@ export default function SettingsView() {
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-bold text-burgundy dark:text-amber/80">Appearance</p>
+          <p className="mb-2 text-sm font-bold text-navy-soft dark:text-navy-mist">Appearance</p>
           <SegmentedControl
             options={THEMES}
             value={settings.theme}
@@ -90,29 +90,29 @@ export default function SettingsView() {
         </div>
 
         <div className="pt-2">
-          <p className="mb-2 text-sm font-bold text-burgundy dark:text-amber/80">Start fresh</p>
+          <p className="mb-2 text-sm font-bold text-navy-soft dark:text-navy-mist">Start fresh</p>
           {!confirming ? (
             <button
               onClick={() => setConfirming(true)}
-              className="min-h-[48px] w-full rounded-xl border-2 border-burgundy/40 px-4 font-bold text-burgundy active:scale-[.99]"
+              className="min-h-[48px] w-full rounded-xl bg-bad-soft px-4 font-bold text-bad transition active:scale-[.97] dark:bg-bad-dusk dark:text-bad-bright"
             >
               Reset my progress
             </button>
           ) : (
-            <div className="rounded-card border-2 border-burgundy/40 bg-white p-4 dark:bg-white/5">
+            <div className="rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
               <p className="mb-3 text-sm font-medium text-navy dark:text-cream">
                 This clears all your ticks and written answers on this device. This can&apos;t be undone.
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirming(false)}
-                  className="min-h-[48px] flex-1 rounded-xl bg-black/5 px-4 font-bold text-navy dark:bg-white/10 dark:text-cream"
+                  className="min-h-[48px] flex-1 rounded-xl bg-black/5 px-4 font-bold text-navy transition active:scale-[.97] dark:bg-white/10 dark:text-cream"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={doReset}
-                  className="min-h-[48px] flex-1 rounded-xl bg-burgundy px-4 font-bold text-white"
+                  className="min-h-[48px] flex-1 rounded-xl bg-bad px-4 font-bold text-white transition active:scale-[.97] dark:bg-bad-bright dark:text-navy"
                 >
                   Reset
                 </button>
@@ -127,8 +127,8 @@ export default function SettingsView() {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between rounded-card bg-white p-4 shadow-card dark:bg-white/5">
-      <span className="text-sm font-medium text-navy-soft dark:text-cream/70">{label}</span>
+    <div className="flex items-center justify-between rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
+      <span className="text-sm font-medium text-navy-soft dark:text-navy-mist">{label}</span>
       {children}
     </div>
   );
@@ -152,10 +152,10 @@ function SegmentedControl<T extends string>({
             key={o.value}
             onClick={() => onChange(o.value)}
             aria-pressed={active}
-            className={`min-h-[48px] flex-1 rounded-xl px-2 text-sm font-bold transition-colors active:scale-[.98] ${
+            className={`min-h-[48px] flex-1 rounded-xl px-2 text-sm font-bold transition active:scale-[.97] ${
               active
-                ? "bg-amber text-navy"
-                : "bg-white text-navy-soft shadow-card dark:bg-white/5 dark:text-cream/70 dark:ring-1 dark:ring-white/10"
+                ? "bg-amber-soft text-amber-deep dark:bg-amber-dusk dark:text-amber"
+                : "bg-surface text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark"
             }`}
           >
             {o.label}

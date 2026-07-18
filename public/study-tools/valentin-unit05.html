@@ -8,31 +8,74 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* ── VOLTSTONE 2026 tokens (design/MODERN-2026-SPEC.md) ── */
   :root {
-    --amber:   #F59E0B;
-    --navy:    #1E3A5F;
-    --burgundy:#7C2D3B;
-    --cream:   #FDF6EC;
-    --white:   #FFFFFF;
-    --green:   #166534;
-    --green-bg:#DCFCE7;
-    --amber-bg:#FEF3C7;
-    --radius:  8px;
-    --shadow:  0 2px 8px rgba(30,58,95,.12);
+    --ink:           #17161C;  /* charcoal ink — text (light) / base (dark) */
+    --bg:            #FAF8F5;  /* warm stone page */
+    --surface:       #FEFDFB;  /* card fill — never pure #fff */
+    --text:          #17161C;
+    --muted:         #5A5662;
+    --accent:        #4F46E5;  /* electric indigo — light-mode accent */
+    --accent-press:  #4338CA;
+    --accent-bright: #A2A4FC;  /* bright indigo — dark surfaces + bright fills w/ ink text */
+    --ember:         #C2410C;  /* reward channel only (SR counter, score values) */
+    --good-text:     #166534;  --good-bg: #F0FDF4;  --good-border: #166534;
+    --warn-text:     #92400E;  --warn-bg: #FFFBEB;  --warn-border: #FBBF24;
+    --bad-text:      #BE123C;
+    --chip:          #F4F1EB;  /* tonal option row */
+    --chip-press:    #ECE8E0;
+    --field-line:    #E7E3DB;
+    --line:          rgba(23,22,28,.06);
+    --track:         #ECE9E2;
+    --header-sub:    #B3B1BD;  /* mist — always on the charcoal header */
+    --tonal:         rgba(23,22,28,.05); /* ghost secondary button */
+    --radius:        12px;
+    --radius-card:   20px;
+    --shadow:        inset 0 1px 0 rgba(255,255,255,.7), 0 1px 2px rgba(23,22,28,.04), 0 12px 32px -16px rgba(23,22,28,.12);
+    --btn-glow:      0 1px 2px rgba(0,0,0,.06), 0 4px 12px -4px #4F46E5;
+    --ease:          cubic-bezier(0.16, 1, 0.3, 1);
+    /* legacy aliases — referenced by inline styles in markup/JS */
+    --navy:     var(--text);
+    --burgundy: var(--ember);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:            #17161C;
+      --surface:       #201E26;  /* navy-raised */
+      --text:          #FAF8F5;
+      --muted:         #B3B1BD;  /* navy-mist */
+      --accent:        #A2A4FC;  /* dark mode ALWAYS accents bright */
+      --accent-press:  #C7C9FD;
+      --ember:         #F59D6E;  /* ember-bright numerals */
+      --good-text:     #4ADE80;  --good-bg: #16281C;  --good-border: #4ADE80;
+      --warn-text:     #FBBF24;  --warn-bg: #2E2413;  --warn-border: #FBBF24;
+      --bad-text:      #FDA4AF;
+      --chip:          #2A2833;
+      --chip-press:    #34313E;
+      --field-line:    #34313E;
+      --line:          rgba(255,255,255,.07);
+      --track:         #2A2833;
+      --tonal:         rgba(255,255,255,.07);
+      --shadow:        0 1px 2px rgba(0,0,0,.2), 0 12px 32px -16px rgba(0,0,0,.5);
+      --btn-glow:      none;
+    }
   }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--cream);
-    color: var(--navy);
+    background: var(--bg);
+    color: var(--text);
     min-height: 100vh;
     padding-bottom: 40px;
   }
 
-  /* ── Header ── */
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ── Header (charcoal band in both modes — accents stay bright indigo) ── */
   header {
-    background: var(--navy);
-    color: var(--white);
+    background: var(--ink);
+    color: #FAF8F5;
     padding: 14px 16px 10px;
     position: sticky;
     top: 0;
@@ -41,7 +84,7 @@
   }
   .back-link {
     display: inline-block;
-    color: var(--amber);
+    color: var(--accent-bright);
     text-decoration: none;
     font-size: 0.85rem;
     margin-bottom: 6px;
@@ -51,17 +94,17 @@
   .back-link:active { opacity: .7; }
   header h1 {
     font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -.3px;
+    font-weight: 800;
+    letter-spacing: -.02em;
   }
-  header p { font-size: 0.8rem; color: #cbd5e1; margin-top: 2px; }
+  header p { font-size: 0.8rem; color: var(--header-sub); margin-top: 2px; }
 
   /* ── Nav tabs ── */
   nav {
     display: flex;
     overflow-x: auto;
-    background: var(--navy);
-    border-top: 1px solid rgba(255,255,255,.12);
+    background: var(--ink);
+    border-top: 1px solid rgba(255,255,255,.08);
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
@@ -72,7 +115,7 @@
     padding: 10px 12px;
     background: none;
     border: none;
-    color: #94a3b8;
+    color: var(--header-sub);
     font-size: 0.78rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -80,36 +123,37 @@
     cursor: pointer;
     border-bottom: 3px solid transparent;
     white-space: nowrap;
-    transition: color .15s, border-color .15s;
+    transition: color .15s var(--ease), border-color .15s var(--ease);
     min-height: 44px;
   }
   nav button.active {
-    color: var(--amber);
-    border-bottom-color: var(--amber);
+    color: var(--accent-bright);
+    border-bottom-color: var(--accent-bright);
   }
 
   /* ── Sections ── */
   section { display: none; padding: 16px; max-width: 640px; margin: 0 auto; }
   section.active { display: block; }
 
-  /* ── Cards ── */
+  /* ── Cards (depth from tone, no borders) ── */
   .card {
-    background: var(--white);
-    border-radius: var(--radius);
+    background: var(--surface);
+    border-radius: var(--radius-card);
     box-shadow: var(--shadow);
     padding: 20px 18px;
     margin-bottom: 16px;
   }
   .card-title {
     font-size: 1rem;
-    font-weight: 700;
-    color: var(--navy);
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--text);
     margin-bottom: 12px;
   }
   .section-label {
     font-size: 0.72rem;
     font-weight: 700;
-    color: var(--burgundy);
+    color: var(--muted);
     text-transform: uppercase;
     letter-spacing: .6px;
     margin-bottom: 4px;
@@ -127,12 +171,12 @@
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    transition: opacity .15s, transform .1s;
+    transition: transform .12s var(--ease), box-shadow .12s var(--ease), opacity .12s var(--ease);
     -webkit-tap-highlight-color: transparent;
   }
-  .btn:active { opacity: .8; transform: scale(.98); }
-  .btn-amber  { background: var(--amber); color: var(--navy); }
-  .btn-navy   { background: var(--navy);  color: var(--white); }
+  .btn:active { transform: scale(.97); }
+  .btn-amber  { background: linear-gradient(135deg,#4F46E5,#4338CA); color: #fff; box-shadow: var(--btn-glow); }
+  .btn-navy   { background: var(--tonal); color: var(--text); }
   .btn-full   { width: 100%; margin-top: 12px; }
   .btn-sm     { min-height: 40px; padding: 8px 16px; font-size: 0.875rem; }
 
@@ -144,19 +188,19 @@
     min-height: 52px;
     padding: 12px 16px;
     text-align: left;
-    background: var(--cream);
-    border: 2px solid #e2cfa0;
+    background: var(--chip);
+    border: 2px solid transparent;
     border-radius: var(--radius);
     font-size: 0.95rem;
-    color: var(--navy);
+    color: var(--text);
     cursor: pointer;
-    transition: background .12s, border-color .12s;
+    transition: background .12s var(--ease), border-color .12s var(--ease), transform .12s var(--ease);
     line-height: 1.35;
     -webkit-tap-highlight-color: transparent;
   }
-  .opt-btn:active { background: #f0e4c8; }
-  .opt-btn.correct  { background: var(--green-bg); border-color: #16a34a; color: var(--green); font-weight: 700; }
-  .opt-btn.wrong    { background: var(--amber-bg); border-color: var(--amber); color: #78350f; }
+  .opt-btn:active { background: var(--chip-press); transform: scale(.985); }
+  .opt-btn.correct  { background: var(--good-bg); border-color: var(--good-border); color: var(--good-text); font-weight: 700; }
+  .opt-btn.wrong    { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
   .opt-btn:disabled { cursor: default; }
 
   /* ── Feedback ── */
@@ -166,15 +210,20 @@
     border-radius: var(--radius);
     font-size: 0.9rem;
     line-height: 1.45;
+    font-variant-numeric: tabular-nums;
     display: none;
   }
-  .feedback.show { display: block; }
-  .feedback.correct { background: var(--green-bg); color: var(--green); }
-  .feedback.wrong   { background: var(--amber-bg); color: #78350f; }
+  .feedback.show { display: block; animation: sheetUp 260ms cubic-bezier(0.175,0.885,0.32,1.1); }
+  .feedback.correct { background: var(--good-bg); color: var(--good-text); }
+  .feedback.wrong   { background: var(--warn-bg); color: var(--warn-text); }
+  @keyframes sheetUp {
+    from { transform: translateY(10px); opacity: .4; }
+    to   { transform: none; opacity: 1; }
+  }
 
   /* ── Progress bar ── */
   .progress-bar-wrap {
-    background: #e2cfa0;
+    background: var(--track);
     border-radius: 99px;
     height: 6px;
     margin-bottom: 16px;
@@ -182,9 +231,9 @@
   }
   .progress-bar-fill {
     height: 100%;
-    background: var(--amber);
+    background: var(--accent);
     border-radius: 99px;
-    transition: width .3s;
+    transition: width .3s var(--ease);
   }
 
   /* ── Score card ── */
@@ -195,26 +244,28 @@
   .score-big {
     font-size: 3rem;
     font-weight: 800;
-    color: var(--navy);
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
     line-height: 1;
   }
-  .score-sub { font-size: 1rem; color: var(--burgundy); margin-top: 6px; }
-  .score-msg { font-size: 0.95rem; color: var(--navy); margin-top: 14px; line-height: 1.5; }
+  .score-sub { font-size: 1rem; color: var(--muted); margin-top: 6px; }
+  .score-msg { font-size: 0.95rem; color: var(--text); margin-top: 14px; line-height: 1.5; }
 
   /* ── Text inputs (section 2) ── */
   .gap-sentence {
     font-size: 0.97rem;
     line-height: 1.8;
-    color: var(--navy);
+    color: var(--text);
     margin-bottom: 8px;
   }
   .gap-input {
     display: inline-block;
     border: none;
-    border-bottom: 2px solid var(--amber);
+    border-bottom: 2px solid var(--accent);
     background: transparent;
     font-size: 0.95rem;
-    color: var(--navy);
+    color: var(--text);
     width: 160px;
     padding: 2px 4px;
     outline: none;
@@ -222,32 +273,32 @@
     vertical-align: baseline;
     min-height: 32px;
   }
-  .gap-input:focus { border-bottom-color: var(--navy); }
-  .gap-input.correct-input { border-bottom-color: #16a34a; background: var(--green-bg); border-radius: 4px 4px 0 0; }
-  .gap-input.wrong-input   { border-bottom-color: #f59e0b; background: var(--amber-bg); border-radius: 4px 4px 0 0; }
+  .gap-input:focus { border-bottom-color: var(--accent-press); }
+  .gap-input.correct-input { border-bottom-color: var(--good-border); background: var(--good-bg); border-radius: 4px 4px 0 0; }
+  .gap-input.wrong-input   { border-bottom-color: var(--warn-border); background: var(--warn-bg); border-radius: 4px 4px 0 0; }
 
   /* ── Section 3 type-it ── */
   .trap-sentence {
     font-size: 0.97rem;
-    color: var(--burgundy);
+    color: var(--bad-text);
     font-style: italic;
     margin-bottom: 10px;
     line-height: 1.5;
   }
   .type-input {
     width: 100%;
-    border: 2px solid #e2cfa0;
+    border: 2px solid var(--field-line);
     border-radius: var(--radius);
     padding: 12px;
     font-size: 0.95rem;
     font-family: inherit;
-    color: var(--navy);
-    background: var(--cream);
+    color: var(--text);
+    background: var(--bg);
     outline: none;
     min-height: 52px;
-    transition: border-color .15s;
+    transition: border-color .15s var(--ease);
   }
-  .type-input:focus { border-color: var(--amber); }
+  .type-input:focus { border-color: var(--accent); }
 
   /* ── Section 4 summary ── */
   .summary-row {
@@ -255,16 +306,16 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
-    border-bottom: 1px solid #f0e4c8;
+    border-bottom: 1px solid var(--line);
     font-size: 0.9rem;
   }
   .summary-row:last-child { border-bottom: none; }
-  .summary-row .label { color: var(--navy); }
-  .summary-row .val   { font-weight: 700; color: var(--burgundy); }
+  .summary-row .label { color: var(--text); }
+  .summary-row .val   { font-weight: 700; color: var(--ember); font-variant-numeric: tabular-nums; }
   .weak-badge {
     display: inline-block;
-    background: var(--amber-bg);
-    color: #78350f;
+    background: var(--warn-bg);
+    color: var(--warn-text);
     border-radius: 99px;
     padding: 2px 10px;
     font-size: 0.75rem;
@@ -273,7 +324,7 @@
   }
   .disclaimer {
     font-size: 0.72rem;
-    color: #9ca3af;
+    color: var(--muted);
     margin-top: 10px;
     font-style: italic;
   }
@@ -286,12 +337,13 @@
   .hidden { display: none !important; }
   .q-counter {
     font-size: 0.78rem;
-    color: var(--burgundy);
+    color: var(--muted);
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
     margin-bottom: 8px;
   }
 
-  /* ── Speaker button ── */
+  /* ── Speaker button (bright fill + ink text — verified pair both modes) ── */
   .speak-btn {
     display: inline-flex;
     align-items: center;
@@ -299,8 +351,8 @@
     min-width: 44px;
     min-height: 44px;
     padding: 0 8px;
-    background: var(--amber);
-    color: var(--navy);
+    background: var(--accent-bright);
+    color: var(--ink);
     border: none;
     border-radius: var(--radius);
     font-size: 1.1rem;
@@ -309,14 +361,24 @@
     margin-left: 8px;
     flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
-    transition: opacity .15s;
+    transition: transform .12s var(--ease), opacity .12s var(--ease);
   }
-  .speak-btn:active { opacity: .7; }
+  .speak-btn:active { transform: scale(.94); }
   .prompt-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 0;
+  }
+
+  /* ── Dark-mode rule overrides (after base rules so they win) ── */
+  @media (prefers-color-scheme: dark) {
+    /* Spotify pattern: dark primary = bright indigo fill + ink text (never amber-deep in dark) */
+    .btn-amber { background: var(--accent-bright); color: var(--ink); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -341,7 +403,7 @@
 <section id="s1" class="active">
   <div class="section-label">Section 1</div>
   <h2 class="card-title mt8">Vocabulary Quiz</h2>
-  <p style="font-size:0.82rem;color:#6b7280;margin-bottom:12px;">10 random questions each round — both directions.</p>
+  <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">10 random questions each round — both directions.</p>
   <p style="font-size:0.8rem;color:var(--burgundy);margin-bottom:8px;font-weight:600;"><span id="srDue"></span></p>
 
   <div id="s1-quiz"></div>
@@ -360,7 +422,7 @@
 <section id="s2">
   <div class="section-label">Section 2</div>
   <h2 class="card-title mt8">Comparatives &amp; Superlatives</h2>
-  <p style="font-size:0.82rem;color:#6b7280;margin-bottom:12px;">Type the correct form in each blank.</p>
+  <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Type the correct form in each blank.</p>
   <div id="s2-items"></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;" class="mt12">
     <button class="btn btn-amber" onclick="checkS2()">Check answers</button>
@@ -375,7 +437,7 @@
 <section id="s3">
   <div class="section-label">Section 3</div>
   <h2 class="card-title mt8">German Trap Drill</h2>
-  <p style="font-size:0.82rem;color:#6b7280;margin-bottom:12px;">Spot the mistake and type the correct sentence.</p>
+  <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Spot the mistake and type the correct sentence.</p>
   <div id="s3-items"></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;" class="mt12">
     <button class="btn btn-amber" onclick="checkS3()">Check answers</button>
@@ -789,7 +851,7 @@ function renderS1Question() {
   card.className = "card";
   card.innerHTML =
     '<div class="q-counter">Question ' + (s1Current + 1) + ' of 10</div>' +
-    '<div style="font-size:0.82rem;color:var(--burgundy);font-weight:600;margin-bottom:6px;">' + escHtml(q.prompt) + '</div>' +
+    '<div style="font-size:0.82rem;color:var(--muted);font-weight:600;margin-bottom:6px;">' + escHtml(q.prompt) + '</div>' +
     '<div class="prompt-row" style="margin-bottom:4px;">' +
       '<span style="font-size:1.3rem;font-weight:700;color:var(--navy);">' + escHtml(q.question) + '</span>' +
     '</div>' +
@@ -1031,12 +1093,12 @@ function checkS3() {
     var fb  = document.getElementById("s3-fb-" + idx);
 
     if (val === exp) {
-      inp.style.borderColor = "#16a34a";
+      inp.style.borderColor = "var(--good-border)";
       fb.className = "feedback correct show";
       fb.innerHTML = "✓ Exactly right! — " + trap.why;
       correct++;
     } else {
-      inp.style.borderColor = "#f59e0b";
+      inp.style.borderColor = "var(--warn-border)";
       fb.className = "feedback wrong show";
       fb.innerHTML = "Not quite. The correct version: “<strong>" + escHtml(trap.right) + "</strong>” — " + trap.why;
     }

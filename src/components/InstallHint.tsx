@@ -70,7 +70,7 @@ export default function InstallHint() {
 
   return (
     <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md px-4">
-      <div className="flex items-center gap-3 rounded-card bg-navy p-3 text-cream shadow-card dark:bg-white/10">
+      <div className="animate-sheet flex items-center gap-3 rounded-card bg-surface p-3 text-navy shadow-card dark:bg-navy-raised dark:text-cream dark:shadow-card-dark">
         <span className="text-xl" aria-hidden>
           📲
         </span>
@@ -87,7 +87,7 @@ export default function InstallHint() {
         {!isIos && deferred && (
           <button
             onClick={install}
-            className="min-h-[48px] shrink-0 rounded-lg bg-amber px-4 text-sm font-bold text-navy"
+            className="min-h-[48px] shrink-0 rounded-lg bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-4 text-sm font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition ease-out2026 active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
           >
             Install
           </button>
@@ -95,7 +95,7 @@ export default function InstallHint() {
         <button
           onClick={dismiss}
           aria-label="Dismiss"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-cream/70 hover:bg-white/10"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft transition ease-out2026 hover:bg-black/[.04] active:scale-[.97] dark:text-navy-mist dark:hover:bg-white/10"
         >
           ✕
         </button>

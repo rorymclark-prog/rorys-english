@@ -26,7 +26,7 @@ export default function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="bg-burgundy px-4 py-1 text-center text-xs font-semibold text-cream"
+      className="animate-sheet bg-warn-soft px-4 py-1 text-center text-xs font-semibold text-warn dark:bg-warn-dusk dark:text-warn-bright"
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.25rem)" }}
     >
       Offline — your saved work is safe and still here.

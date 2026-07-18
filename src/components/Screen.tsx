@@ -22,13 +22,13 @@ export default function Screen({
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
       >
         <div className="min-w-0">
-          <h1 className="text-2xl font-extrabold text-navy break-words dark:text-cream">{title}</h1>
-          {subtitle && <p className="mt-0.5 text-sm text-burgundy dark:text-amber/80">{subtitle}</p>}
+          <h1 className="display text-2xl text-navy break-words dark:text-cream">{title}</h1>
+          {subtitle && <p className="tnum mt-0.5 text-sm text-burgundy dark:text-burgundy-bright">{subtitle}</p>}
         </div>
         <Link
           href={`/s/${code}/settings/`}
           aria-label="Settings"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft hover:bg-black/5 dark:text-cream/70 dark:hover:bg-white/10"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft transition hover:bg-black/5 active:scale-[.97] dark:text-navy-mist dark:hover:bg-white/10"
         >
           <GearIcon />
         </Link>

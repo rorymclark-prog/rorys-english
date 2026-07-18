@@ -24,9 +24,9 @@ export default function TabBar() {
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-black/10 bg-cream/95 backdrop-blur dark:border-white/10 dark:bg-navy/95"
+      className="glass fixed inset-x-3 bottom-3 z-20 mx-auto max-w-md rounded-2xl border border-black/5 shadow-[0_8px_30px_rgba(0,0,0,.14)] dark:border-white/10"
     >
-      <ul className="mx-auto flex max-w-md items-stretch justify-around pb-safe">
+      <ul className="flex items-stretch justify-around pb-safe">
         {tabs.map(({ href, label, Icon, match }) => {
           const active = match(pathname);
           return (
@@ -34,8 +34,8 @@ export default function TabBar() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-[56px] flex-col items-center justify-center gap-1 pt-2 text-xs font-semibold transition-colors ${
-                  active ? "text-amber-deep dark:text-amber" : "text-navy-soft dark:text-cream/60"
+                className={`flex min-h-[56px] flex-col items-center justify-center gap-1 pt-2 text-xs font-semibold transition active:scale-[.97] ${
+                  active ? "text-amber-deep dark:text-amber" : "text-navy-soft dark:text-navy-mist"
                 }`}
               >
                 <Icon width={26} height={26} strokeWidth={active ? 2.4 : 2} />

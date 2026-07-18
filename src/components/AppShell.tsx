@@ -12,7 +12,7 @@ export default function AppShell({ ctx, children }: { ctx: StudentCtx; children:
     <StudentProvider value={ctx}>
       <SettingsProvider studentId={ctx.studentId}>
         <OfflineBanner />
-        <div className="mx-auto min-h-dvh max-w-md pb-32">{children}</div>
+        <div className="mx-auto min-h-dvh max-w-md pb-[calc(6rem+env(safe-area-inset-bottom))]">{children}</div>
         <InstallHint />
         <TabBar />
       </SettingsProvider>

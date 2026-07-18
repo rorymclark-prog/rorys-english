@@ -4,8 +4,8 @@
   "start_url": "/rorys-english/",
   "scope": "/rorys-english/",
   "display": "standalone",
-  "background_color": "#FDF6EC",
-  "theme_color": "#1E3A5F",
+  "background_color": "#FAF8F5",
+  "theme_color": "#17161C",
   "icons": [
     {
       "src": "/rorys-english/icons/icon-192.png",
