@@ -225,8 +225,10 @@ rorys-english/
 | Quiz scores → **Vocab & Quizzes** tab | ✅ wired & live |
 | Secret consistent in all 3 places (Code.gs, .env.local, study tool) = `re-sync-7b3h8d9f4` | ✅ verified |
 | `.env.local` NOT leaked to git | ✅ verified |
-| **Writing tab pipeline** (`scripts/analyse-writing.py` → Claude → Writing tab) | ✅ write/read plumbing verified; needs `ANTHROPIC_API_KEY` to run the AI step |
-| Sheet tabs awaiting pipelines (School Tests, Speaking, Mock Tests) | 🟡 created, empty (Phase 2c–2d) |
+| **Writing tab pipeline** — two ways in now: `scripts/analyse-writing.py` (terminal) AND `/teacher/`'s "Analyse writing" dashboard form (same rubric, same Claude tool-use schema, so results are consistent either way) | ✅ verified; needs `ANTHROPIC_API_KEY` to run the AI step |
+| **School Tests / Mock Tests pipelines** — dashboard score-entry forms (no AI, just numbers): test name+score+max+notes / 5 skill scores+notes, % and Total computed server-side | ✅ |
+| Speaking tab | 🟡 created, still empty — no entry flow yet |
+| **Semester grouping** in Progress (School tests/Writing/Mock tests tables) — derived from each row's date (Austrian school year: Sept–Jan = S1, Feb–Jul = S2), no schema change | ✅ |
 
 ### 7.5 Teacher dashboard
 | Item | Status | Notes |

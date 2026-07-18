@@ -254,6 +254,9 @@ function doPost(e) {
     if (data.action === "teacherAddStudent") return addStudent_(data);
     if (data.action === "teacherAssignHomework") return assignHomework_(data);
     if (data.action === "teacherSetFocusNote") return setFocusNote_(data);
+    if (data.action === "teacherLogSchoolTest") return logSchoolTest_(data);
+    if (data.action === "teacherLogMockTest") return logMockTest_(data);
+    if (data.action === "teacherAnalyseWriting") return analyseWriting_(data);
 
     // WRITES (homework/quiz/writing/assignment). One generic auth error: no oracle.
     var sheetId =
@@ -754,6 +757,234 @@ function assignHomework_(p) {
     out = { ok: false, error: "internal error" };
   }
   return json_(out); // POST-only, same as every teacher* action
+}
+
+// Shared guard for every teacher-only action — centralized so a new
+// teacher* action added later can't accidentally skip the check via a
+// copy-paste that drops the `!expected` fail-closed condition.
+function teacherAuthed_(p) {
+  var expected = PropertiesService.getScriptProperties().getProperty(TEACHER_PASSWORD_PROP);
+  return !!expected && p.teacherSecret === expected;
+}
+
+// ── School test / Mock test logging (plain score entry — no AI needed; a
+// test score is just a number, unlike writing which benefits from analysis) ──
+function logSchoolTest_(p) {
+  var out;
+  try {
+    if (!teacherAuthed_(p)) {
+      out = { ok: false, error: "unauthorized" };
+    } else {
+      var student = studentByAnyCode_(p.code);
+      var sheetId = student
+        ? PropertiesService.getScriptProperties().getProperty("sheet_" + student.code)
+        : null;
+      var test = String(p.test || "").trim().slice(0, MAX_CELL_CHARS);
+      // Check for blank BEFORE Number() coercion: Number("") is 0 (finite,
+      // not negative), so an omitted score would otherwise silently pass
+      // validation and get written as a real, indistinguishable score of 0.
+      var scoreRaw = String(p.score === undefined || p.score === null ? "" : p.score).trim();
+      var maxRaw = String(p.max === undefined || p.max === null ? "" : p.max).trim();
+      var score = Number(scoreRaw);
+      var max = Number(maxRaw);
+      if (!sheetId || !test) {
+        out = { ok: false, error: !sheetId ? "unknown student" : "test name required" };
+      } else if (!scoreRaw || !maxRaw || !isFinite(score) || !isFinite(max) || max <= 0 || score < 0) {
+        out = { ok: false, error: "enter valid numbers for score and max" };
+      } else {
+        var ss = SpreadsheetApp.openById(sheetId);
+        var pct = Math.round((score / max) * 100);
+        var lock = LockService.getScriptLock();
+        lock.waitLock(10000);
+        try {
+          ss.getSheetByName("School Tests").appendRow([
+            now_(), sanitize_(test), score, max, pct, sanitize_(p.notes || ""),
+          ]);
+        } finally {
+          lock.releaseLock();
+        }
+        out = { ok: true };
+      }
+    }
+  } catch (err) {
+    console.error("logSchoolTest_ error: " + err);
+    out = { ok: false, error: "internal error" };
+  }
+  return json_(out); // POST-only
+}
+
+function logMockTest_(p) {
+  var out;
+  try {
+    if (!teacherAuthed_(p)) {
+      out = { ok: false, error: "unauthorized" };
+    } else {
+      var student = studentByAnyCode_(p.code);
+      var sheetId = student
+        ? PropertiesService.getScriptProperties().getProperty("sheet_" + student.code)
+        : null;
+      var paper = String(p.paper || "").trim().slice(0, MAX_CELL_CHARS);
+      var fields = ["reading", "listening", "writing", "speaking", "useOfEnglish"];
+      var scores = {};
+      var valid = true;
+      fields.forEach(function (f) {
+        // Same blank-before-coercion check as logSchoolTest_: Number("") is
+        // 0, which would otherwise pass isFinite/>=0 and silently zero out
+        // an omitted skill score instead of rejecting the submission.
+        var raw = String(p[f] === undefined || p[f] === null ? "" : p[f]).trim();
+        var n = Number(raw);
+        if (!raw || !isFinite(n) || n < 0) valid = false;
+        scores[f] = n;
+      });
+      if (!sheetId || !paper) {
+        out = { ok: false, error: !sheetId ? "unknown student" : "paper name required" };
+      } else if (!valid) {
+        out = { ok: false, error: "enter a valid number for every skill score" };
+      } else {
+        var total = scores.reading + scores.listening + scores.writing + scores.speaking + scores.useOfEnglish;
+        var ss = SpreadsheetApp.openById(sheetId);
+        var lock = LockService.getScriptLock();
+        lock.waitLock(10000);
+        try {
+          ss.getSheetByName("Mock Tests").appendRow([
+            now_(),
+            sanitize_(paper),
+            scores.reading,
+            scores.listening,
+            scores.writing,
+            scores.speaking,
+            scores.useOfEnglish,
+            total,
+            sanitize_(p.notes || ""),
+          ]);
+        } finally {
+          lock.releaseLock();
+        }
+        out = { ok: true };
+      }
+    }
+  } catch (err) {
+    console.error("logMockTest_ error: " + err);
+    out = { ok: false, error: "internal error" };
+  }
+  return json_(out); // POST-only
+}
+
+// ── Writing analysis (teacher-triggered formal assessment) ──────────────────
+// Distinct from the student's own in-app practice writing coach (WRITING_SYSTEM,
+// never graded). This is Rory analysing a real submitted piece — same rubric
+// as scripts/analyse-writing.py (the local script this complements, not
+// replaces) so results are consistent whichever way he runs it.
+var WRITING_ANALYSIS_MAX_INPUT = 8000; // a full essay/test response, body not URL
+
+var WRITING_ASSESS_SYSTEM =
+  "You are an experienced English-as-a-foreign-language tutor assessing a piece " +
+  "of writing by a teenage German-speaking (L1 German) learner, roughly A2–B1 " +
+  "level. Assess fairly and encouragingly. Use the CEFR scale. Identify the most " +
+  "useful recurring error patterns (not every slip) so the tutor knows what to " +
+  "teach next. Feedback must be warm and specific, never shaming. Always respond " +
+  "by calling the record_assessment tool.";
+
+var WRITING_ASSESS_TOOL = {
+  name: "record_assessment",
+  description: "Record the structured assessment of the student's writing sample.",
+  input_schema: {
+    type: "object",
+    properties: {
+      cefr: { type: "string", enum: ["A1", "A2", "A2+", "B1", "B1+", "B2", "C1", "C2"] },
+      grammar: { type: "integer", minimum: 0, maximum: 10 },
+      vocab: { type: "integer", minimum: 0, maximum: 10 },
+      coherence: { type: "integer", minimum: 0, maximum: 10 },
+      errors: {
+        type: "array",
+        items: { type: "string" },
+        description: "Top 3–5 recurring error patterns, each a short phrase with a tiny example.",
+      },
+      feedback: { type: "string", description: "One encouraging paragraph (2–4 sentences) of tutor feedback." },
+    },
+    required: ["cefr", "grammar", "vocab", "coherence", "errors", "feedback"],
+  },
+};
+
+// Returns the assessment object, or null on any failure (no key, HTTP error,
+// or Claude didn't call the tool) — caller decides the user-facing message.
+function analyseWritingWithClaude_(text, studentName) {
+  var key = PropertiesService.getScriptProperties().getProperty("ANTHROPIC_API_KEY");
+  if (!key) return null;
+  var res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
+    method: "post",
+    contentType: "application/json",
+    muteHttpExceptions: true,
+    headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
+    payload: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      system: WRITING_ASSESS_SYSTEM,
+      tools: [WRITING_ASSESS_TOOL],
+      tool_choice: { type: "tool", name: "record_assessment" },
+      messages: [
+        { role: "user", content: "Student: " + studentName + "\n\nWriting sample:\n\"\"\"\n" + text + "\n\"\"\"" },
+      ],
+    }),
+  });
+  if (res.getResponseCode() !== 200) {
+    console.error("Anthropic (writing analysis) " + res.getResponseCode() + ": " + res.getContentText().slice(0, 300));
+    return null;
+  }
+  var body = JSON.parse(res.getContentText());
+  var content = body.content || [];
+  for (var i = 0; i < content.length; i++) {
+    if (content[i].type === "tool_use" && content[i].name === "record_assessment") return content[i].input;
+  }
+  return null;
+}
+
+function analyseWriting_(p) {
+  var out;
+  try {
+    if (!teacherAuthed_(p)) {
+      out = { ok: false, error: "unauthorized" };
+    } else {
+      var student = studentByAnyCode_(p.code);
+      var sheetId = student
+        ? PropertiesService.getScriptProperties().getProperty("sheet_" + student.code)
+        : null;
+      var text = String(p.text || "").trim().slice(0, WRITING_ANALYSIS_MAX_INPUT);
+      if (!sheetId) {
+        out = { ok: false, error: "unknown student" };
+      } else if (text.length < 20) {
+        out = { ok: false, error: "writing sample looks too short" };
+      } else {
+        var a = analyseWritingWithClaude_(text, student.name);
+        if (!a) {
+          out = { ok: false, error: "The AI helper isn't switched on yet, or couldn't answer just now." };
+        } else {
+          var ss = SpreadsheetApp.openById(sheetId);
+          var lock = LockService.getScriptLock();
+          lock.waitLock(10000);
+          try {
+            appendWriting_(ss, {
+              title: p.title || "Writing sample",
+              cefr: a.cefr,
+              grammar: a.grammar,
+              vocab: a.vocab,
+              coherence: a.coherence,
+              errors: a.errors,
+              feedback: a.feedback,
+              link: p.link || "",
+            });
+          } finally {
+            lock.releaseLock();
+          }
+          out = { ok: true, assessment: a };
+        }
+      }
+    }
+  } catch (err) {
+    console.error("analyseWriting_ error: " + err);
+    out = { ok: false, error: "internal error" };
+  }
+  return json_(out); // POST-only
 }
 
 // ── Focus note (the "flag a focus point" pair — surfaces in-app AND in AI) ──

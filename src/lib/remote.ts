@@ -270,3 +270,68 @@ export function assignHomeworkFromDashboard(
 export function setFocusNote(teacherSecret: string, code: string, note: string): Promise<OkResult> {
   return teacherPost<OkResult>({ action: "teacherSetFocusNote", teacherSecret, code, note });
 }
+
+/** Logs a school test score — a plain number, no AI involved. */
+export function logSchoolTest(
+  teacherSecret: string,
+  code: string,
+  test: string,
+  score: number,
+  max: number,
+  notes: string,
+): Promise<OkResult> {
+  return teacherPost<OkResult>({ action: "teacherLogSchoolTest", teacherSecret, code, test, score, max, notes });
+}
+
+/** Logs a mock-exam paper's per-skill scores (Total is computed server-side). */
+export function logMockTest(
+  teacherSecret: string,
+  code: string,
+  paper: string,
+  reading: number,
+  listening: number,
+  writing: number,
+  speaking: number,
+  useOfEnglish: number,
+  notes: string,
+): Promise<OkResult> {
+  return teacherPost<OkResult>({
+    action: "teacherLogMockTest",
+    teacherSecret,
+    code,
+    paper,
+    reading,
+    listening,
+    writing,
+    speaking,
+    useOfEnglish,
+    notes,
+  });
+}
+
+export interface WritingAssessment {
+  cefr: string;
+  grammar: number;
+  vocab: number;
+  coherence: number;
+  errors: string[];
+  feedback: string;
+}
+export interface AnalyseWritingResult {
+  ok: boolean;
+  assessment?: WritingAssessment;
+  error?: string;
+}
+
+/** Sends a real submitted writing sample to Claude for a formal CEFR
+ * assessment (same rubric as scripts/analyse-writing.py) and logs it to the
+ * student's Writing tab. Distinct from the student's own in-app practice
+ * writing coach — this is Rory analysing actual submitted work. */
+export function analyseWriting(
+  teacherSecret: string,
+  code: string,
+  title: string,
+  text: string,
+): Promise<AnalyseWritingResult> {
+  return teacherPost<AnalyseWritingResult>({ action: "teacherAnalyseWriting", teacherSecret, code, title, text });
+}

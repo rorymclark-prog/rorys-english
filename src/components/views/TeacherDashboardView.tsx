@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import {
   addStudent,
+  analyseWriting,
   assignHomeworkFromDashboard,
   fetchTeacherDashboard,
+  logMockTest,
+  logSchoolTest,
   setFocusNote,
+  type WritingAssessment,
   type TeacherStudent,
 } from "@/lib/remote";
 import { ChartIcon, ChevronRightIcon, ChevronLeftIcon } from "@/components/Icons";
@@ -474,8 +478,211 @@ function TeacherStudentPanel({
             </button>
           </form>
         </section>
+
+        {/* Score logging + writing analysis — the three assessment types that
+            already have a Sheet tab + Progress display, but no way in until
+            now (School Tests/Mock Tests never had a pipeline at all; Writing
+            only had the local scripts/analyse-writing.py). */}
+        <SchoolTestForm secret={secret} code={student.code} />
+        <MockTestForm secret={secret} code={student.code} />
+        <WritingAnalysisForm secret={secret} code={student.code} />
       </main>
     </>
+  );
+}
+
+const inputCls =
+  "w-full rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm text-navy outline-none placeholder:text-navy-soft dark:border-white/10 dark:text-cream dark:placeholder:text-navy-mist";
+const primaryBtnCls =
+  "w-full rounded-lg bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-4 py-2.5 text-sm font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition active:scale-[.97] disabled:opacity-40 dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none";
+// Plain non-negative decimal only — Number() alone would silently accept
+// "1e5" (100000) or "0x10" (16) as a valid score, which a typo could produce
+// with no warning. A test/mock-exam score realistically never exceeds 999.
+const SCORE_RE = /^\d{1,3}(\.\d+)?$/;
+function validScore(raw: string): boolean {
+  return SCORE_RE.test(raw.trim());
+}
+
+function SchoolTestForm({ secret, code }: { secret: string; code: string }) {
+  const [test, setTest] = useState("");
+  const [score, setScore] = useState("");
+  const [max, setMax] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false);
+
+  const scoreN = Number(score);
+  const maxN = Number(max);
+  const valid = Boolean(test.trim()) && validScore(score) && validScore(max) && maxN > 0;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!valid) return;
+    setBusy(true);
+    setError(null);
+    const r = await logSchoolTest(secret, code, test.trim(), scoreN, maxN, notes.trim());
+    setBusy(false);
+    if (r.ok) {
+      setTest("");
+      setScore("");
+      setMax("");
+      setNotes("");
+      setFlash(true);
+      window.setTimeout(() => setFlash(false), 2000);
+    } else {
+      setError("Couldn't log that — try again.");
+    }
+  }
+
+  return (
+    <section className="mt-5">
+      <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">
+        Log a school test
+      </h2>
+      <form onSubmit={submit} className="space-y-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
+        <input value={test} onChange={(e) => setTest(e.target.value)} placeholder="Test name (e.g. Schularbeit 3)" maxLength={200} className={inputCls} />
+        <div className="flex gap-3">
+          <input value={score} onChange={(e) => setScore(e.target.value)} placeholder="Score" inputMode="decimal" className={inputCls} />
+          <input value={max} onChange={(e) => setMax(e.target.value)} placeholder="Max" inputMode="decimal" className={inputCls} />
+        </div>
+        <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" maxLength={500} className={inputCls} />
+        {error && <p className="text-sm text-bad dark:text-bad-bright">{error}</p>}
+        <button type="submit" disabled={busy || !valid} className={primaryBtnCls}>
+          {busy ? "Logging…" : flash ? "Logged ✓" : "Log test"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function MockTestForm({ secret, code }: { secret: string; code: string }) {
+  const [paper, setPaper] = useState("");
+  const [reading, setReading] = useState("");
+  const [listening, setListening] = useState("");
+  const [writing, setWriting] = useState("");
+  const [speaking, setSpeaking] = useState("");
+  const [useOfEnglish, setUseOfEnglish] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false);
+
+  const skills = [reading, listening, writing, speaking, useOfEnglish];
+  const skillNs = skills.map(Number);
+  const valid = Boolean(paper.trim()) && skills.every(validScore);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!valid) return;
+    setBusy(true);
+    setError(null);
+    const [r, l, w, sp, u] = skillNs;
+    const res = await logMockTest(secret, code, paper.trim(), r, l, w, sp, u, notes.trim());
+    setBusy(false);
+    if (res.ok) {
+      setPaper("");
+      setReading("");
+      setListening("");
+      setWriting("");
+      setSpeaking("");
+      setUseOfEnglish("");
+      setNotes("");
+      setFlash(true);
+      window.setTimeout(() => setFlash(false), 2000);
+    } else {
+      setError("Couldn't log that — try again.");
+    }
+  }
+
+  return (
+    <section className="mt-5">
+      <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">
+        Log a mock test
+      </h2>
+      <form onSubmit={submit} className="space-y-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
+        <input value={paper} onChange={(e) => setPaper(e.target.value)} placeholder="Paper (e.g. B1 Mock — Paper 1)" maxLength={200} className={inputCls} />
+        <div className="grid grid-cols-2 gap-3">
+          <input value={reading} onChange={(e) => setReading(e.target.value)} placeholder="Reading" inputMode="decimal" className={inputCls} />
+          <input value={listening} onChange={(e) => setListening(e.target.value)} placeholder="Listening" inputMode="decimal" className={inputCls} />
+          <input value={writing} onChange={(e) => setWriting(e.target.value)} placeholder="Writing" inputMode="decimal" className={inputCls} />
+          <input value={speaking} onChange={(e) => setSpeaking(e.target.value)} placeholder="Speaking" inputMode="decimal" className={inputCls} />
+        </div>
+        <input value={useOfEnglish} onChange={(e) => setUseOfEnglish(e.target.value)} placeholder="Use of English" inputMode="decimal" className={inputCls} />
+        <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" maxLength={500} className={inputCls} />
+        {error && <p className="text-sm text-bad dark:text-bad-bright">{error}</p>}
+        <button type="submit" disabled={busy || !valid} className={primaryBtnCls}>
+          {busy ? "Logging…" : flash ? "Logged ✓" : "Log mock test"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function WritingAnalysisForm({ secret, code }: { secret: string; code: string }) {
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<WritingAssessment | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (text.trim().length < 20) return;
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    const r = await analyseWriting(secret, code, title.trim() || "Writing sample", text.trim());
+    setBusy(false);
+    if (r.ok && r.assessment) {
+      setResult(r.assessment);
+      setTitle("");
+      setText("");
+    } else {
+      setError(r.error || "Couldn't analyse that — try again.");
+    }
+  }
+
+  return (
+    <section className="mt-5">
+      <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">
+        Analyse writing
+      </h2>
+      <form onSubmit={submit} className="space-y-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
+        <p className="text-xs text-navy-soft dark:text-navy-mist">
+          Paste a real submitted piece — Claude gives a CEFR level + the one pattern most worth teaching next, logged
+          to their Writing tab. Not their in-app practice chat (that&apos;s separate, never graded).
+        </p>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional, e.g. HW2 essay)" maxLength={200} className={inputCls} />
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Paste the writing sample here…"
+          rows={5}
+          maxLength={8000}
+          className={`${inputCls} resize-none`}
+        />
+        {error && <p className="text-sm text-bad dark:text-bad-bright">{error}</p>}
+        <button type="submit" disabled={busy || text.trim().length < 20} className={primaryBtnCls}>
+          {busy ? "Analysing…" : "Analyse & log"}
+        </button>
+        {result && (
+          <div className="space-y-1.5 rounded-lg bg-amber-soft p-3 dark:bg-amber-dusk">
+            <p className="text-sm font-bold text-navy dark:text-cream">
+              {result.cefr} · Grammar {result.grammar}/10 · Vocab {result.vocab}/10 · Coherence {result.coherence}/10
+            </p>
+            {result.errors.length > 0 && (
+              <ul className="list-disc space-y-0.5 pl-4 text-xs text-navy-soft dark:text-navy-mist">
+                {result.errors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-navy dark:text-cream">{result.feedback}</p>
+          </div>
+        )}
+      </form>
+    </section>
   );
 }
 

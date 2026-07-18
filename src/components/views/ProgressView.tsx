@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import type { StudyTool } from "@/lib/types";
 import { fetchProgress, remoteEnabled, type Progress, type Section } from "@/lib/remote";
@@ -116,10 +116,10 @@ export default function ProgressView({
             <SummaryTiles data={data} />
             <SectionCard title="Homework" section={data.homework} />
             <SectionCard title="Quizzes & vocab" section={data.quizzes} />
-            <SectionCard title="School tests" section={data.schoolTests} />
-            <SectionCard title="Writing" section={data.writing} />
+            <SectionCard title="School tests" section={data.schoolTests} groupBySemester />
+            <SectionCard title="Writing" section={data.writing} groupBySemester />
             <SectionCard title="Speaking" section={data.speaking} />
-            <SectionCard title="Mock tests" section={data.mockTests} />
+            <SectionCard title="Mock tests" section={data.mockTests} groupBySemester />
             {data.generatedAt && (
               <p className="tnum mt-4 text-center text-xs text-navy-soft dark:text-navy-mist">
                 Updated {data.generatedAt}
@@ -220,7 +220,30 @@ function SummaryTiles({ data }: { data: Progress }) {
 /** "85", "85%", "9/10", "12.07.2026", "7:30" — anything numeral-shaped */
 const NUMERAL_RE = /^-?\d+([.,:/\s]\d+)*\s*%?$/;
 
-function SectionCard({ title, section }: { title: string; section?: Section }) {
+/** Austrian school-year terms, derived from the row's date — no schema
+ * change, no manual tagging. Sept–Jan = Semester 1, Feb–Jul = Semester 2;
+ * August (summer break) has no clean term and gets no divider. */
+function termFor(dateCell: string): string | null {
+  const d = /^\d{4}-\d{2}-\d{2}T/.test(dateCell) ? new Date(dateCell) : null;
+  if (!d || isNaN(d.getTime())) return null;
+  const m = d.getMonth() + 1; // 1–12
+  if (m >= 9 || m === 1) return "Semester 1";
+  if (m >= 2 && m <= 7) return "Semester 2";
+  return null;
+}
+
+function SectionCard({
+  title,
+  section,
+  groupBySemester,
+}: {
+  title: string;
+  section?: Section;
+  /** Adds a term divider row when the date crosses a semester boundary —
+   * for the assessment tables (Writing/School tests/Mock tests), not the
+   * higher-frequency ones (Homework/Quizzes) where it'd just be noise. */
+  groupBySemester?: boolean;
+}) {
   if (!section || section.rows.length === 0) return null;
   // a column is numeric if every non-empty cell is numeral-shaped (→ right-align + tnum)
   const numericCols = section.headers.map((_, ci) => {
@@ -255,29 +278,51 @@ function SectionCard({ title, section }: { title: string; section?: Section }) {
             </tr>
           </thead>
           <tbody>
-            {section.rows
-              .slice()
-              .reverse()
-              .map((row, ri) => (
-                <tr key={ri} className="border-b border-black/[.04] last:border-0 dark:border-white/[.04]">
-                  {row.map((cell, ci) => {
-                    const v = String(cell);
-                    const d = /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v) : null;
-                    return (
-                      <td
-                        key={ci}
-                        className={`whitespace-nowrap px-3 py-2 text-navy-soft dark:text-navy-mist ${
-                          numericCols[ci] ? "tnum text-right" : ""
-                        }`}
-                      >
-                        {d
-                          ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-                          : v}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+            {(() => {
+              const rows = section.rows.slice().reverse(); // newest first
+              let lastTerm: string | null | undefined; // undefined = before the first row
+              return rows.map((row, ri) => {
+                const term = groupBySemester ? termFor(String(row[0] ?? "")) : null;
+                const showDivider = groupBySemester && term && term !== lastTerm;
+                // Only update the sentinel on a REAL term — a row with a
+                // malformed/blank date (term=null, e.g. hand-entered into
+                // the Sheet directly) must not reset it, or the next valid
+                // row would look like a semester change even when it isn't.
+                if (groupBySemester && term) lastTerm = term;
+                return (
+                  <Fragment key={ri}>
+                    {showDivider && (
+                      <tr>
+                        <td
+                          colSpan={section.headers.length}
+                          className="bg-amber-soft px-3 py-1 text-[0.625rem] font-bold uppercase tracking-wide text-amber-deep dark:bg-amber-dusk dark:text-amber"
+                        >
+                          {term}
+                        </td>
+                      </tr>
+                    )}
+                    <tr className="border-b border-black/[.04] last:border-0 dark:border-white/[.04]">
+                      {row.map((cell, ci) => {
+                        const v = String(cell);
+                        const d = /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v) : null;
+                        return (
+                          <td
+                            key={ci}
+                            className={`whitespace-nowrap px-3 py-2 text-navy-soft dark:text-navy-mist ${
+                              numericCols[ci] ? "tnum text-right" : ""
+                            }`}
+                          >
+                            {d
+                              ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                              : v}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </Fragment>
+                );
+              });
+            })()}
           </tbody>
         </table>
       </div>
