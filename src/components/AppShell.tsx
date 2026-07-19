@@ -12,7 +12,10 @@ export default function AppShell({ ctx, children }: { ctx: StudentCtx; children:
     <StudentProvider value={ctx}>
       <SettingsProvider studentId={ctx.studentId}>
         <OfflineBanner />
-        <div className="mx-auto min-h-dvh max-w-md pb-[calc(6rem+env(safe-area-inset-bottom))]">{children}</div>
+        {/* max-w-md on phone; most of Rory's students (Ferdi incl.) are
+            actually on iPad most of the time, so md:+ gets real breathing
+            room instead of a phone-width column stranded on a big screen. */}
+        <div className="mx-auto min-h-dvh max-w-md pb-[calc(6rem+env(safe-area-inset-bottom))] md:max-w-2xl">{children}</div>
         <InstallHint />
         <TabBar />
       </SettingsProvider>

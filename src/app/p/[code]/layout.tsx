@@ -34,7 +34,7 @@ export default async function ParentLayout({
   const { code } = await params;
   if (!getStudentByParentCode(code)) notFound();
   return (
-    <div className="mx-auto min-h-dvh max-w-md">
+    <div className="mx-auto min-h-dvh max-w-md md:max-w-2xl">
       <ThemeInit />
       {children}
       <ServiceWorkerRegister />

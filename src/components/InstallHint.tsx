@@ -69,7 +69,7 @@ export default function InstallHint() {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md px-4">
+    <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md px-4 md:max-w-2xl">
       <div className="animate-sheet flex items-center gap-3 rounded-card bg-surface p-3 text-navy shadow-card dark:bg-navy-raised dark:text-cream dark:shadow-card-dark">
         <span className="text-xl" aria-hidden>
           📲

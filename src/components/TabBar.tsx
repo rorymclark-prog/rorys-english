@@ -24,7 +24,7 @@ export default function TabBar() {
   return (
     <nav
       aria-label="Main navigation"
-      className="glass fixed inset-x-3 bottom-3 z-20 mx-auto max-w-md rounded-card border border-black/[.06] shadow-[0_8px_30px_rgba(0,0,0,.14)] dark:border-white/10"
+      className="glass fixed inset-x-3 bottom-3 z-20 mx-auto max-w-md rounded-card border border-black/[.06] shadow-[0_8px_30px_rgba(0,0,0,.14)] dark:border-white/10 md:max-w-2xl"
     >
       <ul className="flex items-stretch justify-around pb-safe">
         {tabs.map(({ href, label, Icon, match }) => {

@@ -43,7 +43,7 @@ export default function ServiceWorkerRegister() {
     <div
       role="status"
       aria-live="polite"
-      className="animate-sheet fixed inset-x-0 z-40 mx-auto max-w-md px-4"
+      className="animate-sheet fixed inset-x-0 z-40 mx-auto max-w-md px-4 md:max-w-2xl"
       style={{ top: "calc(env(safe-area-inset-top) + 0.5rem)" }}
     >
       <button
