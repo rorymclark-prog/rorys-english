@@ -2,7 +2,9 @@
 
 const endpoint = process.env.NEXT_PUBLIC_SYNC_URL || "";
 export interface ApiResult { ok: boolean; error?: string; authRequired?: boolean }
-export interface Session extends ApiResult { token: string; expires: number; role: string }
+export interface Session extends ApiResult { token: string; expires: number; role: string; authProvider?: "firebase"; accountUid?: string; verificationRequired?: boolean }
+const accountsEnabled = !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+let accountEpoch = 0;
 const key = (code: string) => `re_session_v2_${code}`;
 export function savedSession(code: string): Session | null {
   if (typeof window === "undefined") return null;
@@ -19,7 +21,7 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
   if (!endpoint) return { ok: false, error: "The secure connection is not configured yet." } as T;
   // Google can briefly fail while redirecting to its JSON response. Retrying
   // sign-in and reads is safe; writes and AI calls retain their explicit flow.
-  const retryable = new Set(["login", "progress", "resources", "assignments", "note", "submissions", "teacherDashboard"]);
+  const retryable = new Set(["login", "accountLogin", "progress", "resources", "assignments", "note", "submissions", "teacherDashboard"]);
   const attempts = retryable.has(String(body.action)) ? 2 : 1;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
@@ -32,7 +34,7 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
       }
       const value = await res.json() as T & {service?: string; token?: string; expires?: number; role?: string};
       if (!value || typeof value.ok !== "boolean" || value.service === "rorys-english") throw new Error("Unexpected service response");
-      if (body.action === "login" && value.ok && (!value.token || !value.expires || !["student", "parent", "teacher"].includes(value.role || ""))) throw new Error("Missing sign-in confirmation");
+      if (["login", "accountLogin"].includes(String(body.action)) && value.ok && (!value.token || !value.expires || !["student", "parent", "teacher"].includes(value.role || ""))) throw new Error("Missing sign-in confirmation");
       if (value.authRequired) {
         if (savedSession("__teacher__")?.token === body.session) forgetSession("__teacher__");
         else if (typeof body.code === "string") forgetSession(body.code);
@@ -53,12 +55,47 @@ export async function login(code: string, credential: string): Promise<Session> 
   }
   return result;
 }
-export function authed<T extends ApiResult>(code: string, body: Record<string, unknown>): Promise<T> {
+export async function loginWithAccount(code: string): Promise<Session> {
+  const { currentAccount } = await import("./account-auth");
+  const epoch = accountEpoch;
+  const user = await currentAccount();
+  if (!user) return {ok:false,error:"Please sign in.",token:"",expires:0,role:"student"};
+  const idToken = await user.getIdToken();
+  const result = await request<Session>({action:"accountLogin",code,idToken});
+  if (epoch !== accountEpoch || (await currentAccount())?.uid !== user.uid) {
+    return {ok:false,error:"Your account changed. Please sign in again.",token:"",expires:0,role:"student"};
+  }
+  if (result.ok && result.authProvider === "firebase" && result.accountUid === user.uid) {
+    try { sessionStorage.setItem(key(code), JSON.stringify(result)); }
+    catch { return {...result,ok:false,error:"This browser cannot store a sign-in. Please use a browser with storage enabled."}; }
+    window.dispatchEvent(new CustomEvent("re-auth-change"));
+  } else if (!result.ok) forgetSession(code);
+  return result;
+}
+export async function authed<T extends ApiResult>(code: string, body: Record<string, unknown>): Promise<T> {
+  if (accountsEnabled && !code.includes("-fam-") && !String(body.action).startsWith("teacher")) {
+    const { currentAccount } = await import("./account-auth");
+    const user = await currentAccount();
+    if (user) {
+      try { return await request<T>({...body,code,session:await user.getIdToken(),authProvider:"firebase"}); }
+      catch { return {ok:false,error:"Please reconnect and sign in again. Your saved draft is still on this device."} as T; }
+    }
+  }
   const session = String(body.action).startsWith("teacher") ? savedSession("__teacher__") : savedSession(code) || savedSession("__teacher__");
   return request<T>({ ...body, code, session: session?.token || "" });
 }
 export async function logout(code: string) {
-  const token = savedSession(code)?.token;
+  accountEpoch++;
+  const session = savedSession(code);
   forgetSession(code);
-  if (token) await request({ action: "logout", session: token });
+  if (code !== "__teacher__" && accountsEnabled) {
+    const { signOutAccount } = await import("./account-auth");
+    await signOutAccount();
+    for (const storedKey of Object.keys(sessionStorage)) {
+      if (!storedKey.startsWith("re_session_v2_")) continue;
+      try { if (JSON.parse(sessionStorage.getItem(storedKey) || "null")?.authProvider === "firebase") sessionStorage.removeItem(storedKey); } catch { /* invalid entry */ }
+    }
+    window.dispatchEvent(new CustomEvent("re-auth-change"));
+  }
+  if (session?.token && session.authProvider !== "firebase") await request({ action: "logout", session: session.token });
 }

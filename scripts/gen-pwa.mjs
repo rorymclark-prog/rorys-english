@@ -59,3 +59,7 @@ writeFileSync(
 );
 
 console.log(`gen-pwa: wrote ${students.length} student manifest(s) + root manifest`);
+
+const build = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMIT_SHA || "local";
+const worker = readFileSync(join(root, "scripts", "service-worker.js"), "utf-8");
+writeFileSync(join(root, "public", "sw.js"), worker.replaceAll("__BUILD__", build));

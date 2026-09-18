@@ -1,0 +1,6 @@
+.env*
+firebase-debug.log*
+.next*
+out
+.git
+*.tsbuildinfo

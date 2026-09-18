@@ -5,17 +5,14 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Pure static export: no server, deploys to Vercel/Netlify/GitHub Pages, best
-  // offline behaviour, fast on old phones. All state is client-side
-  // (content JSON shipped in the bundle, progress in localStorage).
-  output: "export",
+  // Vercel serves pre-rendered lessons plus the account-verifying API route.
+  // Private progress stays in the authenticated Google service.
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   outputFileTracingRoot: process.cwd(),
   basePath,
   reactStrictMode: true,
   images: { unoptimized: true },
-  // Clean static paths for the dynamic /s/[code] routes so each resolves to an
-  // index.html the service worker can cache for offline use.
+  // Keep established student and lesson links consistent.
   trailingSlash: true,
 };
 

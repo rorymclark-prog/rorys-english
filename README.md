@@ -1,6 +1,8 @@
 # Rory's English
 
-A lesson and homework hub for Rory, Ferdi and Valentin. The authenticated V2 app is live at https://rorymclark-prog.github.io/rorys-english/ (18 September 2026), backed by Google Apps Script version 28. All three versioned public service URLs now run the authenticated API. Existing progress records are retained.
+A lesson and homework hub for Rory, Ferdi and Valentin. The current deployment uses Vercel at https://rorys-english.vercel.app/ with Firebase email/password accounts and the authenticated Google Apps Script progress service (version 29). Existing records and the earlier GitHub Pages release are retained.
+
+Students use their existing lesson link, enter the email they use with Rory, and choose **Set or reset password** on their first visit. They choose their own password through the email link. Email verification is required; the app offers a verification email if needed. **Keep me signed in on this device** remembers the login on their own phone. Google sign-in remains disabled pending provider setup and testing. Existing private access codes remain supported; the teacher keeps the existing teacher login.
 
 ## Student workflow
 
@@ -37,18 +39,20 @@ Open http://127.0.0.1:4173/s/valentin-q9m2/ or http://127.0.0.1:4173/teacher/ an
 npm test
 npm run lint
 npm audit
-NEXT_PUBLIC_BASE_PATH=/rorys-english npm run build
+npm run build
 ```
 
 Live checks covered teacher/student authentication, denied cross-student access, exact written answers, duplicate retry, teacher feedback, revisions and the word helper. The two synthetic submissions were removed and existing records retained. Rory confirmed browser teacher sign-in; automated browser and installed-phone checks were unavailable during activation.
 
-The source includes 23 automated tests for access isolation, teacher-session revocation, immutable/idempotent submissions, teacher review, quiz retries, resource safety, date handling, archived links and durable outbox behaviour.
+The source includes 32 automated tests for access isolation, teacher-session revocation, immutable/idempotent submissions, teacher review, quiz retries, resource safety, date handling, archived links and durable outbox behaviour.
 
 ## Production and future releases
 
-Read [the deployment guide](apps-script/progress-sync/README.md) first. Keep the live Google service and frontend compatible; distribute student access codes privately. The deployment script refuses to run without explicit activation confirmation. Never publish a demo build or leave the old unauthenticated service available as a fallback.
+Read [the deployment guide](apps-script/progress-sync/README.md). Publish this Next.js app to the existing Vercel project `rorys-english` with `npm run deploy`. GitHub holds the source; the old Pages build is retained for existing links. The current app requires its server API route and cannot use a static Pages export.
 
-The frontend receives only the version-2 endpoint URL. Server API keys and teacher credentials stay in Script Properties; no shared browser secret is used. Public routing identifiers are not credentials.
+Use `.env.example` for configuration names. The Firebase Web API key is public project configuration. Student emails/UID mappings belong only in the server environment; Firebase passwords, tokens, teacher credentials and provider secrets never belong in source. The server verifies Firebase signatures and maps the exact UID and verified email to one student. Apps Script independently validates Google identity and server-managed student permissions before issuing a short-lived student session.
+
+The live login integration was checked with a temporary synthetic Firebase account: unverified email rejection, a real signed identity, authenticated progress, and denied cross-student/teacher access. Password-setup link generation was checked for both registered learners without sending mail or changing their passwords. The synthetic account was deleted; no learner answers were written. Real student sign-in and installed-phone/offline behavior still need a device check.
 
 ## Content boundaries
 

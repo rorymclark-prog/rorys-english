@@ -6,6 +6,7 @@ import {createHash,randomUUID} from "node:crypto";
 function fixture() {
   const props=new Map([["TEACHER_PASSWORD","synthetic-teacher"],["sheet_student-a","sheet-a"]]);
   const cache=new Map(), sheets=new Map();
+  const identity={status:200,user:{localId:'managed-user',emailVerified:true,customAttributes:JSON.stringify({studentCode:'student-a',role:'student'})},calls:0};
   const property={getProperty:k=>props.get(k)||null,setProperty:(k,v)=>props.set(k,v)};
   function sheet(name) {
     const data=[];
@@ -24,7 +25,8 @@ function fixture() {
     PropertiesService:{getScriptProperties:()=>property},
     CacheService:{getScriptCache:()=>({get:k=>cache.get(k)||null,put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},
     LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
-    Utilities:{getUuid:randomUUID,DigestAlgorithm:{SHA_256:"sha256"},computeDigest:(_a,t)=>createHash("sha256").update(t).digest(),base64EncodeWebSafe:b=>Buffer.from(b).toString("base64url"),formatDate:()=> "2026-09-17",newBlob:t=>({getBytes:()=>Buffer.from(t)})},
+    Utilities:{getUuid:randomUUID,DigestAlgorithm:{SHA_256:"sha256"},computeDigest:(_a,t)=>createHash("sha256").update(t).digest(),base64EncodeWebSafe:b=>Buffer.from(b).toString("base64url"),base64DecodeWebSafe:t=>Buffer.from(t,'base64url'),formatDate:()=> "2026-09-17",newBlob:t=>({getBytes:()=>Buffer.from(t),getDataAsString:()=>Buffer.from(t).toString()})},
+    UrlFetchApp:{fetch:()=>{identity.calls++;return {getResponseCode:()=>identity.status,getContentText:()=>JSON.stringify({users:[identity.user]})};}},
     Session:{getScriptTimeZone:()=>"Europe/Vienna"},SpreadsheetApp:{openById:()=>ss},
     DriveApp:new Proxy({}, {get(){throw Error("Resource read touched Drive");}}),
     studentByAnyCode_:code=>[roster.code,roster.parentCode].includes(code)?roster:null,
@@ -34,10 +36,11 @@ function fixture() {
     upsertHomework_(){},setAssignmentStatus_(){},pruneAiCounters_(){},
   };
   vm.createContext(ctx);vm.runInContext(fs.readFileSync("apps-script/progress-sync/V2.gs","utf8"),ctx);
+  vm.runInContext(fs.readFileSync("apps-script/progress-sync/FirebaseAuth.gs","utf8"),ctx);
   const post=p=>ctx.doPost({postData:{contents:JSON.stringify(p)}});
   const teacher=()=>ctx.issueSession_("__teacher__","teacher").token;
   const student=()=>ctx.issueSession_("student-a","student").token;
-  return {ctx,post,teacher,student,sheets,props,cache};
+  return {ctx,post,teacher,student,sheets,props,cache,identity};
 }
 test("GET is version-only; route codes and legacy secret do not authenticate",()=>{
   const f=fixture();assert.equal(f.ctx.doGet({parameter:{action:"progress"}}).version,2);
@@ -109,9 +112,31 @@ test("rate limits reserve quota before AI work and reject expired sessions",()=>
   f.cache.clear();assert.equal(f.post({action:"progress",session,code:"student-a"}).authRequired,true);
 });
 test("production Apps Script parses and has one public entry point of each kind",()=>{
-  const code=fs.readFileSync("apps-script/progress-sync/Code.gs","utf8")+fs.readFileSync("apps-script/progress-sync/V2.gs","utf8");
+  const code=fs.readFileSync("apps-script/progress-sync/Code.gs","utf8")+fs.readFileSync("apps-script/progress-sync/V2.gs","utf8")+fs.readFileSync("apps-script/progress-sync/FirebaseAuth.gs","utf8");
   new vm.Script(code);
   assert.equal((code.match(/function doPost\(/g)||[]).length,1);
   assert.equal((code.match(/function doGet\(/g)||[]).length,1);
   assert.ok(code.includes("archived for optional revision, not outstanding catch-up"));
+});
+function identityToken(changes={}) {
+  const now=Math.floor(Date.now()/1000);
+  return 'header.'+Buffer.from(JSON.stringify({aud:'rory-automation',iss:'https://securetoken.google.com/rory-automation',sub:'managed-user',iat:now,exp:now+1800,...changes})).toString('base64url')+'.signature';
+}
+test('managed login requires Google validation and the server-controlled learner permission',()=>{
+  const f=fixture(), token=identityToken();
+  const r=f.post({action:'firebaseLogin',code:'student-a',idToken:token});
+  assert.equal(r.ok,true);assert.equal(r.role,'student');assert.equal(f.identity.calls,1);
+  assert.ok(r.expires-Date.now()<=1800000);
+  assert.equal(f.post({action:'teacherDashboard',code:'student-a',session:r.token}).ok,false);
+  for(const update of [{emailVerified:false},{disabled:true},{localId:'wrong-user'},{customAttributes:'{"studentCode":"other-student","role":"student"}'},{customAttributes:'{"studentCode":"student-a","role":"teacher"}'}]) {
+    const rejected=fixture();Object.assign(rejected.identity.user,update);
+    assert.equal(rejected.post({action:'firebaseLogin',code:'student-a',idToken:token}).ok,false);
+  }
+  const forged=fixture();forged.identity.status=400;
+  assert.equal(forged.post({action:'firebaseLogin',code:'student-a',idToken:token}).ok,false);
+});
+test('expired and wrong-project identity tokens cannot create sessions',()=>{
+  for(const claims of [{exp:1},{aud:'different-project'},{iss:'https://attacker.example'},{sub:''},{iat:Date.now()/1000+3600}]) {
+    const f=fixture();assert.equal(f.post({action:'firebaseLogin',code:'student-a',idToken:identityToken(claims)}).ok,false);assert.equal(f.identity.calls,0);
+  }
 });

@@ -14,9 +14,10 @@ function session_(token) {
   var s=JSON.parse(raw);
   return s.expires > Date.now() && s.version === version_(s.code) ? s : null;
 }
-function issueSession_(code,role) {
-  var token=token_(), expires=Date.now()+SESSION_TTL_*1000;
-  CacheService.getScriptCache().put('session_'+digest_(token),JSON.stringify({code:code,role:role,expires:expires,version:version_(code)}),SESSION_TTL_);
+function issueSession_(code,role,ttl) {
+  ttl=Math.max(1,Math.min(SESSION_TTL_,Number(ttl)||SESSION_TTL_));
+  var token=token_(), expires=Date.now()+ttl*1000;
+  CacheService.getScriptCache().put('session_'+digest_(token),JSON.stringify({code:code,role:role,expires:expires,version:version_(code)}),ttl);
   return {ok:true,token:token,expires:expires,role:role};
 }
 function login_(p) {
@@ -60,6 +61,7 @@ function doPost(e) {
     if(!e || !e.postData || e.postData.contents.length>60000) return json_({ok:false,error:'Request too large'});
     var p=JSON.parse(e.postData.contents);
     if(p.action==='login') return json_(login_(p));
+    if(p.action==='firebaseLogin') return json_(firebaseLogin_(p));
     var s=session_(p.session);
     if(!s) return json_({ok:false,error:'Sign in again to continue.',authRequired:true});
     if(p.action==='logout') {CacheService.getScriptCache().remove('session_'+digest_(p.session));return json_({ok:true});}

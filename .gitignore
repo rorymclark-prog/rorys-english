@@ -4,12 +4,14 @@
 /out/
 /build
 
-# secrets / local env (Apps Script sync URL + secret)
+# private local environment and credentials
 .env*
 !.env.local.example
 !.env.example
 .DS_Store
 *.pem
 npm-debug.log*
+firebase-debug.log*
+.vercel/
 *.tsbuildinfo
 next-env.d.ts
