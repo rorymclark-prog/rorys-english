@@ -2,7 +2,9 @@
   {
     "id": "unit10",
     "title": "A Fair World",
-    "active": true,
+    "active": false,
+    "schoolYear": "2025–26",
+    "status": "archive",
     "studyTools": [
       {
         "title": "Unit 10 Study Tool",

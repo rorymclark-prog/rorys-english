@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getBundle, getHomeworkParams } from "@/lib/content";
+import { getLegacyUnit, getHomeworkParams } from "@/lib/content";
 import HomeworkWeekView from "@/components/views/HomeworkWeekView";
 
 export function generateStaticParams({ params }: { params: { code: string } }) {
@@ -14,10 +14,9 @@ export default async function HomeworkWeekPage({
   params: Promise<{ code: string; week: string }>;
 }) {
   const { code, week } = await params;
-  const bundle = getBundle(code)!;
-  const unit = bundle.activeUnit;
+  const unit = getLegacyUnit(code);
   const hw = unit?.homework.find((h) => String(h.week) === week);
   if (!unit || !hw) notFound();
 
-  return <HomeworkWeekView unitId={unit.id} week={hw} backHref={`/s/${code}/homework/`} />;
+  return <HomeworkWeekView unitId={unit.id} week={hw} archived backHref={`/s/${code}/homework/`} />;
 }

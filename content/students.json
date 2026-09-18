@@ -7,7 +7,13 @@
     "profile": "standard",
     "greeting": "Servus Ferdi",
     "progressLinks": [],
-    "units": [{ "id": "unit10", "title": "A Fair World", "active": true }]
+    "units": [
+      {
+        "id": "unit10",
+        "title": "A Fair World",
+        "active": false
+      }
+    ]
   },
   {
     "id": "valentin",
@@ -17,6 +23,25 @@
     "profile": "standard",
     "greeting": "Hi Valentin",
     "progressLinks": [],
-    "units": [{ "id": "unit05", "title": "Trends & Choices", "active": true }]
+    "units": [
+      {
+        "id": "way2go8-unit01-2026",
+        "title": "way2go! 8 · Unit 1",
+        "active": true,
+        "schoolYear": "2026–27"
+      },
+      {
+        "id": "way2go7-unit09-2025",
+        "title": "Someone’s watching · Unit 9",
+        "active": false,
+        "schoolYear": "2025–26"
+      },
+      {
+        "id": "unit05",
+        "title": "Trends & Choices",
+        "active": false,
+        "schoolYear": "2025–26"
+      }
+    ]
   }
 ]

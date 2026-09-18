@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getAllParentCodes, getStudentByParentCode } from "@/lib/content";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import ThemeInit from "@/components/ThemeInit";
+import SessionGate from "@/components/SessionGate";
 
 // One static read-only parent page per parent code. Unknown code → 404.
 export function generateStaticParams() {
@@ -36,7 +37,7 @@ export default async function ParentLayout({
   return (
     <div className="mx-auto min-h-dvh max-w-md md:max-w-2xl">
       <ThemeInit />
-      {children}
+      <SessionGate code={code}>{children}</SessionGate>
       <ServiceWorkerRegister />
     </div>
   );

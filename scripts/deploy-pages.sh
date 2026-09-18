@@ -2,6 +2,14 @@
 # Redeploy the app to GitHub Pages at https://rorymclark-prog.github.io/rorys-english/
 # Run after editing content (students/units/homework) or code:  npm run deploy
 set -euo pipefail
+if [[ "${RORY_V2_ACTIVATION_CONFIRMED:-}" != "yes" ]]; then
+  echo "V2 activation is not confirmed. Complete the private-sign-in rollout in apps-script/progress-sync/README.md before publishing."
+  exit 1
+fi
+if [[ "${NEXT_PUBLIC_DEMO_MODE:-}" == "true" ]]; then
+  echo "Refusing to publish a demo build."
+  exit 1
+fi
 
 REPO="https://github.com/rorymclark-prog/rorys-english"
 BASE_PATH="/rorys-english"

@@ -1,0 +1,35 @@
+[
+  {
+    "week": 1,
+    "title": "September starter · A skill worth learning",
+    "due": "",
+    "availableFrom": "2026-09-18",
+    "estimatedMinutes": 20,
+    "description": "Original supplementary English practice for the new term. Write independently first, then improve two sentences. A fictional example is welcome. No deadline has been set yet.",
+    "objectives": [
+      "Explain a choice with reasons and an example.",
+      "Connect ideas clearly and revise your own writing."
+    ],
+    "source": "Original practice by Rory’s English; not a way2go! 8 textbook exercise.",
+    "tasks": [
+      {
+        "id": "plan",
+        "type": "written",
+        "prompt": "1 · Plan (2 minutes). Choose a skill someone your age could learn this year: a language, cooking, coding, a sport or another idea. Write three short notes: the skill; why it is useful; one possible difficulty. You may invent the person.",
+        "lines": 3
+      },
+      {
+        "id": "first-draft",
+        "type": "written",
+        "prompt": "2 · Write (10–12 minutes). Write 100–130 words for a school blog: “A skill worth learning”. Explain your choice, give one specific example of its value, and suggest a realistic first step. Use because and although to connect ideas. Optional start: “One skill worth learning is … because …”. Keep this first draft so Rory can see your starting point.",
+        "lines": 8
+      },
+      {
+        "id": "self-edit",
+        "type": "written",
+        "prompt": "3 · Improve (5 minutes). Copy two sentences from your draft, then write a clearer or more accurate version of each. Explain one change briefly. Check verb forms, articles and prepositions. Finish with: “I worked independently” or name any help you used (dictionary, AI hint or another person). Then press Send answers to Rory.",
+        "lines": 6
+      }
+    ]
+  }
+]

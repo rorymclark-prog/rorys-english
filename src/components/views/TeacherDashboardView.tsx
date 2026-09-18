@@ -14,12 +14,11 @@ import {
 } from "@/lib/remote";
 import { ChartIcon, ChevronRightIcon, ChevronLeftIcon } from "@/components/Icons";
 import ProgressView from "./ProgressView";
+import { login, logout, savedSession, forgetSession } from "@/lib/api";
+import { publishAssessment } from "@/lib/remote";
+import TeacherReviewPanel from "./TeacherReviewPanel";
 
-// Persisted in localStorage (not sessionStorage) so Rory stays signed in
-// across visits on his own device, matching how the rest of the app treats
-// "this device" as trusted. The real gate is the server-side password check
-// in Apps Script (getTeacherDashboard_) — this key is only a cache of a
-// secret that's already been verified once.
+// One-time removal of the old persisted password; only expiring tokens remain.
 const STORAGE_KEY = "re_teacher_secret";
 
 // A student is flagged "quiet" once nothing has synced in this many days —
@@ -45,8 +44,12 @@ export default function TeacherDashboardView() {
   // Read any previously-verified password once on mount (pre-paint gate flash
   // isn't worth solving here — this page is never linked from student flows).
   useEffect(() => {
-    setSecret(window.localStorage.getItem(STORAGE_KEY));
+    try {window.localStorage.removeItem(STORAGE_KEY);} catch { /* no stored password */ }
+    const refresh=()=>setSecret(savedSession("__teacher__")?.token || null);
+    refresh();window.addEventListener("re-auth-change",refresh);
+    const timer=setInterval(refresh,30000);
     setReady(true);
+    return()=>{window.removeEventListener("re-auth-change",refresh);clearInterval(timer);};
   }, []);
 
   useEffect(() => {
@@ -60,12 +63,14 @@ export default function TeacherDashboardView() {
           setStudents(d.students ?? []);
           setGeneratedAt(d.generatedAt);
           setLoadState("ok");
-        } else {
+        } else if(d.authRequired) {
           // Stored password no longer valid (e.g. Rory rotated it) — drop it
           // and fall back to the gate rather than looping on a 401.
-          window.localStorage.removeItem(STORAGE_KEY);
+          forgetSession("__teacher__");
           setSecret(null);
           setLoadState("idle");
+        } else {
+          setLoadState("error");
         }
       })
       .catch(() => live && setLoadState("error"));
@@ -80,22 +85,23 @@ export default function TeacherDashboardView() {
     if (!attempt) return;
     setAuthing(true);
     setAuthError(null);
-    const d = await fetchTeacherDashboard(attempt);
+    const session = await login("__teacher__", attempt);
+    const d = session.ok ? await fetchTeacherDashboard(session.token) : session;
     setAuthing(false);
     if (d.ok) {
-      window.localStorage.setItem(STORAGE_KEY, attempt);
-      setStudents(d.students ?? []);
-      setGeneratedAt(d.generatedAt);
+      const dashboard = d as import("@/lib/remote").TeacherDashboard;
+      setStudents(dashboard.students ?? []);
+      setGeneratedAt(dashboard.generatedAt);
       setLoadState("ok");
-      setSecret(attempt);
+      setSecret(session.token);
       setInput("");
     } else {
-      setAuthError("Wrong password. Try again.");
+      setAuthError(d.error || "Could not sign in. Please try again.");
     }
   }
 
   function signOut() {
-    window.localStorage.removeItem(STORAGE_KEY);
+    void logout("__teacher__");
     setSecret(null);
     setStudents(null);
     setLoadState("idle");
@@ -262,7 +268,7 @@ function PasswordGate({
 
 function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () => void }) {
   const s = student.summary;
-  const quiet = s?.daysSinceActivity != null && s.daysSinceActivity >= QUIET_DAYS;
+  const quiet = false; // No inactivity warning without an agreed term calendar.
   return (
     <button
       type="button"
@@ -485,6 +491,7 @@ function TeacherStudentPanel({
             only had the local scripts/analyse-writing.py). */}
         <SchoolTestForm secret={secret} code={student.code} />
         <MockTestForm secret={secret} code={student.code} />
+        <TeacherReviewPanel code={student.code} />
         <WritingAnalysisForm secret={secret} code={student.code} />
       </main>
     </>
@@ -625,6 +632,9 @@ function WritingAnalysisForm({ secret, code }: { secret: string; code: string })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<WritingAssessment | null>(null);
+  const [assessmentId,setAssessmentId]=useState("");
+  const [published,setPublished]=useState(false);
+  const [publishing,setPublishing]=useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -632,12 +642,12 @@ function WritingAnalysisForm({ secret, code }: { secret: string; code: string })
     setBusy(true);
     setError(null);
     setResult(null);
+    setPublished(false);
     const r = await analyseWriting(secret, code, title.trim() || "Writing sample", text.trim());
     setBusy(false);
     if (r.ok && r.assessment) {
       setResult(r.assessment);
-      setTitle("");
-      setText("");
+      setAssessmentId(crypto.randomUUID());
     } else {
       setError(r.error || "Couldn't analyse that — try again.");
     }
@@ -650,8 +660,7 @@ function WritingAnalysisForm({ secret, code }: { secret: string; code: string })
       </h2>
       <form onSubmit={submit} className="space-y-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
         <p className="text-xs text-navy-soft dark:text-navy-mist">
-          Paste a real submitted piece — Claude gives a CEFR level + the one pattern most worth teaching next, logged
-          to their Writing tab. Not their in-app practice chat (that&apos;s separate, never graded).
+          Paste a submitted piece. AI suggests a draft assessment; check it against the original, edit it, then explicitly approve it for the student’s Writing record. This is not an official grade.
         </p>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional, e.g. HW2 essay)" maxLength={200} className={inputCls} />
         <textarea
@@ -664,7 +673,7 @@ function WritingAnalysisForm({ secret, code }: { secret: string; code: string })
         />
         {error && <p className="text-sm text-bad dark:text-bad-bright">{error}</p>}
         <button type="submit" disabled={busy || text.trim().length < 20} className={primaryBtnCls}>
-          {busy ? "Analysing…" : "Analyse & log"}
+          {busy ? "Analysing…" : "Prepare AI draft"}
         </button>
         {result && (
           <div className="space-y-1.5 rounded-lg bg-amber-soft p-3 dark:bg-amber-dusk">
@@ -678,7 +687,13 @@ function WritingAnalysisForm({ secret, code }: { secret: string; code: string })
                 ))}
               </ul>
             )}
-            <p className="text-xs text-navy dark:text-cream">{result.feedback}</p>
+            <label className="block text-sm">Your final feedback<textarea value={result.feedback} maxLength={2000} disabled={published||publishing} onChange={e=>setResult({...result,feedback:e.target.value})} rows={4} className={inputCls}/></label>
+            <div className="grid grid-cols-2 gap-2">
+              <label>CEFR estimate<select disabled={published||publishing} value={result.cefr} onChange={e=>setResult({...result,cefr:e.target.value})} className={inputCls}>{["A1","A2","B1","B1+","B2","B2+","C1","C2"].map(v=><option key={v}>{v}</option>)}</select></label>
+              {(["grammar","vocab","coherence"] as const).map(k=><label key={k}>{k} /10<input type="number" min={0} max={10} disabled={published||publishing} value={result[k]} onChange={e=>setResult({...result,[k]:Number(e.target.value)})} className={inputCls}/></label>)}
+            </div>
+            <p className="mt-3 text-sm">AI draft, not a published assessment or official Matura grade. Check the source writing before approval.</p>
+            <button type="button" disabled={published||publishing} className="mt-3 min-h-11 rounded-xl bg-indigo-700 p-3 text-white disabled:opacity-50" onClick={async()=>{setPublishing(true);const r=await publishAssessment(secret,code,title,result,assessmentId);setPublishing(false);if(r.ok)setPublished(true);setError(r.ok?null:r.error || "Could not publish.");}}>{published?"Published after your approval":publishing?"Publishing…":"Approve and publish assessment"}</button>
           </div>
         )}
       </form>

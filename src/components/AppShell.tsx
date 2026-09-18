@@ -5,13 +5,16 @@ import { SettingsProvider } from "./SettingsContext";
 import TabBar from "./TabBar";
 import InstallHint from "./InstallHint";
 import OfflineBanner from "./OfflineBanner";
+import SessionGate from "./SessionGate";
+import OutboxStatus from "./OutboxStatus";
 
 /** Wraps every student screen: providers + scrollable content + bottom tabs. */
 export default function AppShell({ ctx, children }: { ctx: StudentCtx; children: React.ReactNode }) {
   return (
-    <StudentProvider value={ctx}>
+    <SessionGate code={ctx.code}><StudentProvider value={ctx}>
       <SettingsProvider studentId={ctx.studentId}>
         <OfflineBanner />
+        <OutboxStatus code={ctx.code}/>
         {/* max-w-md on phone; most of Rory's students (Ferdi incl.) are
             actually on iPad most of the time, so md:+ gets real breathing
             room instead of a phone-width column stranded on a big screen. */}
@@ -19,6 +22,6 @@ export default function AppShell({ ctx, children }: { ctx: StudentCtx; children:
         <InstallHint />
         <TabBar />
       </SettingsProvider>
-    </StudentProvider>
+    </StudentProvider></SessionGate>
   );
 }

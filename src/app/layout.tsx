@@ -46,8 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${jetbrains.variable}`}>
       <body className="font-sans">
+        {process.env.NEXT_PUBLIC_DEMO_MODE==="true" && <div className="bg-amber-100 p-3 text-center text-sm font-bold text-slate-900">LOCAL PREVIEW · Dummy homework and feedback · Nothing here changes real student records</div>}
         {children}
-        <ServiceWorkerRegister />
+        {process.env.NEXT_PUBLIC_DEMO_MODE!=="true" && <ServiceWorkerRegister />}
       </body>
     </html>
   );

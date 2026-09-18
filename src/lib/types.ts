@@ -28,9 +28,14 @@ export interface HomeworkTask {
 export interface HomeworkWeek {
   week: number;
   title: string;
-  /** Human-readable due label, e.g. "Mon 8 June". */
+  /** ISO date YYYY-MM-DD; empty means no deadline assigned. */
   due: string;
   tasks: HomeworkTask[];
+  description?: string;
+  availableFrom?: string;
+  estimatedMinutes?: number;
+  objectives?: string[];
+  source?: string;
 }
 
 /** Unit metadata as stored in students.json. */
@@ -38,11 +43,19 @@ export interface UnitMeta {
   id: string;
   title: string;
   active: boolean;
+  schoolYear?: string;
+  book?: string;
+  status?: "current" | "completed" | "archive" | "awaiting-materials";
+  note?: string;
+  /** Tutoring may still be catching up while school has moved to this unit. */
+  tutoringFocus?: string;
 }
 
 /** Full unit definition from <student>/units.json (adds study tools). */
 export interface UnitDef extends UnitMeta {
   studyTools: StudyTool[];
+  /** Approved student materials. Never include teacher notes or private records. */
+  resources?: StudyTool[];
   /** Model sentences for the record-and-compare speaking screen. */
   speakingLines?: string[];
 }
@@ -55,7 +68,7 @@ export interface Unit extends UnitDef {
 export interface Student {
   id: string;
   displayName: string;
-  /** The code in the private link (/s/<code>). This IS the key. */
+  /** Public routing identifier; never an authentication credential. */
   code: string;
   /** The code in the parent's read-only link (/p/<parentCode>). */
   parentCode?: string;

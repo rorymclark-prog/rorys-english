@@ -1,213 +1,57 @@
 # Rory's English
 
-Mobile-first PWA for Rory Clark's English students. Built with Next.js 15 App Router, TypeScript, and Tailwind CSS. Output is a fully static export (`output: "export"`) — no server, no backend, no accounts. All content is shipped as JSON at build time; progress lives in localStorage on the student's device. Study tools are **external HTML pages** linked by URL — there is no in-app quiz engine. Styling follows the **VOLTSTONE 2026 design system** — electric indigo accent (`#4F46E5`, `#A2A4FC` in dark mode) on warm stone `#FAF8F5`, charcoal `#17161C` dark base and PWA theme color, ember `#C2410C` for streaks/rewards, Manrope + JetBrains Mono, floating glass tab bar — see `design/MODERN-2026-SPEC.md` for the full spec (legacy Tailwind color names are kept; only the values changed).
+A lesson and homework hub for Rory, Ferdi and Valentin. The authenticated V2 app is live at https://rorymclark-prog.github.io/rorys-english/ (18 September 2026), backed by Google Apps Script version 28. All three versioned public service URLs now run the authenticated API. Existing progress records are retained.
 
-### What students get
+## Student workflow
 
-- **Today** — greeting, the next homework due, a gentle 7-day activity strip + streak (with a personal best), and cards for Study, Lessons & feedback, and Ask the English tutor.
-- **Homework** — weekly tasks (tick boxes, lined written answers with debounced autosave, voice-memo prompts), a tasteful confetti + haptic celebration on completion, and an **Add due date to my calendar** button (downloads an `.ics`).
-- **Study** — cards that open the unit's external HTML study tools in a new tab (vocab quizzes, grammar, German traps, text-to-speech, spaced-repetition review).
-- **Lessons & feedback** — automatic search of Rory's Drive for files with the student's name (no manual drag-and-drop) — practice sheets, audio files, slides, etc. Cached and link-viewable once. Click to download/preview.
-- **Ask the English tutor** — conversational Q&A (Haiku), vocabulary lookup, and writing coach feedback at `/s/<code>/coach`. On-device chat history, rate-limited to 40 calls/day per student.
-- **Progress** — summary tiles + per-section tables (homework, quizzes, writing, etc.) at `/s/<code>/progress`, reached via a Today card. Parent view at `/p/<parentCode>` (private read-only link, same features).
-- **Settings** — text size, light/dark/auto theme, **Send my progress to Rory** (native share sheet → WhatsApp, nothing sent automatically), and reset.
-- **Installable PWA** — Add to Home Screen, full-screen, offline after first load, an offline banner when the connection drops, and long-press app-icon shortcuts to Homework/Study.
-- **Private by design** — no accounts, no analytics, `noindex`, progress never leaves the device.
+- Today shows the current book and teacher-assigned work for the school year.
+- Lessons separates current units from archived material. Stable unit-and-week links never change when the active unit changes.
+- Homework saves device-local drafts, sends complete answers, confirms receipt, and shows teacher feedback. Revisions create new submitted copies.
+- The outbox retains an immutable pending copy until the server acknowledges it; retries are idempotent.
+- AI provides practice hints and revision advice, using the existing Anthropic service. It is not a grading authority.
+- Approved materials link to student-safe Drive files without changing their sharing settings.
+- Old standalone quizzes remain local practice; their legacy automatic uploads have been removed.
 
----
+Valentin’s current school book is way2go! 8, Unit 1. A 20-minute September writing starter is available from 18 September 2026, with no unconfirmed deadline. It is original supplementary practice, not a textbook exercise. Previous-year Unit 5 and Unit 9 material remain in the 2025–26 archive. Unit 9 includes the student PDF, fictional AI-narrated listening and checking transcript; teacher notes are excluded. New Unit 1 textbook exercises await the source pages. Ferdi’s current content is unchanged for his separate follow-up.
 
-## Local dev
+Lessons are term-time only: Valentin every second Saturday, Ferdi weekly, around 90 minutes in person with a shorter online core. Dates are assigned explicitly; no holiday calendar or unverified school requirements have been invented.
 
-```bash
+## Local preview (dummy data only)
+
+Use two terminals in this directory:
+
+```sh
 npm install
-npm run dev      # predev auto-generates per-student manifests, then starts Next.js
+node scripts/preview-api.mjs
 ```
 
-Production build (static export to `out/`):
-
-```bash
-npm run build    # prebuild runs gen-pwa.mjs, then next build writes out/
+```sh
+NEXT_PUBLIC_SYNC_URL=http://127.0.0.1:4174 NEXT_PUBLIC_DEMO_MODE=true npm run dev -- --hostname 127.0.0.1 --port 4173
 ```
 
----
+Open http://127.0.0.1:4173/s/valentin-q9m2/ or http://127.0.0.1:4173/teacher/ and use the synthetic access code `demo-only`. The demo cannot send AI requests or update real student records. It stores its example submissions in memory and resets when its service restarts.
 
-## Project structure
+## Checks
 
-```
-rorys-english/
-├── content/
-│   ├── students.json               # master student list
-│   ├── ferdi/
-│   │   ├── units.json              # Ferdi's unit definitions + study tools
-│   │   └── unit10/
-│   │       └── homework.json       # homework weeks for Unit 10
-│   └── valentin/
-│       ├── units.json
-│       └── unit05/
-│           └── homework.json
-├── public/
-│   ├── icons/                      # icon-192.png, icon-512.png, apple-touch-icon.png
-│   └── m/                          # per-student .webmanifest files (auto-generated)
-├── scripts/
-│   ├── gen-pwa.mjs                 # generates manifests on predev / prebuild
-│   └── make-icons.py               # one-time icon generator (requires Pillow)
-└── src/
-    ├── app/                        # Next.js App Router pages
-    └── lib/
-        ├── content.ts              # build-time JSON loader (Server Components only)
-        ├── storage.ts              # localStorage helpers (client only)
-        └── types.ts                # content contract (Student, Unit, HomeworkWeek, …)
+```sh
+npm test
+npm run lint
+npm audit
+NEXT_PUBLIC_BASE_PATH=/rorys-english npm run build
 ```
 
----
+Live checks covered teacher/student authentication, denied cross-student access, exact written answers, duplicate retry, teacher feedback, revisions and the word helper. The two synthetic submissions were removed and existing records retained. Rory confirmed browser teacher sign-in; automated browser and installed-phone checks were unavailable during activation.
 
-## How to add a student
+The source includes 23 automated tests for access isolation, teacher-session revocation, immutable/idempotent submissions, teacher review, quiz retries, resource safety, date handling, archived links and durable outbox behaviour.
 
-1. Add an entry to `content/students.json`:
+## Production and future releases
 
-```json
-{
-  "id": "anna",
-  "displayName": "Anna",
-  "code": "anna-x4p7",
-  "parentCode": "anna-fam-k2m9",
-  "profile": "standard",
-  "greeting": "Hi Anna",
-  "units": [{ "id": "unit05", "title": "Trends & Choices", "active": true }]
-}
-```
+Read [the deployment guide](apps-script/progress-sync/README.md) first. Keep the live Google service and frontend compatible; distribute student access codes privately. The deployment script refuses to run without explicit activation confirmation. Never publish a demo build or leave the old unauthenticated service available as a fallback.
 
-- The `code` value is the **student's private-URL key** — they access the app at `/s/<code>/`. Keep it unguessable (a few random chars appended to the name works fine).
-- The `parentCode` is an optional **parent/guardian read-only link** at `/p/<parentCode>/` — same progress data, no edits. Omit if no parent view is needed.
+The frontend receives only the version-2 endpoint URL. Server API keys and teacher credentials stay in Script Properties; no shared browser secret is used. Public routing identifiers are not credentials.
 
-2. Create `content/anna/units.json` and `content/anna/unit05/homework.json` (see shapes below).
+## Content boundaries
 
-3. Re-run `npm run dev` or `npm run build`. `gen-pwa.mjs` runs automatically and writes `public/m/anna-x4p7.webmanifest`. No code changes needed.
+Content JSON and static files are publicly downloadable assets, not a safe place for answer keys, teacher notes, recordings, private feedback or full copyrighted ebooks. Publish only approved student material.
 
----
-
-## How to add a unit
-
-1. Add an entry to `content/students.json` → `units[]` for the relevant student:
-
-```json
-{ "id": "unit11", "title": "City Life", "active": true }
-```
-
-Set at most one unit to `"active": true` — that's the unit shown on the Today and Study screens.
-
-2. Add the same entry to `content/<studentId>/units.json` (with `studyTools[]`):
-
-```json
-[
-  {
-    "id": "unit11",
-    "title": "City Life",
-    "active": true,
-    "studyTools": []
-  }
-]
-```
-
-3. Create `content/<studentId>/unit11/homework.json` with an empty array `[]` or your first weeks.
-
-No code changes needed.
-
----
-
-## How to add a study tool
-
-Add a `{title, url, blurb}` object to `studyTools[]` in the relevant `units.json`. Example from Ferdi's `unit10`:
-
-```json
-"studyTools": [
-  {
-    "title": "Unit 10 Study Tool",
-    "url": "https://example.com/REPLACE-WITH-NETLIFY-URL",
-    "blurb": "Vocab quiz, conditionals practice & German traps."
-  }
-]
-```
-
-The app renders each entry as a card that opens the URL in a new tab. A study tool can live **either**:
-
-- **Bundled with the app** — drop a self-contained `.html` file in `public/study-tools/` and use a root-relative URL like `/study-tools/ferdi-unit10.html`. It deploys with the app, works offline (cached by the service worker), and stays same-origin/private. Ferdi's Unit 10 tool is wired up this way as a working example.
-- **External (Netlify etc.)** — build the HTML tool, host it anywhere, and paste the full `https://…` URL.
-
-No code changes either way.
-
----
-
-## How to add a homework week
-
-Append an entry to `content/<studentId>/<unitId>/homework.json`. The three task types are `"checkbox"`, `"written"`, and `"voice"`. Written tasks accept an optional `"lines"` field (defaults to 3).
-
-```json
-{
-  "week": 5,
-  "title": "HW5 · Listening + reflection",
-  "due": "Mon 6 July",
-  "tasks": [
-    { "id": "t1", "type": "checkbox", "prompt": "Watch the BBC clip and tick when done." },
-    { "id": "t2", "type": "written", "prompt": "Write 3 sentences about what you heard.", "lines": 4 },
-    { "id": "t3", "type": "voice",   "prompt": "Record yourself summarising the clip in 30 seconds." }
-  ]
-}
-```
-
-Weeks are sorted by `week` number at build time. No code changes needed.
-
-localStorage keys follow the pattern `{studentId}_{unitId}_hw{week}_{taskId}` — e.g. `ferdi_unit10_hw1_t3`.
-
----
-
-## Deploy to Vercel
-
-1. Push the repo to GitHub (or any Git host).
-2. Import the project on [vercel.com](https://vercel.com). Framework preset: **Next.js**.
-3. Vercel runs `npm run build` and serves the static `out/` directory. Free-tier static hosting, no server needed.
-
-Because this is a static export it can also deploy to Netlify, GitHub Pages, Cloudflare Pages, or any host that serves static files.
-
----
-
-## Handing out a student link
-
-Send the student their URL:
-
-```
-https://<your-vercel-domain>/s/ferdi-7h3k/
-https://<your-vercel-domain>/s/valentin-q9m2/
-```
-
-Tell them: **Share → Add to Home Screen** (Safari on iPhone / Chrome on Android) to install as a PWA. The app launches full-screen, scoped to their code. An unknown code returns a 404.
-
----
-
-## Progress sync to Google Sheets (optional)
-
-By default the app is fully device-local. To collect results in a **Google Sheet per student** (homework completion, quiz/vocab scores — plus tabs ready for school tests, writing/speaking analysis and mock tests), deploy the Apps Script in [`apps-script/progress-sync/`](apps-script/progress-sync/README.md). It provisions a Drive folder + Sheet per student and gives you a Web App URL. Put the URL + secret in `.env.local` and `npm run deploy` — completing homework or a quiz then writes a row to that student's Sheet. Without it, nothing syncs and nothing leaves the device.
-
-### Optional: enable the AI tutor
-
-The Lessons & feedback hub (Drive-linked) is automatic once the Apps Script is deployed. To also enable the AI tutor (chat, word help, writing coach), add `ANTHROPIC_API_KEY` to the Apps Script's Script Properties (one-time setup), then approve the `script.external_request` scope. See [`apps-script/progress-sync/README.md`](apps-script/progress-sync/README.md#3-ai-helper-endpoints-tutor-chat--word-lookup--writing-coach) for details and rate limits (40 calls per student per day).
-
-## Privacy
-
-- No accounts, no server, no analytics.
-- Homework progress (checkboxes, written answers, streak) is stored in localStorage on the student's own device and never leaves it.
-- Voice tasks are recorded in the student's phone's own voice-memo app and sent via WhatsApp. The app never records or uploads audio.
-
----
-
-## Regenerating icons
-
-Icons are committed static assets (`public/icons/`). Only re-run this if the icon design changes:
-
-```bash
-pip install Pillow
-python3 scripts/make-icons.py
-# writes icon-512.png, icon-192.png, apple-touch-icon.png to public/icons/
-```
-
-The script draws a charcoal tile with an indigo plate and a stone "RE" monogram (VOLTSTONE palette — see `design/MODERN-2026-SPEC.md`). It is not part of the normal build.
+New-unit quizzes, audio upload/transcription, a complete curriculum tracker, deck revisions and NotebookLM integration are not included in this first implementation. These need source material and a separate content workflow, not invented textbook exercises.

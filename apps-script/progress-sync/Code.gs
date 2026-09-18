@@ -5,11 +5,11 @@
  *   1. setup()  — run ONCE: builds the Roster spreadsheet + a Drive folder +
  *                 Progress Sheet per student, and remembers each Sheet's id.
  *   2. doPost() — the Web App endpoint the PWA + study tools + teacher
- *                 dashboard POST to. Validates the shared secret (or teacher
- *                 password) + student code and reads/writes the right Sheet.
+ *                 dashboard POST to through the authenticated V2 session API.
+ *                 The V2 dispatcher validates roles before calling these handlers.
  *
- * No student passwords; the student CODE (same one in their app link) is the
- * key, and SECRET is light anti-abuse. Data lands straight in Google Sheets,
+ * Public route codes identify pages; they are not credentials. Independent
+ * access codes and expiring sessions protect private records. Data stays in Google Sheets,
  * where you can add charts on the Dashboard tab.
  *
  * DEPLOY: see README.md in this folder.
@@ -99,9 +99,9 @@ function studentByAnyCode_(code) {
   return null;
 }
 
-// Light anti-abuse shared secret. Set the SAME value as the app's
-// NEXT_PUBLIC_SYNC_SECRET. Change it here and re-deploy if it ever leaks.
-var SECRET = "re-sync-7b3h8d9f4";
+// Internal bridge for retained handlers. V2 verifies the session first;
+// this marker is not accepted as a credential and is never sent by the app.
+var SECRET = "server-internal-v2"; // Internal compatibility marker, not authentication.
 
 var ROOT_FOLDER_NAME = "Rory's English — Progress";
 
@@ -232,7 +232,7 @@ function sanitize_(v) {
   return /^[=+\-@]/.test(s) ? "'" + s : s;
 }
 
-function doPost(e) {
+function legacyPost_(e) {
   try {
     if (!e.postData || e.postData.contents.length > MAX_PAYLOAD_BYTES) {
       return json_({ ok: false, error: "rejected" });
@@ -298,15 +298,7 @@ function doPost(e) {
 // parent code; both resolve to the same Sheet. Teacher-only actions are
 // deliberately absent here — see the doPost comment above.
 //   ?action=progress&code=<student-or-parent-code>&secret=<SECRET>&callback=<fn>
-function doGet(e) {
-  var p = (e && e.parameter) || {};
-  if (p.action === "progress") return getProgress_(p);
-  if (p.action === "resources") return getResources_(p);
-  if (p.action === "ai") return getAi_(p);
-  if (p.action === "assignments") return getAssignments_(p);
-  if (p.action === "note") return getNote_(p);
-  return json_({ ok: true, service: "rorys-english progress-sync" });
-}
+// GET is version-only in V2.gs. No public JSONP API.
 
 // ── AI layer (word helper + writing coach) ───────────────────────────────────
 // The Anthropic key lives in Script Properties (ANTHROPIC_API_KEY) — server-side,
@@ -325,12 +317,12 @@ var WORD_SYSTEM =
 var WRITING_SYSTEM =
   "You are an encouraging English writing coach for a German-speaking teenager (around B1). " +
   "This is the student's own PRACTICE writing, not graded homework — never give a grade or score. " +
-  "Research shows B1 learners improve most from ONE targeted correction at a time, framed as a " +
+  "For this short activity, give ONE targeted correction at a time, framed as a " +
   "strategy they can reuse, with praise for effort not talent. So reply in plain text, warmly and " +
   "briefly: (1) one genuine, specific thing they did well; (2) the SINGLE most useful pattern to fix " +
   "— name the rule simply, show their sentence corrected, and give one more mini-example; " +
   "(3) a short effort-based encouragement (e.g. 'you're really getting the hang of past tenses'). " +
-  "Do NOT list many errors — pick the one that helps most. Keep it under ~120 words. " +
+  "Pick the most useful pattern and ask the learner to revise it. Never write a whole assignment for them. Keep it under ~120 words. " +
   "If the student writes something suggesting they are struggling personally, respond kindly and " +
   "suggest they talk to Rory or a trusted adult — do not act as a counsellor.";
 
@@ -354,7 +346,7 @@ function getAi_(p) {
     // .code differs from the code that was sent.
     if (!student || student.code !== p.code) {
       out = { ok: false, error: "unauthorized" };
-    } else if (aiCount_(student.code) >= AI_DAILY_CAP) {
+    } else if (!p.reserved && aiCount_(student.code) >= AI_DAILY_CAP) {
       out = { ok: false, error: "That's enough practice with the helper for today — try again tomorrow!" };
     } else {
       var q = String(p.q || "").slice(0, AI_MAX_INPUT).trim();
@@ -365,7 +357,10 @@ function getAi_(p) {
         // the system prompt as soft context — never forced, never mentioned
         // as "your teacher is watching" (would undercut the practice-not-
         // graded framing already established for writing/tutor chat).
-        var note = focusNoteFor_(student.code);
+        var profile = student.name === "Valentin"
+          ? "Valentin is studying way2go! 8 Unit 1 at school this term. B1/B2 is a provisional teaching estimate, not a measured level. Adjust help to his actual writing. Previous-year Unit 5 and way2go! 7 Unit 9 are archived for optional revision, not outstanding catch-up. His September starter is original practice: plan a school-blog paragraph about a useful skill, write 100–130 words with reasons and an example, then revise two sentences. Give hints that preserve his own first draft; do not write the assignment for him. The edition and Unit 1 contents still need source pages: do not invent them. "
+          : "Ferdi's current book needs confirmation; do not assume last year's MORE! 4 remains current. Adapt from A2/B1 to demonstrated ability. Focus on linking ideas, clear sentences and useful vocabulary. ";
+        var note = profile + focusNoteFor_(student.code);
         var focusSuffix = note
           ? "\n\nThe student's tutor (Rory) flagged this as a current focus area for them — " +
             "weave it in naturally if relevant to what they ask, but don't force it or mention " +
@@ -382,7 +377,7 @@ function getAi_(p) {
       // Only spend a daily slot when Claude actually answered (not on a missing
       // key / error), and take a lock so concurrent calls can't both slip past
       // the cap. localStorage is the source of truth so nothing is lost.
-      if (out && out.ok) aiInc_(student.code);
+      if (out && out.ok && !p.reserved) aiInc_(student.code);
     }
   } catch (err) {
     console.error("getAi_ error: " + err);
@@ -460,160 +455,7 @@ function callClaude_(model, system, userText, maxTokens) {
   return { ok: true, text: text };
 }
 
-// Lists lesson slides / marked work / assessments for a student — AUTOMATICALLY,
-// with no drag-and-drop. Two sources, deduped:
-//   1. Any Drive file you OWN whose title contains the student's name
-//      (your existing naming convention, e.g. "Ferdi_ESA_Debrief_Deck.pptx").
-//   2. Anything dropped into their "Shared" subfolder (still supported).
-// Each surfaced file is set link-viewable so the student can open it.
-// NOTE: name your private files WITHOUT the student's name to keep them out.
-function getResources_(p) {
-  var out;
-  try {
-    var student = p.secret === SECRET ? studentByAnyCode_(p.code) : null;
-    var sheetId = student
-      ? PropertiesService.getScriptProperties().getProperty("sheet_" + student.code)
-      : null;
-    if (!sheetId) {
-      out = { ok: false, error: "unauthorized" };
-    } else {
-      var seen = {}, cands = [];
-
-      // 1. Files you own named with the student's display name (fast: metadata only).
-      var safeName = student.name.replace(/'/g, "\\'");
-      var q =
-        "title contains '" + safeName + "' and trashed = false" +
-        " and mimeType != 'application/vnd.google-apps.folder'" +
-        " and 'me' in owners";
-      var it = DriveApp.searchFiles(q);
-      while (it.hasNext()) collectResource_(it.next(), cands, seen, student);
-
-      // 2. The student's Shared subfolder (optional extra drop-zone).
-      var parents = DriveApp.getFileById(sheetId).getParents();
-      if (parents.hasNext()) {
-        var sit = getOrCreateFolder_(parents.next(), "Shared").getFiles();
-        while (sit.hasNext()) collectResource_(sit.next(), cands, seen, student);
-      }
-
-      // Newest first, cap to keep the list and the share-step manageable.
-      cands.sort(function (a, b) {
-        return a.modified < b.modified ? 1 : -1;
-      });
-      cands = cands.slice(0, 40);
-
-      // Share each surfaced file ONCE (cached), so repeat loads are fast.
-      ensureShared_(cands);
-
-      var items = cands.map(function (c) {
-        return { name: c.name, url: c.url, type: c.type, modified: c.modified };
-      });
-      out = { ok: true, name: student.name, resources: items };
-    }
-  } catch (err) {
-    console.error("getResources_ error: " + err);
-    out = { ok: false, error: "internal error" };
-  }
-  return reply_(p.callback, out);
-}
-
-// Files we WON'T auto-surface even if the name matches:
-//  - Sheets (financial/business docs — invoices, trackers — are usually Sheets)
-//  - Apps Script projects
-// Everything a lesson/assessment normally is (Docs, Slides, PDF, images) stays.
-var RESOURCE_BLOCK_MIME = {
-  "application/vnd.google-apps.spreadsheet": 1,
-  "application/vnd.google-apps.script": 1,
-};
-
-// Maintenance: revoke link-sharing on any previously-shared file that no longer
-// matches a current student (renamed, deleted, or flagged [private]). Run this
-// occasionally from the editor, or add a weekly time-driven trigger.
-function unshareStale_() {
-  var props = PropertiesService.getScriptProperties();
-  var cached = {};
-  try {
-    JSON.parse(props.getProperty("shared_ids") || "[]").forEach(function (id) { cached[id] = 1; });
-  } catch (e) {}
-  var current = {};
-  getRoster_().forEach(function (s) {
-    var esc = s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    var re = new RegExp("(^|[^A-Za-z])" + esc + "([^A-Za-z]|$)", "i");
-    var it = DriveApp.searchFiles(
-      "title contains '" + s.name.replace(/'/g, "\\'") + "' and trashed = false and 'me' in owners",
-    );
-    while (it.hasNext()) {
-      var f = it.next();
-      if (RESOURCE_BLOCK_MIME[f.getMimeType()]) continue;
-      if (/\[private\]/i.test(f.getName())) continue;
-      if (re.test(f.getName())) current[f.getId()] = 1;
-    }
-  });
-  var keep = [], revoked = 0;
-  Object.keys(cached).forEach(function (id) {
-    if (current[id]) {
-      keep.push(id);
-      return;
-    }
-    try {
-      DriveApp.getFileById(id).setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
-      revoked++;
-    } catch (e) {}
-  });
-  props.setProperty("shared_ids", JSON.stringify(keep));
-  Logger.log("unshareStale_: revoked " + revoked + ", kept " + keep.length);
-}
-
-// Collect metadata only (no Drive writes). Filters out risky / non-lesson files.
-function collectResource_(f, cands, seen, student) {
-  var id = f.getId();
-  if (seen[id]) return;
-  var mt = f.getMimeType();
-  if (RESOURCE_BLOCK_MIME[mt]) return;
-  var name = f.getName();
-  // Name-token match: the student's name not flanked by other LETTERS. This
-  // allows "Ferdi_ESA…" / "Ferdi Unit 9" (underscore/space are fine) but rejects
-  // "Valentina's…" / "Ferdinand…" (a following letter = a different word).
-  var esc = student.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  var re = new RegExp("(^|[^A-Za-z])" + esc + "([^A-Za-z]|$)", "i");
-  if (!re.test(name)) return;
-  // Opt-out marker: name a file "…[private]…" to keep it out of the student's app.
-  if (/\[private\]/i.test(name)) return;
-  seen[id] = 1;
-  cands.push({
-    id: id,
-    name: f.getName(),
-    url: f.getUrl(),
-    type: mt,
-    modified: Utilities.formatDate(f.getLastUpdated(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
-    file: f,
-  });
-}
-
-// Set link-viewable sharing only for files not already shared by us before.
-// A cache of shared ids in Script Properties keeps repeat calls fast.
-function ensureShared_(cands) {
-  var props = PropertiesService.getScriptProperties();
-  var shared = {};
-  try {
-    (JSON.parse(props.getProperty("shared_ids") || "[]")).forEach(function (id) { shared[id] = 1; });
-  } catch (e) {}
-  var changed = false;
-  cands.forEach(function (c) {
-    if (shared[c.id]) return;
-    try {
-      c.file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch (e2) {
-      /* couldn't change — still mark so we don't retry every load */
-    }
-    shared[c.id] = 1;
-    changed = true;
-  });
-  if (changed) {
-    var ids = Object.keys(shared);
-    if (ids.length > 800) ids = ids.slice(ids.length - 800); // bound the cache
-    props.setProperty("shared_ids", JSON.stringify(ids));
-  }
-}
+// Resource listing and approval live in V2.gs. Legacy automatic sharing removed.
 
 function getProgress_(p) {
   var out;
@@ -644,7 +486,7 @@ function getProgress_(p) {
       }
     }
   } catch (err) {
-    out = { ok: false, error: String(err) };
+    out = { ok: false, error: "Could not load progress. Please retry." };
   }
   return reply_(p.callback, out);
 }
@@ -682,11 +524,8 @@ function getAssignments_(p) {
       } else {
         var ss = SpreadsheetApp.openById(sheetId);
         var all = rows_(ss, "Assignments");
-        // Status column index 4 (0-based) per TABS.Assignments header order.
-        var open = all.rows.filter(function (r) {
-          return String(r[4]).toLowerCase() !== "done";
-        });
-        out = { ok: true, assignments: { headers: all.headers, rows: open } };
+        // Keep reviewed assignments available so their feedback is accessible.
+        out = { ok: true, assignments: { headers: all.headers, rows: all.rows } };
       }
     }
   } catch (err) {
@@ -959,24 +798,8 @@ function analyseWriting_(p) {
         if (!a) {
           out = { ok: false, error: "The AI helper isn't switched on yet, or couldn't answer just now." };
         } else {
-          var ss = SpreadsheetApp.openById(sheetId);
-          var lock = LockService.getScriptLock();
-          lock.waitLock(10000);
-          try {
-            appendWriting_(ss, {
-              title: p.title || "Writing sample",
-              cefr: a.cefr,
-              grammar: a.grammar,
-              vocab: a.vocab,
-              coherence: a.coherence,
-              errors: a.errors,
-              feedback: a.feedback,
-              link: p.link || "",
-            });
-          } finally {
-            lock.releaseLock();
-          }
-          out = { ok: true, assessment: a };
+          // Only the separate teacher approval action publishes a record.
+          out = { ok: true, assessment: a, draft: true };
         }
       }
     }
@@ -1183,16 +1006,9 @@ function studentSummary_(ss) {
   };
 }
 
-// JSON when no callback; JSONP (text/javascript) when a callback is given.
+// Compatibility helper: V2 always returns plain JSON, never executable JSONP.
 function reply_(callback, obj) {
-  var body = JSON.stringify(obj);
-  if (callback) {
-    var cb = String(callback).replace(/[^\w$.]/g, "");
-    return ContentService.createTextOutput(cb + "(" + body + ")").setMimeType(
-      ContentService.MimeType.JAVASCRIPT
-    );
-  }
-  return ContentService.createTextOutput(body).setMimeType(ContentService.MimeType.JSON);
+  return json_(obj);
 }
 
 // One row per homework week; completing/uncompleting updates it in place.

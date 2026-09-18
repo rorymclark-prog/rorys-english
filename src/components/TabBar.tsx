@@ -12,7 +12,7 @@ export default function TabBar() {
 
   const tabs = [
     { href: `${base}/`, label: "Today", Icon: HomeIcon, match: (p: string) => p === `${base}` || p === `${base}/` },
-    { href: `${base}/study/`, label: "Study", Icon: BookIcon, match: (p: string) => p.startsWith(`${base}/study`) },
+    { href: `${base}/lessons/`, label: "Lessons", Icon: BookIcon, match: (p: string) => p.startsWith(`${base}/lessons`)||p.startsWith(`${base}/study`) },
     {
       href: `${base}/homework/`,
       label: "Homework",

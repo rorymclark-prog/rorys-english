@@ -505,17 +505,16 @@ function makeSpeakBtn(englishText) {
 }
 
 // ── Progress sync (optional) — paste your Apps Script /exec URL + secret to enable.
-var SYNC = { url: "https://script.google.com/macros/s/AKfycbxzo-IunYLs8JA6R-ZCCrzIiB7Gt1gONgFJvYbnOc119XEnmaFaHp4AW2DYnJRS_lNsxQ/exec", secret: "re-sync-7b3h8d9f4", code: "ferdi-7h3k", tool: "unit10" };
+// Archived practice is device-local; it does not upload scores.
 function syncQuiz(section, score, total) {
-  if (!SYNC.url) return;
-  try {
-    fetch(SYNC.url, {
-      method: "POST", mode: "no-cors", keepalive: true,
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ secret: SYNC.secret, type: "quiz", code: SYNC.code, tool: SYNC.tool, section: section, score: score, total: total })
-    });
-  } catch (e) {}
+  // Retain the exercise callback without legacy unauthenticated uploads.
 }
+document.addEventListener("DOMContentLoaded", function() {
+  var notice=document.createElement("p");
+  notice.textContent="Archived practice · Scores stay on this device and are not sent to Rory. This is not newly assigned homework.";
+  notice.style.cssText="padding:14px;background:#fef3c7;color:#172033;text-align:center;font:15px system-ui";
+  document.body.prepend(notice);
+});
 
 /* ════════════════════════════════════════════════════════════════
    DATA

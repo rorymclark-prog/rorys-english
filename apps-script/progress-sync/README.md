@@ -1,147 +1,47 @@
-# Progress Sync — Apps Script
+# Progress service — version 2 activation guide
 
-Writes app + study-tool results into a **Google Sheet per student** (inside a
-Drive folder per student). Free, no server, no API keys on the phone.
+Status, 18 September 2026: V2 is live. Remote source and both progress spreadsheets were privately backed up before activation. The production endpoint and both older public deployment URLs now run version 28; anonymous record requests are denied on all three. The frontend was published to the existing GitHub Pages app. Rory confirmed teacher sign-in in his browser. Live API checks passed student sign-in, role isolation, answer submission and deduplication, feedback, revision preservation and the word helper. The two clearly labelled synthetic submissions were removed and read-back verified. Valentin’s access code is kept in a private access card outside the repository. Ferdi’s code is to be configured in his separate follow-up. Browser automation was unavailable; installed-phone/offline rollout is not claimed as checked.
 
-## What it creates
+## What changes
 
-```
-Drive / Rory's English — Progress /
-  Ferdi/
-    Ferdi — Progress   ← Sheet with tabs: Dashboard, Homework, Vocab & Quizzes,
-    recordings/                            School Tests, Writing, Speaking, Mock Tests
-    writing/
-  Valentin/ …
-```
+- Deploy BOTH Code.gs and V2.gs. Only V2.gs defines public doGet / doPost.
+- GET returns version information only. Authenticated POST is the only data API. No JSONP or shared browser secret.
+- Teacher signs in with the existing TEACHER_PASSWORD Script Property. Student and parent routing codes are public identifiers, not credentials.
+- Teacher creates independent, high-entropy student/parent access codes in the dashboard and shares them privately. Only salted hashes are persisted. Rotating a code revokes its earlier sessions.
+- Sessions expire after six hours, or sooner if the Apps Script cache evicts them. Browser session storage holds tokens, not passwords.
+- Student answers become immutable Submissions rows. A retry with the same ID returns the original receipt; a revision uses a new ID.
+- Teacher feedback changes the review status, not the original answer. Reviewed dynamic assignments remain accessible.
+- Resources come only from a teacher-approved list. Reads never search Drive or change file permissions. Approval in the app does not itself grant Drive access.
+- AI remains on the existing Anthropic provider. Teacher writing analysis is a draft; separate explicit approval publishes it. Practice AI is not a school grade.
+- Quotas are reserved under a lock before provider calls. Failed attempts may consume a slot: this deliberately fails closed.
+- Archived standalone quizzes are device-local practice only. Their old automatic uploads have been retired. Existing score records are not deleted.
 
-- **Homework** + **Vocab & Quizzes** tabs fill automatically from the app.
-- **School Tests / Writing / Speaking / Mock Tests** are ready for you (or Claude)
-  to fill — these are the analysis pipelines we layer on next.
-- **Dashboard** has starter formulas; add charts by hand.
+## Configuration
 
-## One-time setup
+The static frontend needs only NEXT_PUBLIC_SYNC_URL (the version-2 /exec URL) and, for GitHub Pages, NEXT_PUBLIC_BASE_PATH=/rorys-english.
 
-1. Go to <https://script.google.com> → **New project**.
-2. Paste `Code.gs` into the editor. Then **Project Settings → check "Show
-   appsscript.json"**, open it, and paste the contents of `appsscript.json`.
-3. (Optional) edit `STUDENTS` and `SECRET` at the top of `Code.gs`. `STUDENTS`
-   is only a one-time SEED for the Roster Sheet (created by `setup()`) — after
-   that, the Roster Sheet is the real source of truth; see "Adding a student"
-   below for how new students actually get added day to day.
-4. Run the **`setup`** function once. Authorise when prompted (it needs Drive +
-   Sheets access — that's your own account). Check the execution log: it prints
-   each student's Sheet URL.
-5. **Deploy → New deployment → type: Web app.**
-   - *Execute as:* **Me**
-   - *Who has access:* **Anyone**
-   - Deploy, then **copy the `/exec` URL**.
+Do not configure NEXT_PUBLIC_SYNC_SECRET. Do not put API keys, teacher passwords, access codes, private feedback, or teacher notes in static content or the repository.
 
-## Connect the app
+Existing Script Properties (roster/sheet mappings, TEACHER_PASSWORD, ANTHROPIC_API_KEY) remain on the server. New properties use access_, access_version_, and approved_resources_ prefixes. Existing Sheets remain in place.
 
-In the project root create **`.env.local`** (it's git-ignored):
+## Safe release sequence
 
-```
-NEXT_PUBLIC_SYNC_URL=https://script.google.com/macros/s/XXXX/exec
-NEXT_PUBLIC_SYNC_SECRET=change-me-rory-english-2026
-```
+1. Re-read the latest remote Apps Script source and compare it with the local implementation; the remote deployment can be newer than GitHub. Preserve unrelated changes, including Rory’s editor-only external-request authorization helper.
+2. Save a private backup of that remote source and note every existing deployment/version. Back up the affected progress sheets before making any structural changes.
+3. Verify the actual script project, Google account, and GitHub Pages destination. Do not create a new provider or replace Rory’s existing account configuration.
+4. Deploy the two-file backend to a test deployment first. Test readable cross-origin POST from the real frontend origin: health, teacher login, student and parent access, denied cross-student reads, a synthetic submission/retry/revision, and teacher feedback.
+5. Rory signs in, creates and privately distributes the new student access codes. The assistant must not display real access codes in reports or logs.
+6. Review the specific files exposed by the old resource feature. Stop new automatic sharing immediately with the new backend, but do not bulk revoke Drive permissions without identifying the intended recipients and obtaining approval. Do not approve a full teacher deck containing answer keys or notes as student material.
+7. Coordinate switching the existing live backend and frontend. Retire ALL older publicly accessible data deployments; otherwise the old unauthenticated path remains reachable even if the new frontend is secure. Do not leave old versions as public fallback endpoints.
+8. Build with the real version-2 URL, the GitHub Pages base path, and no DEMO flag. Run tests, type checks, dependency audit, and production build. Stamp the service-worker cache version. Verify the real URLs in a browser, including an existing installed PWA.
+9. Test a full workflow with a synthetic record first, then let Rory approve use with actual learners. Check Drive sharing explicitly; the local tests cannot prove the live permissions.
 
-(The secret must match `SECRET` in `Code.gs`.) Then redeploy the app:
+Do not run npm run deploy until this coordinated activation is approved. Do not roll back to the insecure public data endpoint if testing fails; pause writes and restore a secure maintenance state instead.
 
-```
-npm run deploy
-```
+## Remaining boundaries
 
-## Teacher dashboard (one-time setup, needed to switch on)
-
-`/teacher/` is a single password-gated page showing every student at a
-glance (homework/quiz/writing counts, last updated) with drill-down into
-full per-student progress — same data as each student's own Progress tab,
-aggregated. It's POST-only end to end (no GET/JSONP path anywhere), so the
-password can never end up in a URL, browser history, or a server log.
-
-Same one-time-paste pattern as `ANTHROPIC_API_KEY`: Apps Script editor →
-**Project Settings → Script Properties → add key `TEACHER_PASSWORD`** with a
-password only you know. Until it's set, the endpoint fails closed (rejects
-every attempt) rather than falling back to any default. Then visit
-`/teacher/` and enter it — the app remembers you on that device (signed in
-via a browser-stored token, not cookies) until you tap "Sign out."
-
-Done — completing a homework week or finishing a quiz round now appends a row to
-that student's Sheet within a second or two.
-
-### For the standalone study tools
-
-The HTML study tools (`public/study-tools/*.html`) aren't built by Next, so paste
-the same URL + secret into the `SYNC` config block near the top of each file.
-
-## The endpoints (what the app calls)
-
-The Apps Script (`Code.gs`) handles three kinds of `doPost` requests (student code + secret in request body):
-
-### 1. **Sync endpoint** (above: homework + quiz scores)
-
-Write events to the Sheet tabs. Called when a student completes homework or finishes a study-tool quiz.
-
-- Homework: writes/updates a row in **Homework** tab (week-level upsert).
-- Quiz/vocab: appends a row to **Vocab & Quizzes** tab.
-
-### 2. **Resources endpoint** — auto-linked Lessons & feedback hub
-
-Called via `doGet?action=resources` (GET, JSONP, secret + student code as query params for progress reads; see below).
-
-- **Fully automatic.** The Apps Script searches Rory's Drive for files whose **title contains the student's name** (e.g., any file titled with "Ferdi" becomes link-viewable for Ferdi's app) + any files in an optional `<studentName> Shared` subfolder.
-- Newest 40 files, deduped; **excludes** Google Sheets and Apps Scripts (no infinite loops).
-- Each file is set **link-viewable once** (cached in Script Property `shared_ids` for speed — first load ~9s while sharing, then ~4s).
-- ⚠️ **Naming rule:** to keep a Drive file private from the student's app, name it *without* the student's name.
-- **App:** renders as **"Lessons & feedback"** card on Today and a full screen at `/s/<code>/resources`. Reachable by student code or parent code.
-
-### 3. **AI helper endpoints** (tutor chat + word lookup + writing coach)
-
-Called via `doPost` with `action="ai"` (CORS POST, secret + student code in body, no length limit via body transport).
-
-- **Ask the tutor** (Haiku): conversational Q&A in a chat bubble, on-device history (localStorage `re_tutor_chat_<code>`, last 30 messages), context of last ~6 turns (1200-char budget) so follow-ups work. B1-simple answers with German glosses; steers off-topic back to English; safety line in all AI responses.
-- **Word help** (Haiku): vocabulary lookup with examples.
-- **Writing coach** (Sonnet): practice-not-graded feedback, one-focus-error per submission.
-- **Route:** `/s/<code>/coach` ("Ask the English tutor" card on Today). Reachable by student or parent code.
-- **Rate limit:** 40 calls per student per day (`ai_<code>_<date>` counters in Script Properties). If hit, returns a friendly message (suggests asking Rory next lesson).
-- **Input cap:** 2000 chars (writing samples up to 4000 via auto-chunking).
-- **Key setup (1-time, needed to switch on):** Apps Script editor → **Project Settings → Script Properties → add key `ANTHROPIC_API_KEY` with value from Anthropic dashboard.** Then run any function (e.g., `setup`) once to approve the new `script.external_request` scope. Until then the app shows "isn't switched on yet." 
-- **Transport:** CORS POST (request body carries secret + text, no length limit); JSONP GET as fallback for read endpoints.
-
-### 4. **Teacher-only endpoints** (dashboard actions — POST-only, no GET/JSONP path)
-
-All gated by `TEACHER_PASSWORD` (see "Teacher dashboard" above). None of these
-can ever be reached via a URL parameter — the password would leak into
-browser history/server logs otherwise.
-
-- `action=teacherAddStudent` `{name}` → provisions Drive folder + Sheet + a
-  Roster row at request time, returns `{code, parentCode, name}` **once** —
-  copy them immediately, they aren't shown again. The static app shell still
-  needs one deploy; run `node scripts/add-student.mjs "Name" <code> <parentCode>`
-  (using the exact codes just returned) then `npm run deploy`.
-- `action=teacherAssignHomework` `{code, title, details, due}` → appends a row
-  to that student's **Assignments** tab; shows in their Homework tab on next
-  load, no redeploy.
-- `action=teacherSetFocusNote` `{code, note}` → sets (or clears, with an empty
-  string) a short note shown on the student's Today screen and woven into
-  their next AI-tutor/writing-coach reply as soft context.
-
-### 5. **Assignments** (student-side, reachable by student or parent code)
-
-- `action=assignments` — open (not-done) tutor-assigned tasks for a student.
-- The student's completion write (`type: "assignment"` in the sync endpoint)
-  marks one row done by its generated `Id`, not by title (two assignments can
-  share a title).
-
-### Note on sync behavior
-
-- The student **code** is the key (same one in their app link); `SECRET` is light
-  anti-abuse. Because the app is static, the secret is visible in the page source
-  — fine for this low-stakes data, not a vault.
-- The app's localStorage stays the source of truth, so a missed sync is never lost
-  progress — re-completing re-sends.
-- **Adding a student:** use `/teacher/`'s "Add student" button (provisions
-  everything server-side instantly), then run
-  `node scripts/add-student.mjs "Name" <code> <parentCode>` with the codes it
-  gives you, then `npm run deploy` — one command instead of hand-editing
-  `STUDENTS` + `content/students.json` + redeploying separately.
+- Static textbook task descriptions remain public assets even though private records require a session. No protected teacher content belongs in those files.
+- Browser-local drafts and chat remain on that device after sign-out. Use private devices; do not promise encryption or secure deletion.
+- Full curriculum coverage needs actual textbook/edition pages, school requirements, and a term calendar. No unknown Unit 1 content or holiday dates have been invented.
+- No automated audio upload/transcription, Drive reorganization, NotebookLM workflow, new textbook quizzes, or universal curriculum tracker is included in this first upgrade.
+- Readable Google responses, real teacher/student authentication, real AI word help and service migration were checked on activation. Installed-phone and real offline behavior still need a device check. Apps Script can return transient transport errors; the frontend retries safe reads/sign-in, and keeps written submissions until a matching receipt is returned.

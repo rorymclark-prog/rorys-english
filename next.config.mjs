@@ -9,6 +9,8 @@ const nextConfig = {
   // offline behaviour, fast on old phones. All state is client-side
   // (content JSON shipped in the bundle, progress in localStorage).
   output: "export",
+  distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
+  outputFileTracingRoot: process.cwd(),
   basePath,
   reactStrictMode: true,
   images: { unoptimized: true },

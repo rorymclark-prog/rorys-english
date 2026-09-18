@@ -113,6 +113,8 @@ export default function ProgressView({
 
         {state === "ok" && data && (
           <>
+            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Practice and test history. Quiz scores show attempts, not proof that a topic is mastered.</p>
+            {mode==="student"&&studentCode&&<Link className="mb-4 inline-block underline" href={`/s/${studentCode}/homework/`}>Submitted work, revisions and Rory’s feedback →</Link>}
             <SummaryTiles data={data} />
             <SectionCard title="Homework" section={data.homework} />
             <SectionCard title="Quizzes & vocab" section={data.quizzes} />

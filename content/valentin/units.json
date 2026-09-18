@@ -1,8 +1,47 @@
 [
   {
+    "id": "way2go8-unit01-2026",
+    "title": "way2go! 8 · Unit 1",
+    "active": true,
+    "schoolYear": "2026–27",
+    "book": "way2go! 8",
+    "status": "current",
+    "note": "Your current school book is way2go! 8, Unit 1. Start with the September writing task below. It is original English practice; textbook-specific activities will follow once we have the Unit 1 pages.",
+    "studyTools": []
+  },
+  {
+    "id": "way2go7-unit09-2025",
+    "title": "Someone’s watching · Unit 9",
+    "active": false,
+    "schoolYear": "2025–26",
+    "book": "way2go! 7",
+    "status": "archive",
+    "note": "Last year’s unit: journalism, advertising and privacy. These student materials were refreshed in September 2026 for revision. They are optional reference material, not new homework.",
+    "studyTools": [],
+    "resources": [
+      {
+        "title": "Unit 9 student slides",
+        "url": "/lessons/valentin/2025-26/unit09/Student_Slides.pdf",
+        "blurb": "Vocabulary, reading, listening questions and report-writing practice. Student version without teacher notes."
+      },
+      {
+        "title": "Listen: Maya checks a news story",
+        "url": "/lessons/valentin/2025-26/unit09/media/Maya_Listening.mp3",
+        "blurb": "About 2 minutes. Fictional story with NotebookLM AI narration; supplementary practice, not publisher audio."
+      },
+      {
+        "title": "Maya listening transcript",
+        "url": "/lessons/valentin/2025-26/unit09/media/Maya_Listening_Transcript.txt",
+        "blurb": "Use after listening to check your understanding. Automatically transcribed from the recording."
+      }
+    ]
+  },
+  {
     "id": "unit05",
     "title": "Trends & Choices",
-    "active": true,
+    "active": false,
+    "schoolYear": "2025–26",
+    "status": "archive",
     "studyTools": [
       {
         "title": "Unit 5 Study Tool",

@@ -13,15 +13,23 @@ export default function SpeakView({ lines }: { lines: string[] }) {
   const [err, setErr] = useState("");
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const streamRef = useRef<MediaStream|null>(null);
+  const audioRef = useRef<string|null>(null);
+  const alive = useRef(true);
 
   useEffect(() => {
+    alive.current=true;
     setSupported(
       typeof navigator !== "undefined" &&
         !!navigator.mediaDevices?.getUserMedia &&
         typeof window.MediaRecorder !== "undefined",
     );
     return () => {
-      if (myAudio) URL.revokeObjectURL(myAudio);
+      alive.current=false;
+      if(recRef.current?.state==="recording") recRef.current.stop();
+      streamRef.current?.getTracks().forEach(t=>t.stop());
+      if(audioRef.current) URL.revokeObjectURL(audioRef.current);
+      window.speechSynthesis?.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -41,19 +49,25 @@ export default function SpeakView({ lines }: { lines: string[] }) {
     setErr("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if(!alive.current) {stream.getTracks().forEach(t=>t.stop());return;}
+      streamRef.current=stream;
       chunksRef.current = [];
       const rec = new MediaRecorder(stream);
       rec.ondataavailable = (e) => e.data.size && chunksRef.current.push(e.data);
       rec.onstop = () => {
+        stream.getTracks().forEach(t=>t.stop());
+        if(!alive.current)return;
         const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
         if (myAudio) URL.revokeObjectURL(myAudio);
-        setMyAudio(URL.createObjectURL(blob));
+        audioRef.current=URL.createObjectURL(blob);
+        setMyAudio(audioRef.current);
         stream.getTracks().forEach((t) => t.stop());
       };
       recRef.current = rec;
       rec.start();
       setRecording(true);
     } catch {
+      streamRef.current?.getTracks().forEach(t=>t.stop());
       setErr("I couldn't use the microphone. Check the mic permission and try again.");
     }
   };

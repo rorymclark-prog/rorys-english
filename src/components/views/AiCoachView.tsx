@@ -20,6 +20,7 @@ export default function AiCoachView({ code }: { code: string }) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errMsg, setErrMsg] = useState("");
   const [chat, setChat] = useState<ChatMsg[]>([]);
+  const [chatReady,setChatReady]=useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // Tutor chat survives reloads on this device (it's their notebook, not synced).
@@ -31,8 +32,10 @@ export default function AiCoachView({ code }: { code: string }) {
     } catch {
       /* ignore */
     }
+    setChatReady(true);
   }, [chatKey]);
   useEffect(() => {
+    if(!chatReady)return;
     try {
       window.localStorage.setItem(chatKey, JSON.stringify(chat.slice(-30)));
     } catch {
@@ -40,7 +43,16 @@ export default function AiCoachView({ code }: { code: string }) {
     }
     const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     chatEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" });
-  }, [chat, chatKey]);
+  }, [chat, chatKey,chatReady]);
+  useEffect(()=>{
+    try {setInput(localStorage.getItem(`re_ai_draft_${code}_${mode}`)||"");}
+    catch { /* Existing chat remains visible even if storage is unavailable. */ }
+  },[code,mode]);
+  const changeInput=(value:string)=>{
+    setInput(value);
+    try {localStorage.setItem(`re_ai_draft_${code}_${mode}`,value);}
+    catch {setErrMsg("Draft could not be saved. Copy it before leaving this page.");}
+  };
 
   const placeholder =
     mode === "word"
@@ -195,7 +207,7 @@ export default function AiCoachView({ code }: { code: string }) {
         {mode === "writing" ? (
           <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value.slice(0, WRITING_MAX))}
+            onChange={(e) => changeInput(e.target.value.slice(0, WRITING_MAX))}
             placeholder={placeholder}
             rows={6}
             className="w-full rounded-xl border border-black/[.06] bg-surface p-3 text-base leading-relaxed text-navy shadow-card outline-none transition focus:border-amber-deep dark:border-white/10 dark:bg-navy-raised dark:text-cream dark:shadow-card-dark dark:focus:border-amber"
@@ -203,7 +215,7 @@ export default function AiCoachView({ code }: { code: string }) {
         ) : (
           <input
             value={input}
-            onChange={(e) => setInput(e.target.value.slice(0, mode === "tutor" ? TUTOR_MAX : 200))}
+            onChange={(e) => changeInput(e.target.value.slice(0, mode === "tutor" ? TUTOR_MAX : 200))}
             onKeyDown={(e) => e.key === "Enter" && ask()}
             placeholder={placeholder}
             className="w-full rounded-xl border border-black/[.06] bg-surface p-3 text-base text-navy shadow-card outline-none transition focus:border-amber-deep dark:border-white/10 dark:bg-navy-raised dark:text-cream dark:shadow-card-dark dark:focus:border-amber"

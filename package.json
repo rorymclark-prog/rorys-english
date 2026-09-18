@@ -10,23 +10,26 @@
     "build": "next build",
     "start": "next start",
     "deploy": "bash scripts/deploy-pages.sh",
-    "lint": "next lint"
+    "lint": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "googleapis": "^173.0.0",
-    "next": "^15.5.4",
+    "next": "15.5.25",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "xlsx": "^0.18.5"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.5.0",
+    "postcss": "^8.5.28",
     "puppeteer-core": "^25.1.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "sharp": "0.35.4"
   }
 }

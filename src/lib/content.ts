@@ -67,13 +67,16 @@ export function getBundle(code: string): StudentBundle | null {
     .map((u) => loadUnit(student.id, u.id))
     .filter((u): u is Unit => u !== null);
 
-  const activeUnit = units.find((u) => u.active) ?? units[0] ?? null;
+  const activeUnit = units.find((u) => u.active) ?? null;
   return { student, units, activeUnit };
 }
 
-/** Params for /s/[code]/homework/[week] — one entry per (code, active-unit week). */
-export function getHomeworkParams(code: string): { week: string }[] {
+/** Keep legacy links attached to the original unit, not whichever unit is current. */
+export function getLegacyUnit(code: string): Unit | null {
   const bundle = getBundle(code);
-  if (!bundle?.activeUnit) return [];
-  return bundle.activeUnit.homework.map((h) => ({ week: String(h.week) }));
+  const id = bundle?.student.id === "valentin" ? "unit05" : "unit10";
+  return bundle?.units.find(u => u.id === id) ?? null;
+}
+export function getHomeworkParams(code: string): { week: string }[] {
+  return getLegacyUnit(code)?.homework.map(h => ({week: String(h.week)})) ?? [];
 }

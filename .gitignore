@@ -1,11 +1,13 @@
 /node_modules
 /.next/
+/.next-dev/
 /out/
 /build
 
 # secrets / local env (Apps Script sync URL + secret)
 .env*
 !.env.local.example
+!.env.example
 .DS_Store
 *.pem
 npm-debug.log*
