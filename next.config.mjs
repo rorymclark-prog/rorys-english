@@ -11,6 +11,9 @@ const nextConfig = {
   outputFileTracingRoot: process.cwd(),
   basePath,
   reactStrictMode: true,
+  // Bundle the Auth verifier so CommonJS dependencies do not require ESM
+  // through Vercel’s runtime loader.
+  transpilePackages: ["firebase-admin", "jwks-rsa", "jose"],
   images: { unoptimized: true },
   // Keep established student and lesson links consistent.
   trailingSlash: true,
