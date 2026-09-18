@@ -1,9 +1,11 @@
 "use client";
 import {useEffect,useState} from "react";
+import {isStudentPreview} from "@/lib/student-preview";
 import {deliver,outbox,type PendingEvent} from "@/lib/sync";
 import {fetchSubmissions,type Submission} from "@/lib/remote";
 export interface AnswerField {id:string;prompt:string;type?:string}
 export default function SubmissionForm({code,unit,task,title,fields,initialAnswers={},onSaved}:{code:string;unit:string;task:string;title?:string;fields:AnswerField[];initialAnswers?:Record<string,string>;onSaved?:(answers:Record<string,string>)=>void}) {
+  const preview=isStudentPreview(code);
   const key=`re_draft_v2_${code}_${unit}_${task}`;
   const [answers,setAnswers]=useState<Record<string,string>>({});
   const [history,setHistory]=useState<Submission[]>([]);
@@ -32,11 +34,13 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[key,code,unit,task]);
   function edit(id:string,value:string) {
+    if(preview)return;
     const next={...answers,[id]:value};setAnswers(next);setMessage("");
     try {localStorage.setItem(key,JSON.stringify(next));onSaved?.(next);}
     catch {setMessage("Could not save on this device. Copy your answer before leaving.");}
   }
   async function submit() {
+    if(preview)return;
     setBusy(true);setMessage("");
     const event=pending||{action:"submit",id:crypto.randomUUID(),code,unit,task,title:title||task,prompts:Object.fromEntries(fields.map(f=>[f.id,f.prompt])),answers:{...answers}};
     const r=await deliver(event);setBusy(false);
@@ -51,12 +55,12 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
       <span className="mb-2 block font-semibold">{f.prompt}</span>
       {f.type==="voice" && <span className="mb-2 block text-sm">Send the recording using your agreed private channel. This box submits a note, not an audio file.</span>}
       {f.type==="checkbox" && <span className="mb-2 block text-sm">Tell Rory what you practised or what you found difficult.</span>}
-      <textarea aria-label={f.prompt} disabled={!ready||!!pending||busy} value={answers[f.id]||""} onChange={e=>edit(f.id,e.target.value)} rows={f.type==="written"?5:2} maxLength={6000} className="w-full rounded-lg border border-slate-300 bg-transparent p-3 disabled:opacity-60"/>
+      <textarea aria-label={f.prompt} disabled={preview||!ready||!!pending||busy} value={answers[f.id]||""} onChange={e=>edit(f.id,e.target.value)} rows={f.type==="written"?5:2} maxLength={6000} className="w-full rounded-lg border border-slate-300 bg-transparent p-3 disabled:opacity-60"/>
     </label>)}
     <p className="text-xs">Drafts stay on this device. Submitted copies and Rory’s feedback are saved privately to your progress record. Avoid personal details.</p>
     {pending && <p role="status" className="rounded-xl bg-amber-soft p-3 text-navy">A saved copy is waiting to send. Retry it before making a revision.</p>}
-    <button type="button" disabled={!ready||busy||(!pending&&(!Object.values(answers).some(v=>v.trim())||!!unchanged))} onClick={()=>void submit()} className="min-h-12 w-full rounded-xl bg-indigo-700 p-3 font-bold text-white disabled:opacity-50">
-      {busy?"Sending…":pending?"Retry saved submission":last?"Submit revision":"Send answers to Rory"}
+    <button type="button" disabled={preview||!ready||busy||(!pending&&(!Object.values(answers).some(v=>v.trim())||!!unchanged))} onClick={()=>void submit()} className="min-h-12 w-full rounded-xl bg-indigo-700 p-3 font-bold text-white disabled:opacity-50">
+      {preview?"Sending is disabled in teacher preview":busy?"Sending…":pending?"Retry saved submission":last?"Submit revision":"Send answers to Rory"}
     </button>
     {message && <p role="status" className="text-sm">{message}</p>}
     {last && <section className="rounded-card border border-indigo-200 p-4">

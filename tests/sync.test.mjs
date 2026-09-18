@@ -13,7 +13,7 @@ function fixture(respond) {
   const exports={},sent=[];
   const api={authed:async(code,event)=>{sent.push(event);return respond(event);},savedSession:()=>({token:"test"})};
   const code=ts.transpileModule(fs.readFileSync("src/lib/sync.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  vm.runInNewContext(code,{exports,process:{env:{}},require:()=>api,localStorage:storage,window:{dispatchEvent(){}},navigator:{onLine:true},Event:class{}});
+  vm.runInNewContext(code,{exports,process:{env:{}},require:name=>name.includes("student-preview")?{isStudentPreview:()=>false}:api,localStorage:storage,window:{dispatchEvent(){}},navigator:{onLine:true},Event:class{}});
   return {api:exports,storage,sent};
 }
 test("a failed submission stays in the outbox and retry preserves the original",async()=>{

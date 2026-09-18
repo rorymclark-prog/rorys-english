@@ -6,7 +6,7 @@ import ts from "typescript";
 function client(fetch) {
   const exports={};
   const code=ts.transpileModule(fs.readFileSync("src/lib/api.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  vm.runInNewContext(code,{exports,fetch,process:{env:{NEXT_PUBLIC_SYNC_URL:"https://example.test/exec"}},AbortController,setTimeout:(fn,ms)=>ms===500?(fn(),0):0,clearTimeout:()=>{}});
+  vm.runInNewContext(code,{exports,require:()=>({isStudentPreview:()=>false}),fetch,process:{env:{NEXT_PUBLIC_SYNC_URL:"https://example.test/exec"}},AbortController,setTimeout:(fn,ms)=>ms===500?(fn(),0):0,clearTimeout:()=>{}});
   return exports;
 }
 test("temporary Google response errors retry reads without retrying writes or AI",async()=>{

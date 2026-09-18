@@ -9,6 +9,7 @@ export type Dependencies = {
 };
 const studentActions = new Set(["progress", "resources", "assignments", "note", "submissions", "ai", "submit", "event"]);
 export async function accountService(body: Record<string, unknown>, deps: Dependencies): Promise<Reply> {
+  if (body.preview && !new Set(["progress","resources","assignments","note","submissions"]).has(String(body.action))) return {ok:false,error:"Student preview is read-only."};
   // Legacy teacher/student codes stay compatible during the move.
   if (body.action !== "accountLogin" && body.authProvider !== "firebase") return deps.upstream(body);
   const token = body.action === "accountLogin" ? body.idToken : body.session;

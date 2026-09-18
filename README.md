@@ -44,7 +44,7 @@ npm run build
 
 Live checks covered teacher/student authentication, denied cross-student access, exact written answers, duplicate retry, teacher feedback, revisions and the word helper. The two synthetic submissions were removed and existing records retained. Rory confirmed browser teacher sign-in; automated browser and installed-phone checks were unavailable during activation.
 
-The source includes 40 automated tests for access isolation, teacher-session revocation, immutable/idempotent submissions, teacher review, quiz retries, resource safety, date handling, archived links and durable outbox behaviour.
+The source includes 44 automated tests for access isolation, teacher-session revocation, immutable/idempotent submissions, teacher review, quiz retries, resource safety, date handling, archived links and durable outbox behaviour.
 
 ## Production and future releases
 
@@ -59,3 +59,9 @@ The live login integration was checked with a temporary synthetic Firebase accou
 Content JSON and static files are publicly downloadable assets, not a safe place for answer keys, teacher notes, recordings, private feedback or full copyrighted ebooks. Publish only approved student material.
 
 New-unit quizzes, audio upload/transcription, a complete curriculum tracker, deck revisions and NotebookLM integration are not included in this first implementation. These need source material and a separate content workflow, not invented textbook exercises.
+
+### Menu and teacher preview
+
+Teacher and student pages share a menu with appearance, text size and dated release notes. Teacher preferences use a separate device-local key. Select View as student from the teacher menu or a student workspace for a read-only preview, then Exit preview to return. Preview uses the existing teacher session, requires no student credentials, and blocks writes, AI, draft changes and outbox delivery. It must never populate a student session or silently drain their queued work. The API also rejects non-read operations marked as preview.
+
+Slides & resources collects existing approved lesson assets and live approved Drive links. Editable teaching masters, notes and answers belong in private storage; student copies must be reviewed before being added.

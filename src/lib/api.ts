@@ -1,4 +1,5 @@
 "use client";
+import { isStudentPreview, previewTeacherSession, PREVIEW_READS, PREVIEW_NOTICE } from "./student-preview";
 
 const endpoint = process.env.NEXT_PUBLIC_SYNC_URL || "";
 export interface ApiResult { ok: boolean; error?: string; authRequired?: boolean }
@@ -18,6 +19,7 @@ export function forgetSession(code: string) {
   window.dispatchEvent(new CustomEvent("re-auth-change"));
 }
 export async function request<T extends ApiResult>(body: Record<string, unknown>): Promise<T> {
+  if (isStudentPreview() && !PREVIEW_READS.has(String(body.action))) return {ok:false,error:PREVIEW_NOTICE} as T;
   if (!endpoint) return { ok: false, error: "The secure connection is not configured yet." } as T;
   // Google can briefly fail while redirecting to its JSON response. Retrying
   // sign-in and reads is safe; writes and AI calls retain their explicit flow.
@@ -75,6 +77,12 @@ export async function loginWithAccount(code: string): Promise<Session> {
   return result;
 }
 export async function authed<T extends ApiResult>(code: string, body: Record<string, unknown>): Promise<T> {
+  if (isStudentPreview(code)) {
+    if (!PREVIEW_READS.has(String(body.action))) return {ok:false,error:PREVIEW_NOTICE} as T;
+    const teacher = previewTeacherSession();
+    if (!teacher) return {ok:false,authRequired:true,error:"Your teacher session has ended. Return to the teacher workspace to sign in."} as T;
+    return request<T>({...body,code,session:teacher.token,preview:true});
+  }
   if (accountsEnabled && !code.includes("-fam-") && !String(body.action).startsWith("teacher")) {
     const { currentAccount } = await import("./account-auth");
     const user = await currentAccount();

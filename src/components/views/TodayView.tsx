@@ -44,7 +44,7 @@ export default function TodayView({unit}:{unit:Unit|null}) {
     </section>
     <Link className={card} href={`/s/${code}/coach/`}><h2 className="font-bold">Writing &amp; word helper</h2><p className="mt-1 text-sm">Try it yourself, ask for a hint, then revise. AI feedback is practice advice, not Rory’s assessment.</p></Link>
     <div className="grid grid-cols-2 gap-3">
-      <Link className={card} href={`/s/${code}/resources/`}>Shared documents</Link>
+      <Link className={card} href={`/s/${code}/resources/`}>Slides &amp; resources</Link>
       <Link className={card} href={`/s/${code}/progress/`}>My progress</Link>
     </div>
     <p className="mt-5 text-sm">{studentId==="valentin"?"Lessons every second Saturday":"Weekly lessons"}, during term time. Rory will confirm lesson dates and homework deadlines.</p>

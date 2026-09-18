@@ -65,7 +65,8 @@ function themeScript(studentId: string): string {
   const key = JSON.stringify(rawSettingsKey(studentId)).replace(/</g, "\\u003c");
   return (
     `(function(){try{var t=null;try{var r=localStorage.getItem(${key});` +
-    `if(r)t=JSON.parse(r).theme}catch(e){}` +
+    `if(r){var s=JSON.parse(r);t=s.theme;var z=s.textScale;` +
+    `if(z==="normal"||z==="large"||z==="xl")document.documentElement.setAttribute("data-text-scale",z)}}catch(e){}` +
     `var d;if(t==="light"){d=false}` +
     `else if(t==="system"){d=matchMedia("(prefers-color-scheme: dark)").matches}` +
     `else{d=true}` +

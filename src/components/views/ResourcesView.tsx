@@ -113,9 +113,11 @@ function kindOf(type: string): { Icon: IconComponent; label: string } {
 export default function ResourcesView({
   fetchCode,
   mode,
+  lessonResources = [],
 }: {
   fetchCode: string;
   mode: "student" | "parent";
+  lessonResources?: {title:string;url:string;unit:string;schoolYear:string;blurb?:string}[];
 }) {
   const [state, setState] = useState<"loading" | "ok" | "error" | "off">("loading");
   const [items, setItems] = useState<ResourceItem[]>([]);
@@ -148,12 +150,14 @@ export default function ResourcesView({
         className="mb-2 pt-4"
         style={{ paddingTop: mode === "parent" ? "calc(env(safe-area-inset-top) + 1rem)" : undefined }}
       >
-        <h1 className="display text-2xl text-navy dark:text-cream">Lessons &amp; feedback</h1>
+        <h1 className="display text-2xl text-navy dark:text-cream">Slides &amp; resources</h1>
         <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">
-          Slides, marked work and assessments Rory has shared with you.
+          Student lesson copies, listening and documents shared by Rory.
         </p>
       </header>
 
+      {lessonResources.length>0&&<section className="my-5"><h2 className="mb-3 text-sm font-bold uppercase tracking-wide">From your lessons</h2><ul className="space-y-3">{lessonResources.map(item=><li key={item.url}><a href={item.url.startsWith("/")?`${process.env.NEXT_PUBLIC_BASE_PATH||""}${item.url}`:item.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised"><span aria-hidden="true" className="rounded-xl bg-amber-soft p-3 text-amber-deep dark:bg-amber-dusk dark:text-amber">{item.url.endsWith(".pdf")?<SlidesIcon/>:item.url.endsWith(".mp3")?<AudioIcon/>:<DocIcon/>}</span><span className="min-w-0"><span className="block font-bold">{item.title}</span><span className="mt-1 block text-xs text-navy-soft dark:text-navy-mist">{item.unit} · {item.schoolYear}</span>{item.blurb&&<span className="mt-2 block text-sm">{item.blurb}</span>}</span><ExternalIcon className="ml-auto shrink-0" width={18}/></a></li>)}</ul></section>}
+      <h2 className="mt-5 text-sm font-bold uppercase tracking-wide">Shared by Rory</h2>
       {state === "loading" && (
         <div className="mt-4 space-y-3">
           <div className="h-16 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark" />
@@ -164,7 +168,7 @@ export default function ResourcesView({
       {state === "off" && <Note>This isn&apos;t switched on yet.</Note>}
       {state === "error" && <Note>Couldn&apos;t load right now — check your connection and try again.</Note>}
       {state === "ok" && items.length === 0 && (
-        <Note>Nothing shared here yet. New slides and feedback will appear automatically.</Note>
+        <Note>No extra documents shared yet. New student copies will appear here when Rory adds them.</Note>
       )}
 
       {state === "ok" && items.length > 0 && (

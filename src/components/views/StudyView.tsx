@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import StudyToolLink from "@/components/StudyToolLink";
 import type { Unit } from "@/lib/types";
 import { useStudent } from "@/components/StudentContext";
 import Screen from "@/components/Screen";
@@ -45,14 +46,12 @@ export default function StudyView({ unit }: { unit: Unit | null }) {
               {tool.blurb && (
                 <p className="mt-1 text-sm text-navy-soft dark:text-navy-mist">{tool.blurb}</p>
               )}
-              <a
+              <StudyToolLink
                 href={resolve(tool.url)}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-amber-soft px-4 text-base font-bold text-amber-deep transition active:scale-[.97] dark:bg-amber-dusk dark:text-amber"
               >
                 Open <ExternalIcon width={20} height={20} />
-              </a>
+              </StudyToolLink>
             </li>
           ))}
         </ul>

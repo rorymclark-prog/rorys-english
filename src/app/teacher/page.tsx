@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./teacher.css";
-import ThemeInit from "@/components/ThemeInit";
+import { SettingsProvider } from "@/components/SettingsContext";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import TeacherDashboardView from "@/components/views/TeacherDashboardView";
 
@@ -16,8 +16,7 @@ export const metadata: Metadata = {
 export default function TeacherPage() {
   return (
     <div className="mx-auto min-h-dvh max-w-6xl">
-      <ThemeInit />
-      <TeacherDashboardView />
+      <SettingsProvider studentId="__teacher__"><TeacherDashboardView /></SettingsProvider>
       <ServiceWorkerRegister />
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { isStudentPreview, previewTeacherSession, endStudentPreview } from "@/lib/student-preview";
 import { login, loginWithAccount, logout, savedSession, forgetSession } from "@/lib/api";
 import { accountsEnabled, googleEnabled, watchAccount, signInAccount, signInGoogle, resetAccountPassword, verifyAccountEmail, reloadAccount, signOutAccount, accountError } from "@/lib/account-auth";
 
@@ -16,7 +17,8 @@ export default function SessionGate({ code, children }: { code: string; children
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let active = true, accountPresent = false, refreshing = false;
-    const refresh = () => { if (active) { setSignedIn(!!savedSession(code)); setReady(true); } };
+    const preview=isStudentPreview(code);
+    const refresh = () => { if (active) { setSignedIn(preview?!!previewTeacherSession():!!savedSession(code)); setReady(true); } };
     const renew = async () => {
       if (refreshing || !active) return;
       refreshing = true;
@@ -27,7 +29,7 @@ export default function SessionGate({ code, children }: { code: string; children
       finally { refreshing = false; refresh(); }
     };
     refresh();
-    const unwatch = accountsEnabled && !code.includes("-fam-") ? watchAccount(user => {
+    const unwatch = !preview && accountsEnabled && !code.includes("-fam-") ? watchAccount(user => {
       accountPresent = !!user;
       if (!active) return;
       setHasAccount(!!user);
@@ -50,7 +52,8 @@ export default function SessionGate({ code, children }: { code: string; children
     finally { setBusy(false); }
   }
   if (!ready) return <p className="p-6">Opening your lessons…</p>;
-  if (signedIn) return <><div className="mx-auto flex max-w-2xl justify-end px-5 pt-2"><button onClick={() => logout(code)} className="min-h-11 text-sm underline">Sign out</button></div>{children}</>;
+  if (signedIn) return <>{children}</>;
+  if (isStudentPreview(code)) return <main className="mx-auto max-w-md p-8"><h1 className="text-2xl font-bold">Teacher sign-in needed</h1><p className="my-4">Your preview session has ended. Sign in to your teacher workspace to continue.</p><button className="min-h-11 rounded-xl bg-indigo-700 p-3 text-white" onClick={()=>{endStudentPreview();window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH||""}/teacher/`);}}>Back to teacher sign-in</button></main>;
   return <main className="mx-auto max-w-md px-6 py-12">
     <p className="mb-3 text-sm font-bold uppercase tracking-wide text-indigo-700">Rory’s English</p>
     <h1 className="display text-3xl">Your English lessons</h1>

@@ -14,9 +14,11 @@ import {
 } from "@/lib/remote";
 import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon } from "@/components/Icons";
 import ProgressView from "./ProgressView";
-import { login, logout, savedSession, forgetSession } from "@/lib/api";
+import { login, savedSession, forgetSession } from "@/lib/api";
 import { publishAssessment } from "@/lib/remote";
 import TeacherReviewPanel from "./TeacherReviewPanel";
+import AppMenu from "@/components/AppMenu";
+import StudentPreviewButton from "@/components/StudentPreviewButton";
 import studentRoster from "../../../content/students.json";
 
 // One-time removal of the old persisted password; only expiring tokens remain.
@@ -94,15 +96,6 @@ export default function TeacherDashboardView() {
     }
   }
 
-  function signOut() {
-    void logout("__teacher__");
-    setSecret(null);
-    setStudents(null);
-    setLoadState("idle");
-    setSelectedCode(null);
-    setShowFullProgress(false);
-  }
-
   /** Patches one student's cached fields locally after a successful save, so
    * re-opening their panel (without a full re-fetch) shows the new value. */
   function patchStudent(code: string, patch: Partial<TeacherStudent>) {
@@ -117,12 +110,12 @@ export default function TeacherDashboardView() {
   // Drill-down: full per-student progress (same tables the student/parent see).
   if (secret && loadState === "ok" && selected && showFullProgress) {
     return (
-      <ProgressView
+      <div><div className="flex justify-end px-5 pt-3"><AppMenu teacher/></div><ProgressView
         fetchCode={selected.code}
         displayName={selected.name}
         mode="teacher"
         onBack={() => setShowFullProgress(false)}
-      />
+      /></div>
     );
   }
 
@@ -145,7 +138,7 @@ export default function TeacherDashboardView() {
         <a href="/teacher/" className="teacher-brand"><span aria-hidden>RE</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
         <div className="flex items-center gap-2">
           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
-          <button type="button" onClick={signOut} className="teacher-quiet-button">Sign out</button>
+          <AppMenu teacher/>
         </div>
       </header>
       <main>
@@ -312,13 +305,14 @@ function TeacherStudentPanel({
     <div className="teacher-workspace">
       <header className="teacher-topbar">
         <button type="button" onClick={onBack} className="teacher-quiet-button flex items-center gap-2"><ChevronLeftIcon/>All students</button>
-        <span className="teacher-eyebrow">RORY’S ENGLISH</span>
+        <AppMenu teacher/>
       </header>
       <main>
         <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-mint" : "teacher-lilac"}`}>
           <div className="teacher-banner-name"><span className="teacher-avatar">{student.name.slice(0,1).toUpperCase()}</span><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Last activity ${s.lastUpdated}` : "Ready for the first step"}</p></div></div>
           <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ScoreRing value={s?.bestQuizPct}/><span>Full progress <span aria-hidden>↗</span></span></button>
         </section>
+        <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>
         <nav className="teacher-section-nav" aria-label="Student workspace sections">
           <button type="button" aria-pressed={section === "review"} onClick={()=>setSection("review")}><CheckSquareIcon/><span>Work & feedback<small>Read, respond, encourage</small></span></button>
           <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><BookIcon/><span>Plan homework<small>Set the next step</small></span></button>

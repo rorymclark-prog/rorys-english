@@ -1,4 +1,5 @@
 "use client";
+import { isStudentPreview } from "./student-preview";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEVICE-LOCAL STORAGE (localStorage)
@@ -18,6 +19,7 @@ function read(key: string): string | null {
 }
 
 function write(key: string, value: string): void {
+  if(isStudentPreview() && key!=="__teacher___settings")return;
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(key, value);
@@ -27,6 +29,7 @@ function write(key: string, value: string): void {
 }
 
 function remove(prefix: string): void {
+  if(isStudentPreview())return;
   if (typeof window === "undefined") return;
   try {
     const toDelete: string[] = [];

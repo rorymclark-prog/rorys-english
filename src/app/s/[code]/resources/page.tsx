@@ -5,7 +5,8 @@ import { ChevronLeftIcon } from "@/components/Icons";
 
 export default async function ResourcesPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  getBundle(code); // 404 handled by the [code] layout
+  const bundle = getBundle(code)!; // 404 handled by the [code] layout
+  const lessonResources=bundle.units.flatMap(unit=>(unit.resources||[]).map(r=>({...r,unit:unit.title,schoolYear:unit.schoolYear||"Previous year"})));
   return (
     <>
       <header
@@ -20,7 +21,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ code
           <ChevronLeftIcon />
         </Link>
       </header>
-      <ResourcesView fetchCode={code} mode="student" />
+      <ResourcesView fetchCode={code} mode="student" lessonResources={lessonResources} />
     </>
   );
 }

@@ -65,3 +65,11 @@ test('legacy teacher login stays on its existing authentication path', async () 
   const f = setup(); const body = { action: 'login', code: '__teacher__', credential: 'synthetic-teacher-password' };
   assert.equal((await accountService(body, f.deps)).ok, true); assert.deepEqual(f.calls, [body]); assert.equal(f.logins.length, 0);
 });
+
+test('preview requests cannot write or invoke AI, even with a teacher session',async()=>{
+  for(const action of ['submit','event','ai','teacherReview','teacherAccess','teacherAssignHomework','teacherPublishAssessment','logout','unknown']){
+    const f=setup();assert.equal((await accountService({action,code:'learner',session:'teacher-session',preview:true},f.deps)).ok,false);assert.equal(f.calls.length,0);
+  }
+  const f=setup();const body={action:'submissions',code:'learner',session:'teacher-session',preview:true};
+  assert.equal((await accountService(body,f.deps)).ok,true);assert.deepEqual(f.calls,[body]);
+});

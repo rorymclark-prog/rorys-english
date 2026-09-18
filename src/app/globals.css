@@ -130,3 +130,17 @@ button,
 .h-safe-bottom {
   height: env(safe-area-inset-bottom);
 }
+
+/* Shared navigation and appearance controls, for teacher and student spaces. */
+.app-menu-trigger{@apply relative flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-black/10 bg-surface px-3 text-sm font-bold text-navy dark:border-white/10 dark:bg-navy-raised dark:text-cream}
+.app-news-dot{@apply h-2 w-2 rounded-full bg-amber-deep dark:bg-amber}
+.app-menu-dialog{@apply fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-md overflow-y-auto rounded-3xl border border-black/10 bg-cream p-6 text-navy shadow-2xl dark:border-white/10 dark:bg-navy-raised dark:text-cream}
+.app-menu-dialog::backdrop{background:rgba(15,12,25,.55);backdrop-filter:blur(4px)}
+.app-menu-close{@apply grid h-11 w-11 shrink-0 place-items-center rounded-full bg-black/5 text-2xl dark:bg-white/10}
+.app-menu-link{@apply flex min-h-12 items-center justify-between gap-3 rounded-xl bg-black/[.035] px-4 py-3 text-left text-sm font-bold text-navy transition hover:bg-amber-soft dark:bg-white/5 dark:text-cream dark:hover:bg-amber-dusk}
+.app-new-pill{@apply rounded-full bg-amber-soft px-2 py-1 text-xs text-amber-deep dark:bg-amber-dusk dark:text-amber}
+.appearance-option{@apply flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border border-black/10 bg-surface p-2 text-xs font-bold dark:border-white/10 dark:bg-navy}
+.appearance-option.is-selected{@apply border-amber-deep bg-amber-soft text-amber-deep dark:border-amber dark:bg-amber-dusk dark:text-amber}
+.preview-banner{@apply flex flex-wrap items-center justify-between gap-3 rounded-b-xl bg-amber-soft px-5 py-3 text-sm text-navy dark:bg-amber-dusk dark:text-cream}
+.preview-banner p{@apply mt-1 text-xs}
+.preview-banner button{@apply min-h-11 rounded-lg border border-current px-3 text-xs font-bold}

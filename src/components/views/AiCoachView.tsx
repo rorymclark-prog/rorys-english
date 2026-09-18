@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {isStudentPreview} from "@/lib/student-preview";
 import { fetchAi, remoteEnabled } from "@/lib/remote";
 
 const WRITING_MAX = 4000; // POST body now — full short essays fit
@@ -14,6 +15,7 @@ interface ChatMsg {
 }
 
 export default function AiCoachView({ code }: { code: string }) {
+  const preview=isStudentPreview(code);
   const [mode, setMode] = useState<Mode>("tutor");
   const [input, setInput] = useState("");
   const [answer, setAnswer] = useState("");
@@ -35,7 +37,7 @@ export default function AiCoachView({ code }: { code: string }) {
     setChatReady(true);
   }, [chatKey]);
   useEffect(() => {
-    if(!chatReady)return;
+    if(!chatReady||preview)return;
     try {
       window.localStorage.setItem(chatKey, JSON.stringify(chat.slice(-30)));
     } catch {
@@ -49,6 +51,7 @@ export default function AiCoachView({ code }: { code: string }) {
     catch { /* Existing chat remains visible even if storage is unavailable. */ }
   },[code,mode]);
   const changeInput=(value:string)=>{
+    if(preview)return;
     setInput(value);
     try {localStorage.setItem(`re_ai_draft_${code}_${mode}`,value);}
     catch {setErrMsg("Draft could not be saved. Copy it before leaving this page.");}
@@ -77,6 +80,7 @@ export default function AiCoachView({ code }: { code: string }) {
   };
 
   const ask = async () => {
+    if(preview)return;
     const q = input.trim();
     if (!q || status === "loading") return;
     if (!remoteEnabled()) {
@@ -121,6 +125,7 @@ export default function AiCoachView({ code }: { code: string }) {
   };
 
   const clearChat = () => {
+    if(preview)return;
     setChat([]);
     try {
       window.localStorage.removeItem(chatKey);
@@ -195,6 +200,7 @@ export default function AiCoachView({ code }: { code: string }) {
           <div ref={chatEndRef} />
           <button
             onClick={clearChat}
+            disabled={preview}
             className="mx-auto flex min-h-[44px] items-center justify-center px-4 text-xs font-semibold text-navy-soft underline transition active:scale-[.97] dark:text-navy-mist"
           >
             Clear conversation
@@ -207,6 +213,7 @@ export default function AiCoachView({ code }: { code: string }) {
         {mode === "writing" ? (
           <textarea
             value={input}
+            readOnly={preview}
             onChange={(e) => changeInput(e.target.value.slice(0, WRITING_MAX))}
             placeholder={placeholder}
             rows={6}
@@ -215,6 +222,7 @@ export default function AiCoachView({ code }: { code: string }) {
         ) : (
           <input
             value={input}
+            readOnly={preview}
             onChange={(e) => changeInput(e.target.value.slice(0, mode === "tutor" ? TUTOR_MAX : 200))}
             onKeyDown={(e) => e.key === "Enter" && ask()}
             placeholder={placeholder}
@@ -230,7 +238,7 @@ export default function AiCoachView({ code }: { code: string }) {
 
       <button
         onClick={ask}
-        disabled={status === "loading" || !input.trim()}
+        disabled={preview || status === "loading" || !input.trim()}
         className={`mt-2 min-h-[52px] w-full rounded-xl bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-4 text-base font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none ${
           status === "loading" ? "" : "disabled:opacity-50"
         }`}

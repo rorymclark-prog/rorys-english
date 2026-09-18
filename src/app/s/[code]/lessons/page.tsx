@@ -1,4 +1,5 @@
 import Link from "next/link";
+import StudyToolLink from "@/components/StudyToolLink";
 import {getBundle} from "@/lib/content";
 import Screen from "@/components/Screen";
 export default async function LessonsPage({params}:{params:Promise<{code:string}>}) {
@@ -17,7 +18,7 @@ export default async function LessonsPage({params}:{params:Promise<{code:string}
         {r.blurb&&<p className="mt-1 text-sm">{r.blurb}</p>}
         {r.url.endsWith(".mp3")&&<audio className="mt-3 w-full" controls preload="none" src={resolve(r.url)} aria-label={r.title}>Open the audio link above to listen.</audio>}
       </div>)}
-      {unit.studyTools.map(t=><a key={t.url} className="mt-3 block underline" href={resolve(t.url)}>{t.title} · optional practice</a>)}
+      {unit.studyTools.map(t=><StudyToolLink key={t.url} className="mt-3 block underline" href={resolve(t.url)}>{t.title} · optional practice</StudyToolLink>)}
     </section>)}
     <Link className="mt-5 inline-block underline" href={`/s/${code}/resources/`}>Other approved documents →</Link>
   </Screen>;
