@@ -44,7 +44,7 @@ npm run build
 
 Live checks covered teacher/student authentication, denied cross-student access, exact written answers, duplicate retry, teacher feedback, revisions and the word helper. The two synthetic submissions were removed and existing records retained. Rory confirmed browser teacher sign-in; automated browser and installed-phone checks were unavailable during activation.
 
-The source includes 32 automated tests for access isolation, teacher-session revocation, immutable/idempotent submissions, teacher review, quiz retries, resource safety, date handling, archived links and durable outbox behaviour.
+The source includes 36 automated tests for access isolation, teacher-session revocation, immutable/idempotent submissions, teacher review, quiz retries, resource safety, date handling, archived links and durable outbox behaviour.
 
 ## Production and future releases
 

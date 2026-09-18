@@ -1,6 +1,7 @@
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { accountService, type Account, type Reply } from "@/lib/server/account-service";
+import { postProgress } from "@/lib/server/progress-transport";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -9,11 +10,7 @@ const pending = new Map<string, Promise<string>>();
 async function upstream(body: Record<string, unknown>): Promise<Reply> {
   const endpoint = process.env.APPS_SCRIPT_URL;
   if (!endpoint) throw new Error("Missing progress service");
-  const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(25000) });
-  if (!response.ok) throw new Error("Progress service unavailable");
-  const data = await response.json();
-  if (typeof data?.ok !== "boolean" || data.service === "rorys-english") throw new Error("Unexpected progress response");
-  return data;
+  return postProgress(endpoint, body);
 }
 async function backendSession(code: string, idToken: string, refresh = false): Promise<string> {
   if (!refresh && (sessions.get(code)?.expires || 0) > Date.now() + 60000) return sessions.get(code)!.token;
