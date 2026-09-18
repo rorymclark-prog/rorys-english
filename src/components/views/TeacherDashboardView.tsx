@@ -12,18 +12,15 @@ import {
   type WritingAssessment,
   type TeacherStudent,
 } from "@/lib/remote";
-import { ChartIcon, ChevronRightIcon, ChevronLeftIcon } from "@/components/Icons";
+import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon } from "@/components/Icons";
 import ProgressView from "./ProgressView";
 import { login, logout, savedSession, forgetSession } from "@/lib/api";
 import { publishAssessment } from "@/lib/remote";
 import TeacherReviewPanel from "./TeacherReviewPanel";
+import studentRoster from "../../../content/students.json";
 
 // One-time removal of the old persisted password; only expiring tokens remain.
 const STORAGE_KEY = "re_teacher_secret";
-
-// A student is flagged "quiet" once nothing has synced in this many days —
-// framed for the tutor as "worth checking in", not a punitive metric.
-const QUIET_DAYS = 7;
 
 type LoadState = "idle" | "loading" | "ok" | "error";
 
@@ -36,6 +33,7 @@ export default function TeacherDashboardView() {
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [showFullProgress, setShowFullProgress] = useState(false);
   const [addingStudent, setAddingStudent] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [input, setInput] = useState("");
   const [authing, setAuthing] = useState(false);
@@ -77,7 +75,7 @@ export default function TeacherDashboardView() {
     return () => {
       live = false;
     };
-  }, [secret]);
+  }, [secret, refreshKey]);
 
   async function submitGate(e: React.FormEvent) {
     e.preventDefault();
@@ -142,74 +140,37 @@ export default function TeacherDashboardView() {
   }
 
   return (
-    <>
-      <header
-        className="sticky top-0 z-10 flex items-start justify-between gap-3 bg-cream px-5 pb-3 dark:bg-navy"
-        style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
-      >
-        <div className="min-w-0">
-          <h1 className="display text-2xl text-navy dark:text-cream">Students</h1>
-          {generatedAt && <p className="tnum mt-0.5 text-sm text-navy-soft dark:text-navy-mist">Updated {generatedAt}</p>}
+    <div className="teacher-workspace">
+      <header className="teacher-topbar">
+        <a href="/teacher/" className="teacher-brand"><span aria-hidden>RE</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
+        <div className="flex items-center gap-2">
+          <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
+          <button type="button" onClick={signOut} className="teacher-quiet-button">Sign out</button>
         </div>
-        <button
-          type="button"
-          onClick={signOut}
-          className="shrink-0 rounded-full px-3 py-2 text-xs font-semibold text-navy-soft transition ease-out2026 duration-200 hover:bg-black/5 active:scale-[.97] dark:text-navy-mist dark:hover:bg-white/10"
-        >
-          Sign out
-        </button>
       </header>
-
-      <main className="px-5 pb-10">
-        {loadState === "loading" && (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-36 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark"
-              />
-            ))}
+      <main>
+        <section className="teacher-welcome">
+          <div>
+            <p className="teacher-eyebrow">YOUR TEACHING, AT A GLANCE</p>
+            <h1>Room to learn.<br/><span>Space to grow.</span></h1>
+            <p>Welcome back, Rory. Choose a student to review their work,<br className="hidden sm:block"/> give feedback or plan their next step.</p>
           </div>
-        )}
-
-        {loadState === "error" && (
-          <p className="mt-6 rounded-card bg-surface p-5 text-center text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark">
-            Couldn&apos;t load the dashboard right now. Check your connection and try again.
-          </p>
-        )}
-
-        {loadState === "ok" && students && (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {students.length === 0 && (
-              <p className="col-span-full rounded-card bg-surface p-5 text-center text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark">
-                No students configured yet.
-              </p>
-            )}
-            {students.map((s) => (
-              <StudentCard key={s.code} student={s} onOpen={() => setSelectedCode(s.code)} />
-            ))}
-            <button
-              type="button"
-              onClick={() => setAddingStudent(true)}
-              className="flex min-h-[9rem] flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed border-amber-deep/40 p-4 text-amber-deep transition ease-out2026 duration-200 active:scale-[.97] dark:border-amber/40 dark:text-amber"
-            >
-              <span className="text-2xl leading-none" aria-hidden>+</span>
-              <span className="text-sm font-bold">Add student</span>
-            </button>
+          <div className="teacher-book-art" aria-hidden="true"><BookIcon/><span className="teacher-art-star">✦</span><span className="teacher-art-note"><CheckSquareIcon/> A little practice.<br/>A little progress.</span></div>
+        </section>
+        {loadState === "loading" && <div className="teacher-student-grid" role="status" aria-label="Loading students">{[0,1].map(i=><div key={i} className="h-72 animate-pulse rounded-card bg-amber-soft dark:bg-amber-dusk"/>)}</div>}
+        {loadState === "error" && <div className="teacher-empty" role="alert"><ChartIcon/><h2>Let’s try that again</h2><p>Your students’ records could not be loaded.</p><button className="teacher-primary" onClick={()=>setRefreshKey(k=>k+1)}>Reload students</button></div>}
+        {loadState === "ok" && students && <>
+          <div className="teacher-section-heading"><div><p className="teacher-eyebrow">ONE STEP AT A TIME</p><h2>Your students <span>{students.length}</span></h2></div><button type="button" onClick={()=>setAddingStudent(true)} className="teacher-quiet-button">+ Add student</button></div>
+          <div className="teacher-student-grid">
+            {students.length===0 && <div className="teacher-empty"><BookIcon/><h2>Your classroom starts here</h2><p>Add your first student to get started.</p></div>}
+            {students.map(student=><StudentCard key={student.code} student={student} onOpen={()=>setSelectedCode(student.code)}/>)}
           </div>
-        )}
+          <div className="teacher-bottom-note"><CheckSquareIcon/><p>Review the work. Celebrate the effort. Choose the next step.<small>Figures include earlier records. A best quiz score is a snapshot, not a measure of mastery.</small></p></div>
+          {generatedAt && <p className="teacher-updated">Records updated {generatedAt}</p>}
+        </>}
       </main>
-
-      {addingStudent && (
-        <AddStudentSheet
-          secret={secret}
-          onClose={() => setAddingStudent(false)}
-          onAdded={(s) =>
-            setStudents((prev) => [...(prev ?? []), { code: s.code, name: s.name, summary: null, focusNote: "" }])
-          }
-        />
-      )}
-    </>
+      {addingStudent && <AddStudentSheet secret={secret} onClose={()=>setAddingStudent(false)} onAdded={s=>setStudents(prev=>[...(prev??[]),{code:s.code,name:s.name,summary:null,focusNote:""}])}/>}
+    </div>
   );
 }
 
@@ -262,54 +223,23 @@ function PasswordGate({
   );
 }
 
+function ScoreRing({ value }: { value: number | string | undefined }) {
+  const numeric = value !== undefined && String(value).trim() !== "" ? Number(value) : NaN;
+  const score = Number.isFinite(numeric) && numeric >= 0 && numeric <= 100 ? numeric : null;
+  return <div className="teacher-score" aria-label={score === null ? "No quiz score recorded" : `Best quiz score: ${score}%`}>
+    <svg viewBox="0 0 100 100" aria-hidden="true"><circle className="teacher-score-track" cx="50" cy="50" r="42"/><circle className="teacher-score-fill" cx="50" cy="50" r="42" pathLength="100" strokeDasharray={`${score ?? 0} 100`}/></svg>
+    <div><strong>{score === null ? "—" : `${score}%`}</strong><small>Best quiz</small></div>
+  </div>;
+}
 function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () => void }) {
   const s = student.summary;
-  const quiet = false; // No inactivity warning without an agreed term calendar.
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex flex-col gap-3 rounded-card bg-surface p-4 text-left shadow-card transition ease-out2026 duration-200 active:scale-[.97] dark:bg-navy-raised dark:shadow-card-dark"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="display text-lg text-navy dark:text-cream">{student.name}</span>
-        <ChevronRightIcon className="shrink-0 text-navy-soft dark:text-navy-mist" />
-      </div>
-      {s ? (
-        <>
-          <div className="grid grid-cols-3 gap-2">
-            <Stat label="HW" value={String(s.homeworkDone)} />
-            <Stat label="Best quiz" value={s.bestQuizPct === "—" || s.bestQuizPct === "" ? "—" : `${s.bestQuizPct}%`} />
-            <Stat label="Writing" value={String(s.writingSamples)} />
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <p className="tnum text-xs text-navy-soft dark:text-navy-mist">Updated {s.lastUpdated}</p>
-            {quiet && (
-              <span className="tnum shrink-0 rounded-full bg-warn-soft px-2 py-0.5 text-[0.625rem] font-bold text-warn dark:bg-warn-dusk dark:text-warn-bright">
-                Quiet {s.daysSinceActivity}d
-              </span>
-            )}
-          </div>
-        </>
-      ) : (
-        <p className="text-sm text-navy-soft dark:text-navy-mist">Not set up yet</p>
-      )}
-      {student.focusNote && (
-        <p className="truncate text-xs text-amber-deep dark:text-amber">📌 {student.focusNote}</p>
-      )}
-    </button>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-amber-soft p-2 text-center dark:bg-amber-dusk">
-      <div className="tnum text-base font-extrabold text-navy dark:text-cream">{value}</div>
-      <div className="text-[0.625rem] font-medium uppercase tracking-wide text-navy-soft dark:text-navy-mist">
-        {label}
-      </div>
-    </div>
-  );
+  const unit = studentRoster.find(entry=>entry.code===student.code)?.units.find(unit=>unit.active);
+  return <button type="button" onClick={onOpen} className={`teacher-student-card ${student.code.startsWith("ferdi-") ? "teacher-mint" : "teacher-lilac"}`} aria-label={`Open ${student.name}’s teaching workspace`}>
+    <div className="teacher-card-heading"><span className="teacher-avatar">{student.name.slice(0,1).toUpperCase()}</span><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
+    <div className="teacher-card-data"><ScoreRing value={s?.bestQuizPct}/><div className="teacher-card-counts"><div><CheckSquareIcon/><span><strong>{s?.homeworkDone ?? "—"}</strong> homework recorded</span></div><div><BookIcon/><span><strong>{s?.writingSamples ?? "—"}</strong> writing samples</span></div><div><ChartIcon/><span><strong>{s?.quizRounds ?? "—"}</strong> quiz rounds</span></div></div></div>
+    <div className="teacher-focus"><span>{student.focusNote ? "CURRENT FOCUS" : "NEXT STEP"}</span><p>{student.focusNote || "Open their workspace to review answers or assign a little practice."}</p></div>
+    <div className="teacher-card-footer"><span>{s?.lastUpdated ? `Last activity ${s.lastUpdated}` : "No activity recorded yet"}</span><strong>Open workspace <span aria-hidden>↗</span></strong></div>
+  </button>;
 }
 
 // ── One student's quick-action panel ────────────────────────────────────────
@@ -326,6 +256,7 @@ function TeacherStudentPanel({
   onViewProgress: () => void;
   onPatch: (patch: Partial<TeacherStudent>) => void;
 }) {
+  const [section, setSection] = useState<"review" | "assign" | "assess">("review");
   const [note, setNote] = useState(student.focusNote);
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
@@ -378,38 +309,24 @@ function TeacherStudentPanel({
   const s = student.summary;
 
   return (
-    <>
-      <header
-        className="sticky top-0 z-10 flex items-center gap-2 bg-cream px-3 pb-3 dark:bg-navy"
-        style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
-      >
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="Back to students"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft transition hover:bg-black/5 active:scale-[.97] dark:text-navy-mist dark:hover:bg-white/10"
-        >
-          <ChevronLeftIcon />
-        </button>
-        <h1 className="display truncate text-2xl text-navy dark:text-cream">{student.name}</h1>
+    <div className="teacher-workspace">
+      <header className="teacher-topbar">
+        <button type="button" onClick={onBack} className="teacher-quiet-button flex items-center gap-2"><ChevronLeftIcon/>All students</button>
+        <span className="teacher-eyebrow">RORY’S ENGLISH</span>
       </header>
-
-      <main className="px-5 pb-10">
-        <button
-          type="button"
-          onClick={onViewProgress}
-          className="flex w-full items-center justify-between gap-3 rounded-card bg-surface p-4 shadow-card transition active:scale-[.97] dark:bg-navy-raised dark:shadow-card-dark"
-        >
-          <span className="font-bold text-navy dark:text-cream">View full progress</span>
-          <ChevronRightIcon className="shrink-0 text-navy-soft dark:text-navy-mist" />
-        </button>
-        {s?.lastUpdated && (
-          <p className="tnum mt-2 text-center text-xs text-navy-soft dark:text-navy-mist">
-            Last activity {s.lastUpdated}
-            {s.daysSinceActivity != null && s.daysSinceActivity >= QUIET_DAYS ? ` · ${s.daysSinceActivity} days ago` : ""}
-          </p>
-        )}
-
+      <main>
+        <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-mint" : "teacher-lilac"}`}>
+          <div className="teacher-banner-name"><span className="teacher-avatar">{student.name.slice(0,1).toUpperCase()}</span><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Last activity ${s.lastUpdated}` : "Ready for the first step"}</p></div></div>
+          <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ScoreRing value={s?.bestQuizPct}/><span>Full progress <span aria-hidden>↗</span></span></button>
+        </section>
+        <nav className="teacher-section-nav" aria-label="Student workspace sections">
+          <button type="button" aria-pressed={section === "review"} onClick={()=>setSection("review")}><CheckSquareIcon/><span>Work & feedback<small>Read, respond, encourage</small></span></button>
+          <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><BookIcon/><span>Plan homework<small>Set the next step</small></span></button>
+          <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><ChartIcon/><span>Assessments<small>Record & reflect</small></span></button>
+        </nav>
+        <div hidden={section !== "review"}><TeacherReviewPanel code={student.code}/></div>
+        <div hidden={section !== "assign"}>
+        <div className="teacher-form-grid">
         {/* Focus note — surfaces on the student's Today screen AND is woven
             into their next AI-tutor/writing-coach reply as soft context. */}
         <section className="mt-5">
@@ -418,6 +335,7 @@ function TeacherStudentPanel({
           </h2>
           <div className="rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
             <textarea
+              aria-label="Student focus note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="e.g. Great with past tenses now — let's work on conditionals next"
@@ -450,6 +368,7 @@ function TeacherStudentPanel({
             className="space-y-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark"
           >
             <input
+              aria-label="Homework title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title (e.g. Read Unit 11 pages 4–6)"
@@ -457,6 +376,7 @@ function TeacherStudentPanel({
               className="w-full rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm text-navy outline-none placeholder:text-navy-soft dark:border-white/10 dark:text-cream dark:placeholder:text-navy-mist"
             />
             <input
+              aria-label="Homework instructions"
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               placeholder="Details (optional)"
@@ -464,6 +384,7 @@ function TeacherStudentPanel({
               className="w-full rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm text-navy outline-none placeholder:text-navy-soft dark:border-white/10 dark:text-cream dark:placeholder:text-navy-mist"
             />
             <input
+              aria-label="Homework due date (optional)"
               value={due}
               onChange={(e) => setDue(e.target.value)}
               placeholder="Due (optional, e.g. Mon 24 Aug)"
@@ -481,16 +402,16 @@ function TeacherStudentPanel({
           </form>
         </section>
 
-        {/* Score logging + writing analysis — the three assessment types that
-            already have a Sheet tab + Progress display, but no way in until
-            now (School Tests/Mock Tests never had a pipeline at all; Writing
-            only had the local scripts/analyse-writing.py). */}
-        <SchoolTestForm secret={secret} code={student.code} />
-        <MockTestForm secret={secret} code={student.code} />
-        <TeacherReviewPanel code={student.code} />
-        <WritingAnalysisForm secret={secret} code={student.code} />
+        </div>
+        </div>
+        <div hidden={section !== "assess"} className="teacher-assessments">
+          <p className="teacher-section-intro">Keep a record of school results and your own feedback. Choose what you’d like to add.</p>
+          <details open><summary><CheckSquareIcon/>School test<span>Record a result</span></summary><SchoolTestForm secret={secret} code={student.code}/></details>
+          <details><summary><ChartIcon/>Mock exam<span>Practise for the real thing</span></summary><MockTestForm secret={secret} code={student.code}/></details>
+          <details><summary><BookIcon/>Writing feedback<span>Prepare and review an AI draft</span></summary><WritingAnalysisForm secret={secret} code={student.code}/></details>
+        </div>
       </main>
-    </>
+    </div>
   );
 }
 

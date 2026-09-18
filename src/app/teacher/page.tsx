@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./teacher.css";
 import ThemeInit from "@/components/ThemeInit";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import TeacherDashboardView from "@/components/views/TeacherDashboardView";
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 // the one screen a tutor is likely to actually open on a laptop or iPad.
 export default function TeacherPage() {
   return (
-    <div className="mx-auto min-h-dvh max-w-3xl">
+    <div className="mx-auto min-h-dvh max-w-6xl">
       <ThemeInit />
       <TeacherDashboardView />
       <ServiceWorkerRegister />
