@@ -13,7 +13,7 @@ test('a temporary Google response failure retries only GET and never repeats the
   const result=await postProgress(endpoint,{action:'submit',session:'private-session',answers:{a:'exact original'}},async (url,opts)=>{calls.push({url:String(url),...opts});return responses.shift();});
   assert.equal(result.id,'original-receipt');assert.deepEqual(calls.map(c=>c.method),['POST','GET','GET']);
   assert.equal(JSON.parse(calls[0].body).answers.a,'exact original');
-  assert.equal(calls[1].body,undefined);assert.equal(calls[1].headers,undefined);assert.equal(calls[1].redirect,'error');
+  assert.equal(calls[1].body,undefined);assert.equal(calls[1].headers,undefined);assert.equal(calls[1].redirect,'manual');
 });
 test('an uncertain initial operation is never automatically replayed', async()=>{
   let calls=0;await assert.rejects(postProgress(endpoint,{action:'ai'},async()=>{calls++;return new Response(null,{status:503});}));assert.equal(calls,1);
@@ -24,4 +24,14 @@ test('credentials cannot follow an unexpected redirect destination',async()=>{
 test('health HTML and malformed responses never count as a saved answer receipt',async()=>{
   await assert.rejects(postProgress(endpoint,{action:'submit'},async()=>Response.json({ok:true,service:'rorys-english'})));
   await assert.rejects(postProgress(endpoint,{action:'submit'},async()=>new Response('<html>Not found</html>')));
+});
+
+test('Google result redirects stay GET requests and never resend the original credential',async()=>{
+ const calls=[];const responses=[redirect(),new Response(null,{status:302,headers:{location:'https://script.googleusercontent.com/macros/echo?next-response'}}),Response.json({ok:true})];
+ assert.equal((await postProgress(endpoint,{action:'login',credential:'private'},async(url,options)=>{calls.push({url:String(url),...options});return responses.shift();})).ok,true);
+ assert.deepEqual(calls.map(c=>c.method),['POST','GET','GET']);assert.equal(calls[2].body,undefined);
+});
+test('Google result redirect loops and sign-in redirects fail closed',async()=>{
+ let calls=0;await assert.rejects(postProgress(endpoint,{action:'submit'},async()=>{calls++;return redirect();}));assert.equal(calls,5);
+ let otherCalls=0;await assert.rejects(postProgress(endpoint,{action:'submit'},async()=>++otherCalls===1?redirect():new Response(null,{status:302,headers:{location:'https://accounts.google.com/ServiceLogin'}})));assert.equal(otherCalls,2);
 });

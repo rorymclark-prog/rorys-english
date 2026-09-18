@@ -86,17 +86,13 @@ export default function TeacherDashboardView() {
     setAuthing(true);
     setAuthError(null);
     const session = await login("__teacher__", attempt);
-    const d = session.ok ? await fetchTeacherDashboard(session.token) : session;
     setAuthing(false);
-    if (d.ok) {
-      const dashboard = d as import("@/lib/remote").TeacherDashboard;
-      setStudents(dashboard.students ?? []);
-      setGeneratedAt(dashboard.generatedAt);
-      setLoadState("ok");
+    if (session.ok) {
+      // The session effect loads the dashboard once after sign-in.
       setSecret(session.token);
       setInput("");
     } else {
-      setAuthError(d.error || "Could not sign in. Please try again.");
+      setAuthError(session.error || "Could not sign in. Please try again.");
     }
   }
 

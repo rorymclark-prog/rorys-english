@@ -44,7 +44,9 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
       if (attempt + 1 < attempts) await new Promise(resolve => setTimeout(resolve, 500));
     } finally { clearTimeout(timeout); }
   }
-  return { ok: false, error: "Could not reach Rory’s app. Your saved draft is still on this device. Try again when connected." } as T;
+  return { ok: false, error: ["login", "accountLogin"].includes(String(body.action))
+    ? "Could not confirm sign-in because the service is taking too long. Please try again; you do not need to change your password."
+    : "Could not reach Rory’s app. Your saved draft is still on this device. Try again when connected." } as T;
 }
 export async function login(code: string, credential: string): Promise<Session> {
   const result = await request<Session>({ action: "login", code, credential });

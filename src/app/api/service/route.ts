@@ -1,7 +1,8 @@
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { accountService, type Account, type Reply } from "@/lib/server/account-service";
-import { postProgress } from "@/lib/server/progress-transport";
+import { postProgress, ProgressTransportError } from "@/lib/server/progress-transport";
+import { googleHttp } from "@/lib/server/google-http";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -10,7 +11,7 @@ const pending = new Map<string, Promise<string>>();
 async function upstream(body: Record<string, unknown>): Promise<Reply> {
   const endpoint = process.env.APPS_SCRIPT_URL;
   if (!endpoint) throw new Error("Missing progress service");
-  return postProgress(endpoint, body);
+  return postProgress(endpoint, body, googleHttp);
 }
 async function backendSession(code: string, idToken: string, refresh = false): Promise<string> {
   if (!refresh && (sessions.get(code)?.expires || 0) > Date.now() + 60000) return sessions.get(code)!.token;
@@ -45,7 +46,8 @@ export async function POST(request: Request) {
       },
     });
     return Response.json(result, { headers });
-  } catch {
+  } catch (error) {
+    console.error("Progress connection failed", error instanceof ProgressTransportError ? {stage:error.stage,status:error.status} : {stage:"service"});
     return Response.json({ ok: false, error: "Could not connect to Rory’s app. Your saved draft is still on this device. Please try again." }, { status: 503, headers });
   }
 }
