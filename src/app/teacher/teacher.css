@@ -23,9 +23,9 @@
 .teacher-section-heading h2 span{display:inline-grid;place-items:center;width:1.7rem;height:1.7rem;font-size:.8rem;vertical-align:middle;border-radius:50%;background:var(--teacher-line);margin-left:.4rem}
 .teacher-student-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem}
 .teacher-lilac{--student-tint:#f0ecff;--student-accent:#6250b8;--student-avatar:#e1d8ff;--student-track:#e6def6}
-.teacher-mint{--student-tint:#e9f3ef;--student-accent:#32705b;--student-avatar:#cfe6da;--student-track:#d7e8e0}
+.teacher-blue{--student-tint:#e8edf9;--student-accent:#3656aa;--student-avatar:#cddafa;--student-track:#d7e1f7}
 .dark .teacher-lilac{--student-tint:#30293f;--student-accent:#c4b3ff;--student-avatar:#443755;--student-track:#483b60}
-.dark .teacher-mint{--student-tint:#24382f;--student-accent:#a4d9bd;--student-avatar:#344f40;--student-track:#3c5548}
+.dark .teacher-blue{--student-tint:#263553;--student-accent:#b4c7ff;--student-avatar:#354970;--student-track:#405275}
 .teacher-student-card{min-width:0;text-align:left;background:var(--teacher-surface);border:1px solid var(--teacher-line);border-radius:1.6rem;overflow:hidden;box-shadow:0 6px 24px #15122405;transition:transform .2s,box-shadow .2s}
 .teacher-student-card:hover{transform:translateY(-3px);box-shadow:0 12px 26px #15122410}
 .teacher-card-heading{display:flex;align-items:center;gap:.9rem;padding:1.35rem;background:var(--student-tint)}
@@ -97,3 +97,11 @@
 .teacher-management{margin-top:2rem}
 @media(max-width:850px){.teacher-book-art{width:12rem;min-width:12rem;height:10rem}.teacher-card-data{gap:.8rem;padding:1.2rem 1rem}.teacher-score{width:6rem;height:6rem}.teacher-card-counts{font-size:.67rem}.teacher-card-footer{flex-direction:column;align-items:flex-start}.teacher-section-nav small{display:none}}
 @media(max-width:640px){.teacher-workspace{padding:0 1rem 2rem}.teacher-topbar{padding:1rem 0}.teacher-brand{font-size:.85rem}.teacher-brand small{font-size:.5rem}.teacher-quiet-button{padding:.5rem;font-size:.7rem}.teacher-welcome{padding:2rem 0;gap:.5rem}.teacher-welcome h1{font-size:2.3rem}.teacher-welcome p:last-child{font-size:.8rem}.teacher-book-art{display:none}.teacher-student-grid,.teacher-form-grid{grid-template-columns:1fr}.teacher-card-data{gap:1.5rem;padding:1.4rem}.teacher-score{width:7rem;height:7rem}.teacher-card-counts{font-size:.8rem}.teacher-card-footer{flex-direction:row;align-items:center;flex-wrap:wrap}.teacher-student-banner{padding:1.2rem;align-items:flex-start}.teacher-banner-name{gap:.7rem}.teacher-banner-name .teacher-avatar{width:3rem;height:3rem;font-size:1.5rem}.teacher-banner-name h1{font-size:1.7rem}.teacher-banner-name .teacher-eyebrow{font-size:.5rem}.teacher-progress-button{flex-direction:column;gap:.3rem;font-size:.65rem}.teacher-progress-button .teacher-score{width:4rem;height:4rem}.teacher-progress-button .teacher-score strong{font-size:.95rem}.teacher-progress-button .teacher-score small{font-size:.45rem}.teacher-section-nav{gap:.35rem}.teacher-section-nav button{flex-direction:column;gap:.4rem;text-align:center;font-size:.65rem;padding:.75rem .25rem}.teacher-assessments summary>span,.teacher-management summary>span{display:none}.teacher-review-header h2{font-size:1.1rem}}
+
+/* Shared visual direction approved in the local design review. */
+.teacher-workspace,.dark .teacher-workspace{color:var(--re-ink);--teacher-muted:var(--re-muted);--teacher-line:var(--re-line);--teacher-surface:var(--re-surface);--teacher-accent:var(--re-accent);padding:0 clamp(1rem,4vw,4.5rem) 3rem}
+.teacher-brand>span,.teacher-primary{background:var(--re-accent);color:var(--re-onaccent)}.teacher-book-art,.dark .teacher-book-art{background:var(--re-soft)}
+.teacher-section-nav button[aria-pressed=true],.dark .teacher-section-nav button[aria-pressed=true]{background:var(--re-soft);color:var(--re-accent);border-color:var(--re-accent)}
+.teacher-welcome{padding:3rem 0 2.5rem}.teacher-student-grid{gap:1.6rem}.teacher-student-card{border-radius:21px}.teacher-brand>span{font:italic 1.4rem Georgia,serif}.teacher-status{background:var(--re-purplesoft);color:var(--re-purple)}
+@media(min-width:1400px){.teacher-student-card{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}.teacher-card-heading{grid-column:1/-1;padding:1.6rem}.teacher-card-data{padding:2rem 1.6rem}.teacher-focus{margin:1.5rem 1.5rem 1.5rem 0;align-self:center}.teacher-card-footer{grid-column:1/-1}}
+@media(max-width:700px){.teacher-workspace,.dark .teacher-workspace{padding:0 1rem 2rem}.teacher-topbar .re-appearance{display:none}}

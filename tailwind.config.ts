@@ -1,17 +1,6 @@
 import type { Config } from "tailwindcss";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// "VOLTSTONE" palette — 2026 design system (design/MODERN-2026-SPEC.md).
-// Electric indigo accent (Discord/Knowunity lane, teen-validated) on warm
-// stone; Spotify-charcoal dark mode is the flagship. Legacy color NAMES are
-// kept (navy/cream/amber/burgundy) so ~290 existing call sites cascade — only
-// the VALUES changed. Every pair below was WCAG-verified by a 3-judge panel:
-//   ink on bg 16.96:1 · indigo text on bg 5.93:1 · white on indigo 6.29:1
-//   ink on bright-accent 7.92:1 (both modes) · ember on bg 4.89:1
-// Rule that fell out of the math: NEVER use amber-deep (#4F46E5) as a ring or
-// icon on the dark base (2.86:1) — dark mode always accents with amber
-// (#A2A4FC, 7.92:1).
-// ─────────────────────────────────────────────────────────────────────────────
+// Paper & blue. Keep legacy token names compatible with existing screens.
 const config: Config = {
   darkMode: "class",
   content: ["./src/**/*.{ts,tsx}"],
@@ -20,20 +9,20 @@ const config: Config = {
       colors: {
         // ink: primary text in light mode AND the dark-mode charcoal base.
         navy: {
-          DEFAULT: "#17161C", // violet-cast charcoal (never #000)
-          soft: "#5A5662", //   muted/secondary text on light
-          raised: "#201E26", // dark-mode raised surface (+1 elevation, tone not borders)
-          mist: "#B3B1BD", //   dark-mode muted body text (captions may use #A9A6B4)
+          DEFAULT: "#202A40", // violet-cast charcoal (never #000)
+          soft: "#616C80", //   muted/secondary text on light
+          raised: "#1F293B", // dark-mode raised surface (+1 elevation, tone not borders)
+          mist: "#B4BFD3", //   dark-mode muted body text (captions may use #A9A6B4)
         },
         // warm stone near-white: page bg in light mode, text in dark mode.
-        cream: "#FAF8F5",
+        cream: "#F7F6F2",
         // the ONE chromatic accent — electric indigo, used functionally only.
         amber: {
-          DEFAULT: "#A2A4FC", // tone-80 indigo: dark-mode accent + bright fills (ink text on it)
-          deep: "#4F46E5", //    light-mode accent text / primary buttons / light focus ring
-          press: "#4338CA", //   hover/pressed step
-          soft: "#ECEAFD", //    lavender wash — light active pills/tints
-          dusk: "#262347", //    indigo-tinted wash — dark active pills/tints
+          DEFAULT: "#B4C7FF", // tone-80 indigo: dark-mode accent + bright fills (ink text on it)
+          deep: "#3656aa", //    light-mode accent text / primary buttons / light focus ring
+          press: "#2c468d", //   hover/pressed step
+          soft: "#E8EDF9", //    lavender wash — light active pills/tints
+          dusk: "#2E426F", //    indigo-tinted wash — dark active pills/tints
         },
         // ember: the warm REWARD channel (streaks, progress) — quiet, tints-first.
         burgundy: {
@@ -47,7 +36,7 @@ const config: Config = {
         warn: { DEFAULT: "#92400E", soft: "#FFFBEB", bright: "#FBBF24", dusk: "#2E2413" },
         bad: { DEFAULT: "#BE123C", soft: "#FFF1F2", bright: "#FDA4AF", dusk: "#2E1A1E" },
         // card surface (light) — never pure #fff per spec.
-        surface: "#FEFDFB",
+        surface: "#FFFEFA",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],

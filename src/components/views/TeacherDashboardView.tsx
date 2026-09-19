@@ -18,6 +18,7 @@ import { login, savedSession, forgetSession } from "@/lib/api";
 import { publishAssessment } from "@/lib/remote";
 import TeacherReviewPanel from "./TeacherReviewPanel";
 import AppMenu from "@/components/AppMenu";
+import QuickAppearance from "@/components/QuickAppearance";
 import StudentPreviewButton from "@/components/StudentPreviewButton";
 import studentRoster from "../../../content/students.json";
 
@@ -110,7 +111,7 @@ export default function TeacherDashboardView() {
   // Drill-down: full per-student progress (same tables the student/parent see).
   if (secret && loadState === "ok" && selected && showFullProgress) {
     return (
-      <div><div className="flex justify-end px-5 pt-3"><AppMenu teacher/></div><ProgressView
+      <div><div className="flex justify-end px-5 pt-3"><QuickAppearance/><AppMenu teacher/></div><ProgressView
         fetchCode={selected.code}
         displayName={selected.name}
         mode="teacher"
@@ -138,7 +139,7 @@ export default function TeacherDashboardView() {
         <a href="/teacher/" className="teacher-brand"><span aria-hidden>RE</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
         <div className="flex items-center gap-2">
           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
-          <AppMenu teacher/>
+          <QuickAppearance/><AppMenu teacher/>
         </div>
       </header>
       <main>
@@ -227,7 +228,7 @@ function ScoreRing({ value }: { value: number | string | undefined }) {
 function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () => void }) {
   const s = student.summary;
   const unit = studentRoster.find(entry=>entry.code===student.code)?.units.find(unit=>unit.active);
-  return <button type="button" onClick={onOpen} className={`teacher-student-card ${student.code.startsWith("ferdi-") ? "teacher-mint" : "teacher-lilac"}`} aria-label={`Open ${student.name}’s teaching workspace`}>
+  return <button type="button" onClick={onOpen} className={`teacher-student-card ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`} aria-label={`Open ${student.name}’s teaching workspace`}>
     <div className="teacher-card-heading"><span className="teacher-avatar">{student.name.slice(0,1).toUpperCase()}</span><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
     <div className="teacher-card-data"><ScoreRing value={s?.bestQuizPct}/><div className="teacher-card-counts"><div><CheckSquareIcon/><span><strong>{s?.homeworkDone ?? "—"}</strong> homework recorded</span></div><div><BookIcon/><span><strong>{s?.writingSamples ?? "—"}</strong> writing samples</span></div><div><ChartIcon/><span><strong>{s?.quizRounds ?? "—"}</strong> quiz rounds</span></div></div></div>
     <div className="teacher-focus"><span>{student.focusNote ? "CURRENT FOCUS" : "NEXT STEP"}</span><p>{student.focusNote || "Open their workspace to review answers or assign a little practice."}</p></div>
@@ -305,10 +306,10 @@ function TeacherStudentPanel({
     <div className="teacher-workspace">
       <header className="teacher-topbar">
         <button type="button" onClick={onBack} className="teacher-quiet-button flex items-center gap-2"><ChevronLeftIcon/>All students</button>
-        <AppMenu teacher/>
+        <QuickAppearance/><AppMenu teacher/>
       </header>
       <main>
-        <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-mint" : "teacher-lilac"}`}>
+        <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`}>
           <div className="teacher-banner-name"><span className="teacher-avatar">{student.name.slice(0,1).toUpperCase()}</span><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Last activity ${s.lastUpdated}` : "Ready for the first step"}</p></div></div>
           <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ScoreRing value={s?.bestQuizPct}/><span>Full progress <span aria-hidden>↗</span></span></button>
         </section>

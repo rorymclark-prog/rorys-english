@@ -1,168 +1,131 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
-
-// Record-and-compare speaking practice. No scoring, no server: the student hears
-// a model sentence (TTS), records themselves (MediaRecorder), and plays both back
-// to self-compare. Audio is an in-memory blob URL — it never leaves the device.
+import Link from "next/link";
+import { useStudent } from "@/components/StudentContext";
+import { isStudentPreview } from "@/lib/student-preview";
+import { currentAccount } from "@/lib/account-auth";
+import { ConversationArt, MicrophoneIcon } from "@/components/LearningVisuals";
+const topics = [
+  { id: "everyday", title: "Everyday conversation", target: "Answer, add a reason, ask a question.", prompt: "Tell me about something you enjoyed this week. Why did you enjoy it?" },
+  { id: "opinions", title: "Ideas & opinions", target: "Give an opinion and a specific example.", prompt: "Is it better to learn something alone or with other people? Give an example." },
+  { id: "story", title: "Tell a story", target: "Use a clear sequence and past tenses.", prompt: "Tell a short story about a time a plan changed. What happened next?" },
+];
+type State = "idle" | "connecting" | "live" | "closing" | "ended";
+type Fragment = { speaker: "You" | "AI partner"; delta: string; start_ms: number; end_ms: number };
 export default function SpeakView({ lines }: { lines: string[] }) {
-  const [i, setI] = useState(0);
-  const [recording, setRecording] = useState(false);
-  const [myAudio, setMyAudio] = useState<string | null>(null);
-  const [supported, setSupported] = useState(true);
-  const [err, setErr] = useState("");
-  const recRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
-  const streamRef = useRef<MediaStream|null>(null);
-  const audioRef = useRef<string|null>(null);
-  const alive = useRef(true);
-
-  useEffect(() => {
-    alive.current=true;
-    setSupported(
-      typeof navigator !== "undefined" &&
-        !!navigator.mediaDevices?.getUserMedia &&
-        typeof window.MediaRecorder !== "undefined",
-    );
-    return () => {
-      alive.current=false;
-      if(recRef.current?.state==="recording") recRef.current.stop();
-      streamRef.current?.getTracks().forEach(t=>t.stop());
-      if(audioRef.current) URL.revokeObjectURL(audioRef.current);
-      window.speechSynthesis?.cancel();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const line = lines[i] ?? "";
-
-  const speak = () => {
-    if (!("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(line);
-    u.lang = "en-GB";
-    u.rate = 0.95;
-    window.speechSynthesis.speak(u);
-  };
-
-  const startRec = async () => {
-    setErr("");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if(!alive.current) {stream.getTracks().forEach(t=>t.stop());return;}
-      streamRef.current=stream;
-      chunksRef.current = [];
-      const rec = new MediaRecorder(stream);
-      rec.ondataavailable = (e) => e.data.size && chunksRef.current.push(e.data);
-      rec.onstop = () => {
-        stream.getTracks().forEach(t=>t.stop());
-        if(!alive.current)return;
-        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
-        if (myAudio) URL.revokeObjectURL(myAudio);
-        audioRef.current=URL.createObjectURL(blob);
-        setMyAudio(audioRef.current);
-        stream.getTracks().forEach((t) => t.stop());
-      };
-      recRef.current = rec;
-      rec.start();
-      setRecording(true);
-    } catch {
-      streamRef.current?.getTracks().forEach(t=>t.stop());
-      setErr("I couldn't use the microphone. Check the mic permission and try again.");
-    }
-  };
-
-  const stopRec = () => {
-    recRef.current?.stop();
-    setRecording(false);
-  };
-
-  const go = (next: number) => {
-    if (recording) stopRec();
-    if (myAudio) URL.revokeObjectURL(myAudio);
-    setMyAudio(null);
-    setErr("");
-    setI((next + lines.length) % lines.length);
-  };
-
-  if (lines.length === 0) {
-    return (
-      <main className="px-5 pb-10">
-        <p className="mt-6 rounded-card bg-surface p-5 text-center text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark">
-          No speaking practice for this unit yet.
-        </p>
-      </main>
-    );
+  const { code } = useStudent(); const preview = isStudentPreview(code);
+  const [topic, setTopic] = useState(0); const [sessionTopic, setSessionTopic] = useState(0); const [available, setAvailable] = useState<boolean | null>(null);
+  const [state, setState] = useState<State>("idle"); const [status, setStatus] = useState("");
+  const [muted, setMuted] = useState(false); const [elapsed, setElapsed] = useState(0);
+  const [fragments, setFragments] = useState<Fragment[]>([]); const [reflection, setReflection] = useState("");
+  const [recording, setRecording] = useState(false); const [recorded, setRecorded] = useState("");
+  const [recordError, setRecordError] = useState(""); const [recordBusy, setRecordBusy] = useState(false);
+  const audio = useRef<HTMLAudioElement>(null); const peer = useRef<RTCPeerConnection | null>(null);
+  const events = useRef<RTCDataChannel | null>(null); const mic = useRef<MediaStream | null>(null);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null); const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null); const generation = useRef(0);
+  const recorder = useRef<MediaRecorder | null>(null); const recordingMic = useRef<MediaStream | null>(null); const recordingUrl = useRef("");
+  const mounted = useRef(true); const recordGeneration = useRef(0); const controller = useRef<AbortController | null>(null);
+  const busy = state === "connecting" || state === "live" || state === "closing";
+  const endpoint = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/voice/`;
+  function dispose() {
+    generation.current++; controller.current?.abort();
+    if (timer.current) clearInterval(timer.current); if (timeout.current) clearTimeout(timeout.current); if (closeTimer.current) clearTimeout(closeTimer.current);
+    const channel = events.current; events.current = null; channel?.close();
+    peer.current?.close(); peer.current = null; mic.current?.getTracks().forEach(t => t.stop()); mic.current = null;
+    if (audio.current) audio.current.srcObject = null;
   }
-
-  return (
-    <main className="px-5 pb-10">
-      <header className="mb-3 pt-4">
-        <h1 className="display text-2xl font-extrabold text-navy dark:text-cream">Speaking practice</h1>
-        <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">
-          Listen, record yourself, then play both back and compare. Just for you — nothing is saved or sent.
-        </p>
-      </header>
-
-      <section className="rounded-card bg-surface p-5 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
-        <p className="tnum text-xs font-bold uppercase tracking-wide text-amber-deep dark:text-amber">
-          Sentence {i + 1} of {lines.length}
-        </p>
-        <p className="mt-2 text-xl font-bold leading-snug text-navy dark:text-cream">{line}</p>
-
-        <button
-          onClick={speak}
-          className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-amber-soft px-4 font-bold text-amber-deep transition active:scale-[.97] dark:bg-amber-dusk dark:text-amber"
-        >
-          🔊 Listen
-        </button>
-
-        {supported ? (
-          <button
-            onClick={recording ? stopRec : startRec}
-            className={`mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-bold transition active:scale-[.97] ${
-              recording
-                ? "animate-pulse bg-bad-soft text-bad dark:bg-bad-dusk dark:text-bad-bright"
-                : "bg-[linear-gradient(135deg,#4F46E5,#4338CA)] text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
-            }`}
-          >
-            {recording ? "⏹ Stop recording" : "● Record yourself"}
-          </button>
-        ) : (
-          <p className="mt-3 rounded-lg bg-warn-soft p-3 text-center text-sm text-warn dark:bg-warn-dusk dark:text-warn-bright">
-            Recording isn&apos;t supported in this browser — you can still Listen and repeat aloud.
-          </p>
-        )}
-
-        {err && <p role="status" className="mt-3 text-center text-sm font-medium text-bad dark:text-bad-bright">{err}</p>}
-
-        {myAudio && !recording && (
-          <div className="mt-4">
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-deep dark:text-amber">
-              Your recording
-            </p>
-            <audio src={myAudio} controls className="w-full" />
-            <p className="mt-2 text-center text-xs text-navy-soft dark:text-navy-mist">
-              Tip: play the model (🔊) then yours, and listen for the differences.
-            </p>
-          </div>
-        )}
-      </section>
-
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <button
-          onClick={() => go(i - 1)}
-          className="min-h-[48px] flex-1 rounded-xl bg-black/5 px-4 font-bold text-navy transition active:scale-[.97] dark:bg-white/10 dark:text-cream"
-        >
-          ← Back
-        </button>
-        <button
-          onClick={() => go(i + 1)}
-          className="min-h-[48px] flex-1 rounded-xl bg-navy px-4 font-bold text-cream transition active:scale-[.97] dark:bg-cream dark:text-navy"
-        >
-          Next →
-        </button>
-      </div>
-    </main>
-  );
+  function finish(message: string) { dispose(); if (mounted.current) { setState("ended"); setStatus(message); setMuted(false); } }
+  function end() {
+    if (events.current?.readyState === "open") {
+      setState("closing"); setStatus("Finishing your conversation…");
+      mic.current?.getAudioTracks().forEach(t => { t.enabled = false; });
+      events.current.send(JSON.stringify({ type: "session.close" }));
+      closeTimer.current = setTimeout(() => finish("Conversation ended. The final connection receipt was not received."), 15000);
+    } else finish("Conversation ended.");
+  }
+  function stopRecording() { if (recorder.current?.state === "recording") recorder.current.stop(); recordingMic.current?.getTracks().forEach(t => t.stop()); }
+  useEffect(() => {
+    mounted.current = true;
+    fetch(endpoint, { cache: "no-store" }).then(r => r.json()).then(r => { if (mounted.current) setAvailable(r.available === true); }).catch(() => { if (mounted.current) setAvailable(false); });
+    const leave = () => { if (events.current?.readyState === "open") events.current.send(JSON.stringify({ type: "session.close" })); dispose(); stopRecording(); };
+    window.addEventListener("pagehide", leave);
+    return () => { mounted.current = false; recordGeneration.current++; leave(); window.removeEventListener("pagehide", leave); if (recordingUrl.current) URL.revokeObjectURL(recordingUrl.current); };
+  }, [endpoint]);
+  async function start() {
+    if (preview || !available || busy || recording || recordBusy) return;
+    dispose(); const run = generation.current; setState("connecting"); setStatus("Connecting your microphone…"); setFragments([]); setElapsed(0); setReflection(""); setSessionTopic(topic);
+    const check = () => { if (!mounted.current || run !== generation.current) throw new Error("cancelled"); };
+    try {
+      const user = await currentAccount(); check();
+      if (!user) throw new Error("Sign in with your student email to use live voice.");
+      const token = await user.getIdToken(); check();
+      if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) throw new Error("This browser does not support live voice. Try Safari or Chrome.");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!mounted.current || run !== generation.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      mic.current = stream; const connection = new RTCPeerConnection(); peer.current = connection;
+      connection.addEventListener("track", e => { if (run !== generation.current || !audio.current) return; audio.current.srcObject = new MediaStream([e.track]); void audio.current.play().catch(() => setStatus("Press play below to hear your AI partner.")); });
+      stream.getTracks().forEach(t => connection.addTrack(t, stream));
+      const channel = connection.createDataChannel("oai-events"); events.current = channel;
+      channel.addEventListener("message", ({ data }) => {
+        if (run !== generation.current) return;
+        let event; try { event = JSON.parse(data); } catch { return; }
+        if (event.type === "session.started") {
+          if (timeout.current) clearTimeout(timeout.current); setState("live"); setStatus("Connected. Say hello when you’re ready.");
+          const started = Date.now(); timer.current = setInterval(() => { const seconds = Math.floor((Date.now() - started) / 1000); setElapsed(seconds); if (seconds >= 900) { if (timer.current) clearInterval(timer.current); end(); } }, 1000);
+        } else if (event.type === "session.closed") finish("Conversation ended. Keep one useful phrase and one next step.");
+        else if (["session.input_transcript.delta", "session.output_transcript.delta"].includes(event.type) && typeof event.delta === "string") {
+          const f: Fragment = { speaker: event.type === "session.input_transcript.delta" ? "You" : "AI partner", delta: event.delta, start_ms: Number(event.start_ms) || 0, end_ms: Number(event.end_ms) || 0 };
+          setFragments(prev => [...prev, f].slice(-3000));
+        } else if (event.type === "error") setStatus("The voice service reported a problem. End the conversation if it does not recover.");
+      });
+      channel.addEventListener("close", () => { if (run === generation.current) finish("The connection ended. Your visible transcript is still here."); });
+      connection.addEventListener("connectionstatechange", () => { if (run === generation.current && connection.connectionState === "failed") finish("The connection was lost. You can keep your transcript and try again."); });
+      await connection.setLocalDescription(await connection.createOffer()); check();
+      if (connection.iceGatheringState !== "complete") await new Promise<void>((resolve, reject) => {
+        const wait = setTimeout(() => { connection.removeEventListener("icegatheringstatechange", changed); reject(new Error("The microphone connection timed out.")); }, 10000);
+        function changed() { if (connection.iceGatheringState === "complete") { clearTimeout(wait); connection.removeEventListener("icegatheringstatechange", changed); resolve(); } }
+        connection.addEventListener("icegatheringstatechange", changed); changed();
+      });
+      check(); controller.current = new AbortController();
+      timeout.current = setTimeout(() => finish("The voice connection timed out. Please try again."), 55000);
+      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.current.signal, body: JSON.stringify({ code, token, topic: topics[topic].id, sdp: connection.localDescription?.sdp }) });
+      const result = await response.json(); check(); if (!response.ok) throw new Error(result.error || "Live voice could not connect.");
+      await connection.setRemoteDescription({ type: "answer", sdp: result.transport.sdp }); check();
+    } catch (error) { if (run === generation.current) finish(error instanceof Error && error.name === "NotAllowedError" ? "Microphone access was declined. Allow it in your browser to try again." : error instanceof Error ? error.message : "Could not connect."); }
+  }
+  async function record() {
+    if (preview || busy || recordBusy) return;
+    setRecordError(""); setRecordBusy(true); const run = ++recordGeneration.current;
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw new Error("Recording is not supported in this browser. You can still practise aloud.");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!mounted.current || run !== recordGeneration.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      recordingMic.current = stream; const rec = new MediaRecorder(stream); recorder.current = rec; const chunks: BlobPart[] = [];
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      const limit = setTimeout(() => { if (rec.state === "recording") rec.stop(); }, 180000);
+      rec.onstop = () => { clearTimeout(limit); stream.getTracks().forEach(t => t.stop()); if (!mounted.current || run !== recordGeneration.current) return; if (recordingUrl.current) URL.revokeObjectURL(recordingUrl.current); recordingUrl.current = URL.createObjectURL(new Blob(chunks, { type: rec.mimeType || "audio/webm" })); setRecorded(recordingUrl.current); setRecording(false); };
+      rec.onerror = () => { clearTimeout(limit); stream.getTracks().forEach(t => t.stop()); if (mounted.current) { setRecording(false); setRecordError("The recording stopped. Please try again."); } };
+      rec.start(); setRecording(true);
+    } catch (error) { recordingMic.current?.getTracks().forEach(t => t.stop()); if (mounted.current) setRecordError(error instanceof Error && error.name !== "NotAllowedError" ? error.message : "Allow microphone access to record yourself."); }
+    finally { if (mounted.current) setRecordBusy(false); }
+  }
+  function saveTranscript() {
+    const text = `Rory's English — speaking practice\n${topics[sessionTopic].title}\nAI feedback is practice advice, not a teacher assessment.\n\n` + fragments.map(f => `[${(f.start_ms / 1000).toFixed(1)}s] ${f.speaker}: ${f.delta}`).join("\n") + `\n\nMy reflection\n${reflection}`;
+    const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "my-speaking-practice.txt"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const transcript = (speaker: Fragment["speaker"]) => fragments.filter(f => f.speaker === speaker).map(f => f.delta).join("");
+  return <main className="re-home re-speaking"><header className="re-page-heading"><p className="re-eyebrow">SPEAKING STUDIO</p><h1>Your voice. Your ideas.</h1><p>One topic, one useful target, a little more confidence.</p></header>
+    <div className="re-speaking-grid"><section><div className="re-card"><p className="re-eyebrow">1 · CHOOSE A CONVERSATION</p><div className="re-topic-options">{topics.map((t, i) => <button key={t.id} disabled={busy || recording || recordBusy} aria-pressed={topic === i} onClick={() => setTopic(i)}><strong>{t.title}</strong><small>{t.target}</small></button>)}</div></div>
+      <section className="re-card re-live-panel"><div className={`re-voice-orb ${state === "live" ? "is-live" : ""}`} aria-hidden><MicrophoneIcon /></div><p className="re-eyebrow">LIVE AI CONVERSATION · GPT-LIVE-1</p><h2>{state === "live" ? "Make yourself heard." : state === "connecting" ? "Opening your conversation…" : "A conversation, at your pace."}</h2><p>{topics[topic].target}</p>
+        <p className="re-voice-status" role="status">{status || (preview ? "Teacher preview is read-only. Voice is disabled here." : available === null ? "Checking live voice…" : available ? "Ready for a conversation of up to 15 minutes." : "Live AI voice is awaiting connection. Try a rehearsal below in the meantime.")}</p>
+        {busy && <p className="re-timer">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} <small>/ 15:00</small></p>}
+        <div className="re-voice-actions">{!busy ? <button className="re-button" disabled={!available || preview || recording || recordBusy} onClick={() => void start()}>Start conversation</button> : <><button className="re-button re-secondary" disabled={state !== "live"} onClick={() => { const next = !muted; mic.current?.getAudioTracks().forEach(t => { t.enabled = !next; }); setMuted(next); }}>{muted ? "Unmute microphone" : "Mute microphone"}</button><button className="re-button" disabled={state === "closing"} onClick={end}>{state === "closing" ? "Finishing…" : state === "connecting" ? "Cancel" : "End conversation"}</button></>}</div>
+        <audio ref={audio} autoPlay controls className={busy ? "re-live-audio" : "hidden"} aria-label="AI partner audio" />
+        <small>When connected, your microphone audio goes to OpenAI. This is an AI partner. Muting keeps the session running; choose End to finish.</small></section>
+      {!!fragments.length && <section className="re-card"><h2>Conversation captions</h2><p className="re-small-copy">Captions may contain mistakes. Both speakers can speak at once.</p><div className="re-caption-columns">{(["You", "AI partner"] as const).map(s => <div key={s}><h3>{s}</h3><p>{transcript(s)}</p></div>)}</div><label className="re-reflection">One useful phrase & my next target<textarea rows={3} maxLength={3000} value={reflection} onChange={e => setReflection(e.target.value)} placeholder="What will you try again?" /></label><button className="re-button re-secondary" onClick={saveTranscript}>Download conversation & reflection</button><p className="re-small-copy">Kept in this tab until you leave. Download it before leaving. Nothing has been submitted to Rory.</p><Link className="re-text-link" href={`/s/${code}/homework/`}>Open homework to submit your practice →</Link></section>}
+    </section><aside><div className="re-card"><ConversationArt/><h2>A little structure helps.</h2><ol className="re-speaking-steps"><li><strong>Get started</strong>Read your target and think of one idea.</li><li><strong>Keep it going</strong>Add a reason. Ask a follow-up question.</li><li><strong>Make it stick</strong>Keep one phrase. Try one correction again.</li></ol><p className="re-small-copy">This is supplementary practice, not textbook content or a school assessment. Follow Rory’s assignment for what to submit.</p></div>
+      <section className="re-card"><p className="re-eyebrow">QUICK REHEARSAL · ON THIS DEVICE</p><h2>Try it out loud.</h2><p className="re-rehearsal-prompt">{lines.length ? lines[topic % lines.length] : topics[topic].prompt}</p><p className="re-small-copy">Record up to three minutes, listen back and try again. Your recording stays in this tab and is not sent to anyone.</p><button className="re-button re-secondary" disabled={preview || busy || recordBusy} onClick={() => recording ? stopRecording() : void record()}>{recording ? "Stop recording" : recordBusy ? "Opening microphone…" : "Record a rehearsal"}</button><p role="status">{recording ? "Recording…" : recordError}</p>{recorded && !recording && <audio controls src={recorded} className="re-live-audio" aria-label="Your rehearsal recording" />}</section>
+    </aside></div>
+  </main>;
 }

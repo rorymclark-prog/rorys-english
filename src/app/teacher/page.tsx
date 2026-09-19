@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 // the one screen a tutor is likely to actually open on a laptop or iPad.
 export default function TeacherPage() {
   return (
-    <div className="mx-auto min-h-dvh max-w-6xl">
+    <div className="min-h-dvh re-teacher-shell">
       <SettingsProvider studentId="__teacher__"><TeacherDashboardView /></SettingsProvider>
       <ServiceWorkerRegister />
     </div>

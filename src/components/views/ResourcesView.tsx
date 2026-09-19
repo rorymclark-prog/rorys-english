@@ -156,7 +156,7 @@ export default function ResourcesView({
         </p>
       </header>
 
-      {lessonResources.length>0&&<section className="my-5"><h2 className="mb-3 text-sm font-bold uppercase tracking-wide">From your lessons</h2><ul className="space-y-3">{lessonResources.map(item=><li key={item.url}><a href={item.url.startsWith("/")?`${process.env.NEXT_PUBLIC_BASE_PATH||""}${item.url}`:item.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised"><span aria-hidden="true" className="rounded-xl bg-amber-soft p-3 text-amber-deep dark:bg-amber-dusk dark:text-amber">{item.url.endsWith(".pdf")?<SlidesIcon/>:item.url.endsWith(".mp3")?<AudioIcon/>:<DocIcon/>}</span><span className="min-w-0"><span className="block font-bold">{item.title}</span><span className="mt-1 block text-xs text-navy-soft dark:text-navy-mist">{item.unit} · {item.schoolYear}</span>{item.blurb&&<span className="mt-2 block text-sm">{item.blurb}</span>}</span><ExternalIcon className="ml-auto shrink-0" width={18}/></a></li>)}</ul></section>}
+      {lessonResources.length>0&&<section className="my-5"><h2 className="mb-3 text-sm font-bold uppercase tracking-wide">From your lessons</h2><ul className="re-resources-grid">{lessonResources.map(item=><li key={item.url}><a href={item.url.startsWith("/")?`${process.env.NEXT_PUBLIC_BASE_PATH||""}${item.url}`:item.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised"><span aria-hidden="true" className="rounded-xl bg-amber-soft p-3 text-amber-deep dark:bg-amber-dusk dark:text-amber">{item.url.endsWith(".pdf")?<SlidesIcon/>:item.url.endsWith(".mp3")?<AudioIcon/>:<DocIcon/>}</span><span className="min-w-0"><span className="block font-bold">{item.title}</span><span className="mt-1 block text-xs text-navy-soft dark:text-navy-mist">{item.unit} · {item.schoolYear}</span>{item.blurb&&<span className="mt-2 block text-sm">{item.blurb}</span>}</span><ExternalIcon className="ml-auto shrink-0" width={18}/></a></li>)}</ul></section>}
       <h2 className="mt-5 text-sm font-bold uppercase tracking-wide">Shared by Rory</h2>
       {state === "loading" && (
         <div className="mt-4 space-y-3">
@@ -172,7 +172,7 @@ export default function ResourcesView({
       )}
 
       {state === "ok" && items.length > 0 && (
-        <ul className="mt-2 space-y-3">
+        <ul className="mt-4 re-resources-grid">
           {items.map((it) => {
             const k = kindOf(it.type);
             return (

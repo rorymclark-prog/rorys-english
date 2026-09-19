@@ -21,13 +21,13 @@ const server=http.createServer(async(req,res)=>{
     else if(p.action==="logout")sessions.delete(p.session);
     else if(p.action==="note")result={ok:true,note:"Demo preview — no real homework has been assigned."};
     else if(p.action==="assignments")result={ok:true,assignments};
-    else if(p.action==="submissions")result={ok:true,submissions};
+    else if(p.action==="submissions")result={ok:true,submissions:submissions.filter(s=>s.code===p.code)};
     else if(p.action==="resources")result={ok:true,resources:[]};
     else if(p.action==="teacherDashboard")result={ok:true,students:[student],generatedAt:"Local demo"};
     else if(p.action==="progress")result={ok:true,name:"Demo learner",homework:empty,quizzes:empty,schoolTests:empty,writing:empty,speaking:empty,mockTests:empty};
     else if(p.action==="submit"){
-      if(!submissions.some(s=>s.id===p.id))submissions.push({id:p.id,task:p.task,unit:p.unit,submitted:new Date().toISOString(),answers:p.answers,status:"submitted",feedback:"",reviewed:""});
-      result={ok:true,id:p.id};
+      if(!submissions.some(s=>s.id===p.id))submissions.push({id:p.id,code:p.code,title:p.title,prompts:p.prompts,task:p.task,unit:p.unit,submitted:new Date().toISOString(),answers:p.answers,status:"submitted",feedback:"",reviewed:""});
+      result={ok:true,id:p.id,received:submissions.find(s=>s.id===p.id).submitted};
     } else if(p.action==="teacherReview"&&session.role==="teacher"){
       const row=submissions.find(s=>s.id===p.id);if(row)Object.assign(row,{status:p.status,feedback:p.feedback,reviewed:new Date().toISOString()});
     } else result={ok:false,error:"This action is not connected in the local demo. No external request was made."};

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useStudent } from "./StudentContext";
 import { HomeIcon, BookIcon, CheckSquareIcon } from "./Icons";
+import { MicrophoneIcon } from "./LearningVisuals";
 
 export default function TabBar() {
   const { code } = useStudent();
@@ -13,6 +14,7 @@ export default function TabBar() {
   const tabs = [
     { href: `${base}/`, label: "Today", Icon: HomeIcon, match: (p: string) => p === `${base}` || p === `${base}/` },
     { href: `${base}/lessons/`, label: "Lessons", Icon: BookIcon, match: (p: string) => p.startsWith(`${base}/lessons`)||p.startsWith(`${base}/study`) },
+    { href: `${base}/speak/`, label: "Speak", Icon: MicrophoneIcon, match: (p: string) => p.startsWith(`${base}/speak`) },
     {
       href: `${base}/homework/`,
       label: "Homework",
@@ -24,7 +26,7 @@ export default function TabBar() {
   return (
     <nav
       aria-label="Main navigation"
-      className="glass fixed inset-x-3 bottom-3 z-20 mx-auto max-w-md rounded-card border border-black/[.06] shadow-[0_8px_30px_rgba(0,0,0,.14)] dark:border-white/10 md:max-w-2xl"
+      className="re-bottom-nav glass fixed inset-x-3 bottom-3 z-20 mx-auto rounded-card border border-black/[.06] shadow-[0_8px_30px_rgba(0,0,0,.14)] dark:border-white/10"
     >
       <ul className="flex items-stretch justify-around pb-safe">
         {tabs.map(({ href, label, Icon, match }) => {

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import "./design.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 // Self-hosted at build time (static export downloads them once) — no runtime
@@ -31,8 +32,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FAF8F5" },
-    { media: "(prefers-color-scheme: dark)", color: "#17161C" },
+    { media: "(prefers-color-scheme: light)", color: "#F7F6F2" },
+    { media: "(prefers-color-scheme: dark)", color: "#151C2B" },
   ],
   width: "device-width",
   initialScale: 1,

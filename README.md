@@ -28,7 +28,7 @@ node scripts/preview-api.mjs
 ```
 
 ```sh
-NEXT_PUBLIC_SYNC_URL=http://127.0.0.1:4174 NEXT_PUBLIC_DEMO_MODE=true npm run dev -- --hostname 127.0.0.1 --port 4173
+NEXT_PUBLIC_FIREBASE_API_KEY= NEXT_PUBLIC_SYNC_URL=http://127.0.0.1:4174 NEXT_PUBLIC_DEMO_MODE=true npm run dev -- --hostname 127.0.0.1 --port 4173
 ```
 
 Open http://127.0.0.1:4173/s/valentin-q9m2/ or http://127.0.0.1:4173/teacher/ and use the synthetic access code `demo-only`. The demo cannot send AI requests or update real student records. It stores its example submissions in memory and resets when its service restarts.
@@ -44,7 +44,7 @@ npm run build
 
 Live checks covered teacher/student authentication, denied cross-student access, exact written answers, duplicate retry, teacher feedback, revisions and the word helper. The two synthetic submissions were removed and existing records retained. Rory confirmed browser teacher sign-in; automated browser and installed-phone checks were unavailable during activation.
 
-The source includes 44 automated tests for access isolation, teacher-session revocation, immutable/idempotent submissions, teacher review, quiz retries, resource safety, date handling, archived links and durable outbox behaviour.
+The source includes 47 automated tests for access isolation, teacher-session revocation, immutable/idempotent submissions, teacher review, quiz retries, resource safety, date handling, archived links and durable outbox behaviour.
 
 ## Production and future releases
 
@@ -65,3 +65,13 @@ New-unit quizzes, audio upload/transcription, a complete curriculum tracker, dec
 Teacher and student pages share a menu with appearance, text size and dated release notes. Teacher preferences use a separate device-local key. Select View as student from the teacher menu or a student workspace for a read-only preview, then Exit preview to return. Preview uses the existing teacher session, requires no student credentials, and blocks writes, AI, draft changes and outbox delivery. It must never populate a student session or silently drain their queued work. The API also rejects non-read operations marked as preview.
 
 Slides & resources collects existing approved lesson assets and live approved Drive links. Editable teaching masters, notes and answers belong in private storage; student copies must be reviewed before being added.
+
+## Visual workspace and speaking studio · 20 September 2026
+
+The workspace expands across laptops and tablets, with bottom navigation on phones. Paper & blue is the default palette, with warm-white light mode and navy dark mode. Light/dark/system, palette and text-size choices persist locally. Existing learner data and read-only teacher preview remain on their established services. The home screen displays real assignments and notes, never the synthetic design-preview scores.
+
+The speaking studio offers three conversation targets, a device-only rehearsal recorder (up to three minutes), and a GPT-Live-1 WebRTC integration. Live voice uses a server-only OpenAI key, verified Firebase student accounts matched to the server roster, same-origin requests, bounded requests and per-instance start throttling. Teacher preview and legacy-code-only sessions cannot start paid voice. The browser closes conversations after 15 minutes. This is not an account-wide spending cap: configure suitable Platform limits before wider rollout. Captions/reflections can be downloaded; they are not automatically submitted or graded. Model storage is disabled. No operating-system text-to-speech is used.
+
+Production has the private key configured but `LIVE_VOICE_ENABLED=false`. The model-access check succeeded; an actual WebRTC session request returned HTTP 429 `insufficient_quota` / `credit_balance_exhausted`. Add API credit in the Personal / Default project, rerun `node scripts/qa-live-voice.mjs`, then enable the flag and redeploy only after a successful session. ChatGPT subscriptions and API billing are separate. GPT-5.4-mini is an option for simple text experiments; it does not replace GPT-Live-1 voice and still needs available API credit.
+
+Verification: production build, TypeScript, 47 automated tests; browser layouts at 1440×1000, 820×1180 and 390×844 across Today, Homework, Speaking, Study, Resources, Progress and Settings; light/dark screenshots; a simulated microphone recording and playback. Actual iPad/Safari microphone permission, backgrounding and installed-PWA audio still require a device check.

@@ -22,7 +22,7 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
   },[open]);
   const close=()=>dialog.current?.close();
   const viewNews=()=>{setPanel("news");setUnread(false);try{localStorage.setItem(seenKey,LATEST_RELEASE);}catch{/* optional badge */}};
-  const links=code?[["Today",`/s/${code}/`],["Homework & feedback",`/s/${code}/homework/`],["Lessons & archive",`/s/${code}/lessons/`],["Slides & resources",`/s/${code}/resources/`],["My progress",`/s/${code}/progress/`],["Writing & word helper",`/s/${code}/coach/`]]:[];
+  const links=code?[["Today",`/s/${code}/`],["Speaking studio",`/s/${code}/speak/`],["Homework & feedback",`/s/${code}/homework/`],["Lessons & archive",`/s/${code}/lessons/`],["Slides & resources",`/s/${code}/resources/`],["My progress",`/s/${code}/progress/`],["Writing & word helper",`/s/${code}/coach/`]]:[];
   return <>
     <button ref={trigger} type="button" className="app-menu-trigger" aria-label="Open menu" aria-haspopup="dialog" aria-expanded={open} onClick={()=>{setPanel("menu");dialog.current?.showModal();setOpen(true);}}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menu</span>{unread&&<span className="app-news-dot" aria-label="New updates"/>}</button>
     <dialog ref={dialog} aria-labelledby={titleId} className="app-menu-dialog" onClose={()=>{setOpen(false);trigger.current?.focus();}} onClick={e=>{if(e.target===dialog.current){const rect=dialog.current.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)close();}}}>

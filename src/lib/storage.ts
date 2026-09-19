@@ -183,7 +183,9 @@ export function recentActivity(days: string[], n = 7): { day: string; active: bo
 // ── Settings ─────────────────────────────────────────────────────────────────
 export type TextScale = "normal" | "large" | "xl";
 export type Theme = "light" | "dark" | "system";
+export type Palette = "blue" | "indigo" | "clay";
 export interface Settings {
+  palette?: Palette;
   textScale: TextScale;
   theme: Theme;
 }

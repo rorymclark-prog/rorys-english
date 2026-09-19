@@ -51,6 +51,7 @@ function loadSettings(studentId: string): Settings {
 function applyToDocument(s: Settings) {
   const root = document.documentElement;
   root.setAttribute("data-text-scale", s.textScale);
+  root.setAttribute("data-palette", ["blue","indigo","clay"].includes(s.palette||"")?s.palette!:"blue");
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const dark = s.theme === "dark" || (s.theme === "system" && prefersDark);
   root.classList.toggle("dark", dark);
@@ -65,7 +66,7 @@ function themeScript(studentId: string): string {
   const key = JSON.stringify(rawSettingsKey(studentId)).replace(/</g, "\\u003c");
   return (
     `(function(){try{var t=null;try{var r=localStorage.getItem(${key});` +
-    `if(r){var s=JSON.parse(r);t=s.theme;var z=s.textScale;` +
+    `if(r){var s=JSON.parse(r);t=s.theme;var p=s.palette;if(p==="blue"||p==="indigo"||p==="clay")document.documentElement.setAttribute("data-palette",p);var z=s.textScale;` +
     `if(z==="normal"||z==="large"||z==="xl")document.documentElement.setAttribute("data-text-scale",z)}}catch(e){}` +
     `var d;if(t==="light"){d=false}` +
     `else if(t==="system"){d=matchMedia("(prefers-color-scheme: dark)").matches}` +
