@@ -39,6 +39,20 @@ for (const s of students) {
   writeFileSync(join(outDir, `${s.code}.webmanifest`), JSON.stringify(manifest, null, 2));
 }
 
+// Teacher installs must launch the dashboard, not the generic landing page.
+// The broader scope keeps read-only student previews inside the teacher app.
+writeFileSync(join(outDir, "teacher.webmanifest"), JSON.stringify({
+  id: `${base}/teacher/`,
+  name: "Rory's English — Teacher",
+  short_name: "Rory Teacher",
+  start_url: `${base}/teacher/`,
+  scope: `${base}/`,
+  display: "standalone",
+  background_color: "#F7F6F2",
+  theme_color: "#3656AA",
+  icons,
+}, null, 2));
+
 // A generic root manifest for the landing page.
 writeFileSync(
   join(root, "public", "manifest.webmanifest"),
@@ -58,7 +72,7 @@ writeFileSync(
   ),
 );
 
-console.log(`gen-pwa: wrote ${students.length} student manifest(s) + root manifest`);
+console.log(`gen-pwa: wrote ${students.length} student manifest(s) + teacher and root manifests`);
 
 const build = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMIT_SHA || "local";
 const worker = readFileSync(join(root, "scripts", "service-worker.js"), "utf-8");

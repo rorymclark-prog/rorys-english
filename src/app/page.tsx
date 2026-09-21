@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getAllStudents } from "@/lib/content";
 
 // Reached only via private per-student links (/s/<code>). This landing page is
@@ -21,6 +22,10 @@ export default function Home() {
         This is a private study app. Open it with your own personal link — the one Rory sent you —
         then tap <strong className="text-amber-deep dark:text-amber">Share → Add to Home Screen</strong> to install it.
       </p>
+
+      <Link href="/teacher/" className="rounded-xl bg-amber-deep px-6 py-3 font-semibold text-white dark:bg-amber dark:text-navy">
+        Teacher sign-in
+      </Link>
 
       {isDev && (
         <div className="mt-4 w-full rounded-card bg-surface p-4 text-left text-sm shadow-card dark:bg-navy-raised dark:shadow-card-dark">
