@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "./design.css";
+import "./documents.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 // Self-hosted at build time (static export downloads them once) — no runtime

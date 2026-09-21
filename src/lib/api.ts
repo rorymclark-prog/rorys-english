@@ -23,7 +23,7 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
   if (!endpoint) return { ok: false, error: "The secure connection is not configured yet." } as T;
   // Google can briefly fail while redirecting to its JSON response. Retrying
   // sign-in and reads is safe; writes and AI calls retain their explicit flow.
-  const retryable = new Set(["login", "accountLogin", "progress", "resources", "assignments", "note", "submissions", "teacherDashboard"]);
+  const retryable = new Set(["login", "accountLogin", "progress", "resources", "assignments", "note", "submissions", "teacherDashboard", "documents", "document", "documentFile"]);
   const attempts = retryable.has(String(body.action)) ? 2 : 1;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
@@ -48,6 +48,8 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
   }
   return { ok: false, error: ["login", "accountLogin"].includes(String(body.action))
     ? "Could not confirm sign-in because the service is taking too long. Please try again; you do not need to change your password."
+    : body.action === "documentUpload" ? "Could not confirm the upload. Keep this page open and retry; the same upload will be checked."
+    : ["documentAnalyse","documentChat"].includes(String(body.action)) ? "Could not confirm the AI result yet. Your original is saved. Check for updates before retrying."
     : "Could not reach Rory’s app. Your saved draft is still on this device. Try again when connected." } as T;
 }
 export async function login(code: string, credential: string): Promise<Session> {

@@ -1,0 +1,20 @@
+# Documents and feedback — 21 September 2026
+
+Students open **My documents** (or **My work** in phone navigation). Teachers open **Teacher → student → Documents**. Both can scan up to six pages with the camera, rotate/retake pages, or upload one PDF/a set of JPEG, PNG or WebP files. Limit: 2.5 MB per upload. Word documents must be exported as PDF; HEIC must be exported to JPEG or captured through the scanner. Camera scans become JPEGs, up to 2000 pixels on the long edge. Existing uploaded file bytes are retained unchanged.
+
+Originals go to a new private Google Drive folder per student, separate from shared lesson resources. Metadata, AI practice feedback and reviewed teacher feedback live in new Documents tabs in each existing progress spreadsheet; conversations live in Document conversations tabs. Read requests do not create tabs. Existing records are not migrated or altered. Files have no public URLs. Every read/download/upload/AI request is session checked, parents cannot access documents, learners are limited to their own profile, and teacher preview is read-only on client and server.
+
+The original is saved before analysis begins. An upload identifier makes retries safe; revised work uses a new identifier linked to the earlier document. There is no overwrite of an original. Processing leases prevent concurrent AI calls; timed-out clients can read the eventual stored result, and a stale lease can retry after six minutes. The same message identifier deduplicates chat retries. No offline upload success is claimed; unconfirmed files remain on the open page, with a browser warning before leaving.
+
+AI uses the existing private Anthropic configuration, not the unavailable OpenAI live-voice credit. It reads images/PDFs, preserves the original wording in transcription, flags incomplete/uncertain readings, returns strengths, exact source excerpts, minimal corrections, explanations and a small retry task. The system follows Rory’s English teaching skill and gives no formal grade or invented CEFR diagnosis. AI practice feedback is labelled separately from Rory’s reviewed feedback. Teacher feedback is visible only after clicking Publish. Document chat is grounded in the selected transcription and its uncertainties; the saved conversation is visible to that student and Rory. Upload content is treated as untrusted evidence, not instructions. AI requests share the existing daily caps (student AI_DAILY_CAP, teacher 20, whole app 100). Each profile is capped at 20 uploads/day and 500 documents.
+
+## Validation
+
+- 55 automated tests: originals, idempotency, revisions, file validation/limits, private storage, authentication, cross-student denial, parent denial, preview denial, AI failure recovery, processing leases, separate teacher feedback and persisted chat.
+- Browser workflow: capture, rotate, student upload, original viewer, analysis, persistent chat, revisions, teacher scan and review, read-only preview; laptop/tablet/phone light and dark layouts. Synthetic data only. Camera input was simulated; physical iPad/Safari hardware was not tested.
+- Isolated live Apps Script check: actual private Drive save and exact-byte readback, actual Claude PDF analysis and document chat, deduplicated retries, teacher review, student revision, cross-student/preview denial. 12 checks passed. Temporary synthetic profile and its files were moved to trash, private test properties removed and test deployment deleted. Neither learner’s work was changed.
+- Type check, production build and dependency audit passed (zero vulnerabilities).
+
+Implementation reference: [Claude PDF input](https://platform.claude.com/docs/en/build-with-claude/pdf-support), [image input](https://platform.claude.com/docs/en/build-with-claude/vision). PDF and image content use authenticated base64 sources; no original is publicly shared with the AI service.
+
+The user mentioned a skill in another task. The existing “Digitise and analyse” task and Rory’s English skill were located; a different named analysis skill has not yet been identified. The current implementation uses the confirmed shared tutoring method.

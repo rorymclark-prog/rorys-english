@@ -20,6 +20,7 @@ export default function HomeworkListView({unit}:{unit:Unit|null}) {
   const current=assignments.filter(isCurrentAssignment);
   const previous=assignments.filter(a=>!isCurrentAssignment(a));
   return <Screen title="Homework & feedback" subtitle={unit?.title}>
+    <Link className="doc-homework-link" href={`/s/${code}/documents/`}>Working on paper? Scan or upload your work <span aria-hidden>↗</span></Link>
     <p className="mt-3 text-sm">Short tasks between lessons during term time. No holiday or school-break work is assumed; Rory sets each deadline.</p>
     {error && <div role="alert" className="mt-4 rounded-xl border p-4">{error}<button className="ml-3 underline" onClick={()=>void refresh()}>Retry</button></div>}
     {!loaded && <p role="status" className="mt-4">Loading your assignments…</p>}

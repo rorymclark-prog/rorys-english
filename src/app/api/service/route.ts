@@ -31,8 +31,9 @@ export async function POST(request: Request) {
   if (origin && origin !== new URL(request.url).origin) return Response.json({ ok: false, error: "Origin not allowed" }, { status: 403, headers });
   try {
     const text = await request.text();
-    if (text.length > 60000) return Response.json({ ok: false, error: "Request too large" }, { status: 413, headers });
+    if (text.length > 3500000) return Response.json({ ok: false, error: "Request too large" }, { status: 413, headers });
     const body = JSON.parse(text);
+    if (body?.action !== "documentUpload" && text.length > 60000) return Response.json({ok:false,error:"Request too large"}, {status:413,headers});
     if (!body || typeof body !== "object" || Array.isArray(body)) return Response.json({ ok: false, error: "Invalid request" }, { status: 400, headers });
     const roster = JSON.parse(process.env.ACCOUNT_ROSTER_JSON || "{}") as Record<string, Account>;
     const result = await accountService(body, {
