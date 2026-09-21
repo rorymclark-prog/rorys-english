@@ -1,13 +1,17 @@
 import type { Account, Identity } from "./account-service";
-export type VoiceRequest = { code?: unknown; token?: unknown; sdp?: unknown; topic?: unknown; preview?: unknown };
+export type VoiceRequest = { code?: unknown; token?: unknown; sdp?: unknown; topic?: unknown; preview?: unknown; teacherTest?: unknown };
 export const voiceTopics: Record<string, { title: string; target: string }> = {
   everyday: { title: "Everyday conversation", target: "Give a complete answer, add a reason and ask a follow-up question." },
   opinions: { title: "Ideas & opinions", target: "State an opinion, support it with an example, and respond politely to a different view." },
   story: { title: "Tell a story", target: "Describe a real or imaginary event using a clear sequence and past tenses." },
 };
-export async function authorizeVoice(body: VoiceRequest, roster: Record<string, Account>, verify: (token: string) => Promise<Identity>) {
+export async function authorizeVoice(body: VoiceRequest, roster: Record<string, Account>, verify: (token: string) => Promise<Identity>, verifyTeacher?: (token: string) => Promise<boolean>) {
   if (body.preview) throw new Error("Voice is unavailable in read-only teacher preview.");
   if (typeof body.code !== "string" || typeof body.token !== "string" || !body.token) throw new Error("Sign in with your student email to use live voice.");
+  if (body.teacherTest === true) {
+    if (body.code !== "__teacher__" || !verifyTeacher || !await verifyTeacher(body.token)) throw new Error("Sign in to the teacher dashboard to test voice.");
+    return "teacher-voice-test";
+  }
   const account = roster[body.code];
   if (!account) throw new Error("This account cannot use live voice.");
   const identity = await verify(body.token);
