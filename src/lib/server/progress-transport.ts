@@ -36,7 +36,9 @@ export async function postProgress(endpoint: string, body: Record<string, unknow
     let result: Response;
     try {
       result = await fetcher(resultUrl, {
-        method: "GET", cache: "no-store", redirect: "manual", signal: deadline,
+        // Leave time to retry a stalled result download within the overall deadline.
+        method: "GET", cache: "no-store", redirect: "manual",
+        signal: AbortSignal.any([deadline, AbortSignal.timeout(10000)]),
       });
     } catch {
       if (retries++ || deadline.aborted) throw new ProgressTransportError("result-network");
