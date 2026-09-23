@@ -1,6 +1,7 @@
 import {authed,request,savedSession,type ApiResult} from './api';
 export type LearningKind='homework'|'test'|'speaking'|'lesson';
-export type LearningBody={summary?:string;evidenceType?:string;source?:string;strengths?:string[];targets?:string[];nextStep?:string;studentNotes?:string;lessonPoints?:string;ratings?:Record<string,number|null>;writing?:{original?:string;corrected?:string;model?:string;corrections?:{original:string;corrected:string;note:string}[];practice?:string[]};transcript?:string;reflection?:string;aiAnalysis?:string|null;audioDocumentId?:string;tutorPrivate?:{worked?:string;improve?:string;plan?:string}};
+export type AudioReview={reviewId?:string;summary:string;strengths:string[];targets:string[];nextStep:string;ratings?:Record<string,number|null>;reviewedAt?:string;reviewedBy?:string};
+export type LearningBody={summary?:string;evidenceType?:string;source?:string;strengths?:string[];targets?:string[];nextStep?:string;studentNotes?:string;lessonPoints?:string;ratings?:Record<string,number|null>;writing?:{original?:string;corrected?:string;model?:string;corrections?:{original:string;corrected:string;note:string}[];practice?:string[]};transcript?:string;reflection?:string;aiAnalysis?:string|null;audioDocumentId?:string;audioReview?:AudioReview;tutorPrivate?:{worked?:string;improve?:string;plan?:string}};
 export type LearningRecord={id:string;created:string;date:string;kind:LearningKind;title:string;visibility:'shared'|'teacher';author:string;body:LearningBody};
 export type LearningReply={id:string;reviewId:string;created:string;answer:string;author:string};
 export type LearningResult=ApiResult&{records?:LearningRecord[];replies?:LearningReply[];record?:LearningRecord;received?:boolean};
@@ -10,3 +11,4 @@ export const replyLearning=(code:string,reviewId:string,id:string,answer:string)
 export const saveSpeaking=(code:string,id:string,title:string,transcript:string,reflection:string)=>authed<LearningResult>(code,{action:'speakingSave',id,title,transcript,reflection});
 export const analyseSpeaking=(code:string,id:string)=>authed<LearningResult>(code,{action:'speakingAnalyse',id});
 export const attachSpeakingAudio=(code:string,id:string,documentId:string)=>authed<LearningResult>(code,{action:'speakingAttachAudio',id,documentId});
+export const reviewSpeakingAudio=(code:string,id:string,reviewId:string,review:AudioReview)=>request<LearningResult>({action:'teacherReviewSpeaking',code,id,reviewId,review,session:savedSession('__teacher__')?.token||''});
