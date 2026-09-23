@@ -12,7 +12,7 @@ async function readReply(response: Response): Promise<Reply> {
   return data;
 }
 
-export async function postProgress(endpoint: string, body: Record<string, unknown>, fetcher: typeof fetch = fetch): Promise<Reply> {
+export async function postProgress(endpoint: string, body: Record<string, unknown>, fetcher: typeof fetch = fetch, resultFallback?: typeof fetch): Promise<Reply> {
   const deadline = AbortSignal.timeout(40000);
   let response: Response;
   try { response = await fetcher(endpoint, {
@@ -35,7 +35,9 @@ export async function postProgress(endpoint: string, body: Record<string, unknow
   while (true) {
     let result: Response;
     try {
-      result = await fetcher(resultUrl, {
+      // After a failed result download, try the runtime's separate connection
+      // pool. The original POST is never repeated or handed to this fallback.
+      result = await (retries > 0 && resultFallback ? resultFallback : fetcher)(resultUrl, {
         // Leave time to retry a stalled result download within the overall deadline.
         method: "GET", cache: "no-store", redirect: "manual",
         signal: AbortSignal.any([deadline, AbortSignal.timeout(10000)]),

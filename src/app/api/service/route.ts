@@ -11,7 +11,7 @@ const pending = new Map<string, Promise<string>>();
 async function upstream(body: Record<string, unknown>): Promise<Reply> {
   const endpoint = process.env.APPS_SCRIPT_URL;
   if (!endpoint) throw new Error("Missing progress service");
-  return postProgress(endpoint, body, googleHttp);
+  return postProgress(endpoint, body, googleHttp, fetch);
 }
 async function backendSession(code: string, idToken: string, refresh = false): Promise<string> {
   if (!refresh && (sessions.get(code)?.expires || 0) > Date.now() + 60000) return sessions.get(code)!.token;

@@ -18,6 +18,15 @@ test('a temporary Google response failure retries only GET and never repeats the
 test('an uncertain initial operation is never automatically replayed', async()=>{
   let calls=0;await assert.rejects(postProgress(endpoint,{action:'ai'},async()=>{calls++;return new Response(null,{status:503});}));assert.equal(calls,1);
 });
+test('a separate result connection is used only after a failed GET, without resending the operation',async()=>{
+  const calls=[];
+  const primary=async(url,options)=>{calls.push({transport:'primary',...options});if(options.method==='POST')return redirect();throw Error('result network unavailable');};
+  const fallback=async(url,options)=>{calls.push({transport:'fallback',...options});return Response.json({ok:true,id:'received-once'});};
+  const reply=await postProgress(endpoint,{action:'submit',session:'synthetic-secret',answers:{writing:'Original answer'}},primary,fallback);
+  assert.equal(reply.id,'received-once');
+  assert.deepEqual(calls.map(c=>[c.transport,c.method]),[['primary','POST'],['primary','GET'],['fallback','GET']]);
+  assert.equal(calls[2].body,undefined);assert.equal(calls[2].headers,undefined);assert.equal(calls[2].redirect,'manual');
+});
 test('credentials cannot follow an unexpected redirect destination',async()=>{
   let calls=0;await assert.rejects(postProgress(endpoint,{action:'login',credential:'private'},async()=>{calls++;return new Response(null,{status:302,headers:{location:'https://unrelated.example/'}});}));assert.equal(calls,1);
 });
