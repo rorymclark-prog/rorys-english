@@ -10,6 +10,9 @@
     "build": "next build",
     "start": "next start",
     "deploy": "vercel --prod",
+    "ui:rollback": "node scripts/ui-rollback.mjs rollback",
+    "ui:restore": "node scripts/ui-rollback.mjs restore",
+    "ui:rollbacks": "node scripts/ui-rollback.mjs list",
     "lint": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs"
   },

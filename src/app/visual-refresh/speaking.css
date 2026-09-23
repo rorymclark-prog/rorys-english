@@ -1,0 +1,10 @@
+.re-speaking .re-topic-options button{position:relative;border-width:2px;min-height:112px;transition:border-color .15s ease,background .15s ease,transform .15s ease}
+.re-speaking .re-topic-options button:hover:not(:disabled){border-color:var(--re-accent);transform:translateY(-2px)}
+.re-speaking .re-topic-options button[aria-pressed=true]{background:var(--re-soft);border-color:var(--re-accent);box-shadow:inset 0 0 0 1px var(--re-accent)}
+.re-speaking .re-topic-options button[aria-pressed=true]::after{content:"SELECTED";display:block;margin-top:10px;color:var(--re-accent);font-size:.58rem;font-weight:850;letter-spacing:.12em}
+.re-voice-orb.is-connecting{box-shadow:0 0 0 7px var(--re-soft);animation:voice-connect 1.4s ease-in-out infinite}
+.re-voice-orb.is-live{background:var(--re-purplesoft);color:var(--re-purple);box-shadow:0 0 0 8px var(--re-purplesoft)}
+.re-voice-orb.is-muted{background:var(--re-surface2);color:var(--re-muted);box-shadow:0 0 0 1px var(--re-line)}
+.re-voice-orb.is-ended{background:var(--re-soft);box-shadow:0 0 0 1px var(--re-line)}
+@keyframes voice-connect{50%{transform:scale(1.045)}}
+@media(prefers-reduced-motion:reduce){.re-voice-orb.is-connecting{animation:none}.re-speaking .re-topic-options button:hover:not(:disabled){transform:none}}

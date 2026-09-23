@@ -1,0 +1,10 @@
+.progress-page{max-width:1200px}
+.progress-history-heading{font-size:1.3rem;font-weight:800;letter-spacing:-.03em;margin-top:30px}
+.learning-record>header{border-left:5px solid var(--re-accent)}
+.learning-record article{border:1px solid var(--re-line);border-left:5px solid var(--re-accent)}
+.learning-record article.learning-kind-speaking{border-left-color:var(--re-purple)}
+.learning-record article.learning-kind-homework{border-left-color:var(--re-warmtext)}
+.learning-record article.learning-kind-test{border-left-color:var(--re-accent)}
+.learning-record article.learning-kind-lesson{border-left-color:var(--re-muted)}
+.learning-filters{padding:4px 0}
+.learning-filters button{min-height:42px;font-weight:750}

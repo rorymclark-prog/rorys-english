@@ -1,0 +1,13 @@
+.re-nav-groups{gap:17px!important}
+.re-nav-group{display:grid;gap:3px}
+.re-nav-group>p{padding:0 12px 5px;color:var(--re-muted);font-size:.6rem;font-weight:850;letter-spacing:.15em}
+.re-sidebar .re-nav-group a{min-height:40px;padding:8px 11px;font-size:.75rem}
+.re-sidebar .re-workspace-label{margin:22px 0 20px}
+.re-sidebar .re-sidebar-bottom{padding-top:12px}
+.re-tab-link{color:var(--re-muted);transition:color .15s ease,background .15s ease}
+.re-tab-link.is-active{color:var(--re-accent);background:var(--re-soft);border-radius:15px}
+.re-tab-link svg{flex-shrink:0}
+.app-menu-group{display:grid;gap:5px;margin:15px 0}
+.app-menu-group>p{color:var(--re-muted);font-size:.6rem;font-weight:850;letter-spacing:.14em;padding:0 5px 4px}
+.app-menu-group .app-menu-link{background:var(--re-surface);border:1px solid var(--re-line)}
+@media(prefers-reduced-motion:reduce){.re-tab-link{transition:none!important}}

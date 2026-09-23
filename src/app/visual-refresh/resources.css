@@ -1,0 +1,2 @@
+.re-resources-grid a{transition:border-color .15s ease,background .15s ease}
+.re-resources-grid a:hover,.re-resources-grid a:focus-visible{border-color:var(--re-accent);background:var(--re-soft)}

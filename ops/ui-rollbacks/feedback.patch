@@ -1,0 +1,81 @@
+diff --git a/src/components/views/LearningView.tsx b/src/components/views/LearningView.tsx
+index 1b6161b..ef3e162 100644
+--- a/src/components/views/LearningView.tsx
++++ b/src/components/views/LearningView.tsx
+@@ -39,8 +39,8 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
+     else setError(result.error||'Could not save this review.');
+   }
+   async function submit(id:string){const value=(answer[id]||'').trim();if(!value||busy||disabled)return;setBusy(true);setError('');const key=ids.current[id]||crypto.randomUUID();ids.current[id]=key;const r=await replyLearning(code,id,key,value);setBusy(false);if(r.ok&&r.received){delete ids.current[id];setAnswer(a=>({...a,[id]:''}));setMessage('Your answer is saved. Rory can review it.');await refresh();}else setError(r.error||'Could not confirm your answer. Keep it here and try again.');}
+-  return <div className="learning-record space-y-5 py-4 text-navy dark:text-cream">
+-    {showHeader&&<header className={card}><p className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-amber">RORY’S REVIEWS</p><h2 className="display mt-1 text-2xl">{mode==='teacher'?`${name}'s reviews`:mode==='parent'?`${name}'s learning`:'Feedback and next steps'}</h2><p className="mt-2 text-sm text-navy-soft dark:text-navy-mist">Writing, speaking, lessons and school tests. Open an entry to see what worked and what to try next.</p></header>}
++  return <div className="space-y-5 py-4 text-navy dark:text-cream">
++    {showHeader&&<header className={card}><p className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-amber">Learning record</p><h2 className="display mt-1 text-2xl">{mode==='teacher'?`${name}'s reviews`:mode==='parent'?`${name}'s learning`:'Your work and next steps'}</h2><p className="mt-2 text-sm text-navy-soft dark:text-navy-mist">Writing, speaking, lessons and school test preparation in one place. Each entry shows the evidence and what to try next.</p></header>}
+     {mode==='teacher'&&<details className={card}><summary className="cursor-pointer font-bold">Add a review or lesson note</summary><form onSubmit={create} className="mt-4 space-y-3">
+       <div className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Type<select className={box} value={kind} onChange={e=>setKind(e.target.value as LearningKind)}>{kinds.map(k=><option key={k} value={k}>{labels[k]}</option>)}</select></label><label className="text-sm">Date<input className={box} type="date" required value={date} onChange={e=>setDate(e.target.value)}/></label></div>
+       <label className="block text-sm">Title<input className={box} required maxLength={150} value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. Press freedom essay review"/></label>
+@@ -56,9 +56,9 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
+       <button className={button} disabled={busy||!title.trim()}>{busy?'Saving…':'Save review'}</button>
+     </form></details>}
+     {error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}{message&&<p role="status" className="rounded-xl bg-green-50 p-3 text-sm text-green-800">{message}</p>}
+-    <nav className="learning-filters flex flex-wrap gap-2" aria-label="Filter learning records">{(['all',...kinds] as const).map(k=><button key={k} type="button" aria-pressed={filter===k} onClick={()=>setFilter(k)} className={`rounded-full border px-3 py-2 text-sm ${filter===k?'border-indigo-600 bg-indigo-600 text-white':'border-black/15 dark:border-white/20'}`}>{k==='all'?'All':labels[k]}</button>)}</nav>
++    <nav className="flex flex-wrap gap-2" aria-label="Filter learning records">{(['all',...kinds] as const).map(k=><button key={k} type="button" aria-pressed={filter===k} onClick={()=>setFilter(k)} className={`rounded-full border px-3 py-2 text-sm ${filter===k?'border-indigo-600 bg-indigo-600 text-white':'border-black/15 dark:border-white/20'}`}>{k==='all'?'All':labels[k]}</button>)}</nav>
+     {checkpoints.length>0&&<section className={card}><h3 className="font-bold">Speaking checkpoints</h3><p className="mt-1 text-xs text-navy-soft dark:text-navy-mist">Rory’s task based observations. Compare similar tasks and support levels before reading a change as progress.</p><div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr><th className="pr-3">Date</th>{Object.entries(ratingLabels).map(([key,label])=><th key={key} className="pr-3">{label}</th>)}</tr></thead><tbody>{checkpoints.slice(-4).map(r=><tr key={r.id} className="border-t border-black/10 dark:border-white/10"><td className="py-2 pr-3">{r.date}</td>{Object.keys(ratingLabels).map(key=><td key={key} className="pr-3">{r.body.ratings?.[key]??'—'}</td>)}</tr>)}</tbody></table></div><p className="mt-2 text-xs">Scale: 1–4. A dash means not observed.</p></section>}
+-    {loading?<p>Opening the learning record…</p>:!records.length?<p className={card}>No reviews yet. New work and lesson notes will appear here.</p>:!records.some(r=>filter==='all'||r.kind===filter)?<p className={card}>Nothing in this area yet.</p>:<div className="space-y-4">{records.filter(r=>filter==='all'||r.kind===filter).map(r=>{const b=r.body,w=b.writing,rs=replies.filter(x=>x.reviewId===r.id);return <article key={r.id} className={`${card} learning-kind-${r.kind}`}>
++    {loading?<p>Opening the learning record…</p>:!records.length?<p className={card}>No reviews yet. New work and lesson notes will appear here.</p>:!records.some(r=>filter==='all'||r.kind===filter)?<p className={card}>Nothing in this area yet.</p>:<div className="space-y-4">{records.filter(r=>filter==='all'||r.kind===filter).map(r=>{const b=r.body,w=b.writing,rs=replies.filter(x=>x.reviewId===r.id);return <article key={r.id} className={card}>
+       <div className="flex flex-wrap items-center gap-2 text-xs"><span className="rounded-full bg-indigo-100 px-2 py-1 font-bold text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100">{labels[r.kind]}</span><span>{r.date}</span>{r.visibility==='teacher'&&<span className="rounded-full bg-amber/20 px-2 py-1">Rory only</span>}</div><h3 className="mt-2 text-xl font-bold">{r.title}</h3>{b.summary&&<p className="mt-2 whitespace-pre-wrap text-sm"><FeedbackText text={b.summary}/></p>}
+       {(b.evidenceType||b.source)&&<p className="mt-2 text-xs text-navy-soft dark:text-navy-mist">{b.evidenceType}{b.source&&` · ${b.source}`}</p>}
+       {!!b.strengths?.length&&<div className="mt-4"><h4 className="font-semibold">What’s working</h4><ul className="ml-5 list-disc text-sm">{b.strengths.map((x,i)=><li key={i}><FeedbackText text={x}/></li>)}</ul></div>}
+diff --git a/src/components/views/ProgressView.tsx b/src/components/views/ProgressView.tsx
+index 6eba142..7af51b3 100644
+--- a/src/components/views/ProgressView.tsx
++++ b/src/components/views/ProgressView.tsx
+@@ -4,7 +4,7 @@ import { Fragment, useEffect, useState } from "react";
+ import Link from "next/link";
+ import type { StudyTool } from "@/lib/types";
+ import { fetchProgress, remoteEnabled, type Progress, type Section } from "@/lib/remote";
+-import { GearIcon, ExternalIcon, ChevronLeftIcon, ChevronRightIcon, CheckSquareIcon, FileIcon, TargetIcon } from "@/components/Icons";
++import { GearIcon, ExternalIcon, ChevronLeftIcon } from "@/components/Icons";
+ import LearningView from "./LearningView";
+ import DocumentsView from "./DocumentsView";
+ 
+@@ -57,7 +57,8 @@ export default function ProgressView({
+     <>
+       {/* Header (self-contained so this works in the app shell AND the parent page) */}
+       <header
+-        className="re-screen-header flex items-start justify-between gap-3"
++        className="sticky top-0 z-10 flex items-start justify-between gap-3 bg-cream px-5 pb-3 dark:bg-navy"
++        style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
+       >
+         <div className="flex min-w-0 items-start gap-2">
+           {mode === "teacher" && onBack && (
+@@ -94,8 +95,7 @@ export default function ProgressView({
+         )}
+       </header>
+ 
+-      <main className="re-screen-main progress-page">
+-        {mode==="student"&&studentCode&&<nav className="ux-route-grid" aria-label="Related work pages"><Link className="ux-route-card" href={`/s/${studentCode}/homework/`}><CheckSquareIcon/><span><strong>Homework</strong><small>Open your tasks</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${studentCode}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Focus on school tests</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${studentCode}/documents/`}><FileIcon/><span><strong>Documents</strong><small>Find saved work</small></span><ChevronRightIcon/></Link></nav>}
++      <main className="px-5 pb-10">
+         {state === "loading" && (
+           <div className="mt-4 space-y-3">
+             <div className="h-20 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark" />
+@@ -115,10 +115,8 @@ export default function ProgressView({
+ 
+         {state === "ok" && data && (
+           <>
+-            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Rory’s reviews come first. The numbers below show activity, not a grade of what you have mastered.</p>
+-            <LearningView code={fetchCode} name={displayName} mode={mode} />
+-            <h2 className="progress-history-heading">Practice history</h2>
+-            <p className="ux-subtle">Quiz scores show attempts, not proof that a topic is mastered.</p>
++            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Practice and test history. Quiz scores show attempts, not proof that a topic is mastered.</p>
++            {mode==="student"&&studentCode&&<Link className="mb-4 inline-block underline" href={`/s/${studentCode}/homework/`}>Submitted work, revisions and Rory’s feedback →</Link>}
+             <SummaryTiles data={data} />
+             <SectionCard title="Homework" section={data.homework} />
+             <SectionCard title="Quizzes & vocab" section={data.quizzes} />
+@@ -126,6 +124,7 @@ export default function ProgressView({
+             <SectionCard title="Writing" section={data.writing} groupBySemester />
+             <SectionCard title="Speaking" section={data.speaking} />
+             <SectionCard title="Mock tests" section={data.mockTests} groupBySemester />
++            <LearningView code={fetchCode} name={displayName} mode={mode} />
+             {mode === "parent" && <details className="mt-5"><summary className="cursor-pointer rounded-card bg-surface p-4 font-bold shadow-card dark:bg-navy-raised dark:shadow-card-dark">View saved documents and homework files</summary><DocumentsView code={fetchCode} name={displayName} parent /></details>}
+             {data.generatedAt && (
+               <p className="tnum mt-4 text-center text-xs text-navy-soft dark:text-navy-mist">

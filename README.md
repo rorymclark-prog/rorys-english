@@ -50,6 +50,8 @@ The source includes 47 automated tests for access isolation, teacher-session rev
 
 Read [the deployment guide](apps-script/progress-sync/README.md). Publish this Next.js app to the existing Vercel project `rorys-english` with `npm run deploy`. GitHub holds the source; the old Pages build is retained for existing links. The current app requires its server API route and cannot use a static Pages export.
 
+The September visual redesign has [independent rollback steps for each page area](ops/ui-rollbacks/README.md). `npm run ui:rollbacks` lists the available areas and their current state. Rolling back one area requires a reviewed source change and a new Vercel deployment; it does not alter student records.
+
 Use `.env.example` for configuration names. The Firebase Web API key is public project configuration. Student emails/UID mappings belong only in the server environment; Firebase passwords, tokens, teacher credentials and provider secrets never belong in source. The server verifies Firebase signatures and maps the exact UID and verified email to one student. Apps Script independently validates Google identity and server-managed student permissions before issuing a short-lived student session.
 
 The live login integration was checked with a temporary synthetic Firebase account: unverified email rejection, a real signed identity, authenticated progress, and denied cross-student/teacher access. Password-setup link generation was checked for both registered learners without sending mail or changing their passwords. The synthetic account was deleted; no learner answers were written. Real student sign-in and installed-phone/offline behavior still need a device check.

@@ -1,0 +1,5 @@
+.test-prep-page{max-width:1020px}
+.test-prep-hero{padding:24px;border:1px solid var(--re-line);border-left:5px solid var(--re-accent);border-radius:18px;background:var(--re-surface);margin-bottom:17px}
+.test-prep-hero h1{font-size:clamp(1.8rem,3vw,2.5rem);font-weight:800;letter-spacing:-.04em;margin:5px 0 8px}
+.test-prep-hero>p:last-child{max-width:650px;color:var(--re-muted);font-size:.84rem;line-height:1.65}
+@media(max-width:700px){.test-prep-hero{padding:18px}}

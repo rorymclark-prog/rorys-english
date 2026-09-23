@@ -1,0 +1,9 @@
+.landing-page{gap:12px}
+.landing-icon{display:grid;place-items:center;width:62px;height:62px;border-radius:19px;background:var(--re-soft);color:var(--re-accent);margin-bottom:8px}
+.landing-page h1{margin:2px 0 0}
+.landing-intro{max-width:330px;color:var(--re-muted);font-size:.89rem;line-height:1.7}
+.landing-instructions{width:100%;margin:18px 0 6px;padding:23px;border:1px solid var(--re-line);border-radius:19px;background:var(--re-surface);text-align:left}
+.landing-instructions h2{font-size:1rem;font-weight:800;margin-bottom:9px}
+.landing-instructions p{color:var(--re-muted);font-size:.79rem;line-height:1.65}
+.landing-instructions p+p{margin-top:10px}
+.landing-teacher-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:11px 18px;border-radius:11px;background:var(--re-accent);color:var(--re-onaccent);font-size:.82rem;font-weight:800}
