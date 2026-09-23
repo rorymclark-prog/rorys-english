@@ -11,7 +11,13 @@ const studentActions = new Set(["progress", "resources", "assignments", "note", 
 export async function accountService(body: Record<string, unknown>, deps: Dependencies): Promise<Reply> {
   if (body.preview && !new Set(["progress","resources","assignments","note","submissions","documents","document","documentFile"]).has(String(body.action))) return {ok:false,error:"Student preview is read-only."};
   // Legacy teacher/student codes stay compatible during the move.
-  if (body.action !== "accountLogin" && body.authProvider !== "firebase") return deps.upstream(body);
+  if (body.action !== "accountLogin" && body.authProvider !== "firebase") {
+    const reply = await deps.upstream(body);
+    if (body.action === "login" && body.code === "__teacher__" && !reply.ok && reply.error === "Sign-in failed. Check your access code with Rory.") {
+      return { ...reply, error: "Sign-in failed. Check your teacher password and try again." };
+    }
+    return reply;
+  }
   const token = body.action === "accountLogin" ? body.idToken : body.session;
   if (typeof token !== "string" || !token) return { ok: false, authRequired: true, error: "Please sign in again." };
   let identity: Identity;

@@ -6,6 +6,8 @@ import TeacherDashboardView from "@/components/views/TeacherDashboardView";
 
 export const metadata: Metadata = {
   title: "Teacher dashboard — Rory's English",
+  manifest: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/m/teacher.webmanifest`,
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Rory Teacher" },
   // Real access control is the server-side password check (Apps Script) —
   // this just keeps the URL out of search results.
   robots: { index: false, follow: false },

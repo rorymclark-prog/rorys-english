@@ -35,3 +35,27 @@ test('Google result redirect loops and sign-in redirects fail closed',async()=>{
  let calls=0;await assert.rejects(postProgress(endpoint,{action:'submit'},async()=>{calls++;return redirect();}));assert.equal(calls,5);
  let otherCalls=0;await assert.rejects(postProgress(endpoint,{action:'submit'},async()=>++otherCalls===1?redirect():new Response(null,{status:302,headers:{location:'https://accounts.google.com/ServiceLogin'}})));assert.equal(otherCalls,2);
 });
+
+
+test('a stalled result download leaves time to retry without repeating the operation', async () => {
+  const timedExports={};
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/server/progress-transport.ts','utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText, {
+    exports:timedExports, URL,
+    AbortSignal:{any:signals=>AbortSignal.any(signals),timeout:ms=>AbortSignal.timeout(ms===10000?5:1000)},
+  });
+  const calls=[];
+  const keepAlive=setTimeout(()=>{},1500);
+  try {
+    const result=await timedExports.postProgress(endpoint,{action:'submit'},async(url,options)=>{
+      calls.push(options);
+      if(calls.length===1)return redirect();
+      if(calls.length===2)return new Promise((resolve,reject)=>options.signal.addEventListener('abort',()=>reject(options.signal.reason),{once:true}));
+      return Response.json({ok:true,id:'saved-once'});
+    });
+    assert.equal(result.id,'saved-once');
+    assert.deepEqual(calls.map(c=>c.method),['POST','GET','GET']);
+    assert.equal(calls[0].signal.aborted,false);
+    assert.equal(calls[1].signal.aborted,true);
+    assert.equal(calls[2].signal.aborted,false);
+  }finally{clearTimeout(keepAlive);}
+});

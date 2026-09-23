@@ -54,6 +54,8 @@ export interface UnitMeta {
 /** Full unit definition from <student>/units.json (adds study tools). */
 export interface UnitDef extends UnitMeta {
   studyTools: StudyTool[];
+  /** Curated words from a verified current unit for original voice practice. */
+  voiceVocabulary?: string[];
   /** Approved student materials. Never include teacher notes or private records. */
   resources?: StudyTool[];
   /** Model sentences for the record-and-compare speaking screen. */

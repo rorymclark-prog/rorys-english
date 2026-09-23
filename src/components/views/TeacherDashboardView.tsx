@@ -16,6 +16,7 @@ import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon
 import ProgressView from "./ProgressView";
 import { login, savedSession, forgetSession } from "@/lib/api";
 import { publishAssessment } from "@/lib/remote";
+import { VoiceStudio } from "./SpeakView";
 import DocumentsView from "./DocumentsView";
 import TeacherReviewPanel from "./TeacherReviewPanel";
 import AppMenu from "@/components/AppMenu";
@@ -29,6 +30,7 @@ const STORAGE_KEY = "re_teacher_secret";
 type LoadState = "idle" | "loading" | "ok" | "error";
 
 export default function TeacherDashboardView() {
+  const [testingVoice, setTestingVoice] = useState(false);
   const [ready, setReady] = useState(false);
   const [secret, setSecret] = useState<string | null>(null);
   const [students, setStudents] = useState<TeacherStudent[] | null>(null);
@@ -107,6 +109,11 @@ export default function TeacherDashboardView() {
   if (!ready) return null;
   if (!secret) return <PasswordGate input={input} setInput={setInput} authing={authing} authError={authError} onSubmit={submitGate} />;
 
+  if (testingVoice) return <div className="teacher-workspace">
+    <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => setTestingVoice(false)}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><QuickAppearance/><AppMenu teacher/></div></header>
+    <VoiceStudio code="__teacher__" lines={[]} teacherTest practiceOptions={studentRoster.map(s => ({ code: s.code, name: s.displayName, unit: s.units.find(u => u.active)?.title }))} />
+  </div>;
+
   const selected = selectedCode ? students?.find((x) => x.code === selectedCode) ?? null : null;
 
   // Drill-down: full per-student progress (same tables the student/parent see).
@@ -152,6 +159,7 @@ export default function TeacherDashboardView() {
           </div>
           <div className="teacher-book-art" aria-hidden="true"><BookIcon/><span className="teacher-art-star">✦</span><span className="teacher-art-note"><CheckSquareIcon/> A little practice.<br/>A little progress.</span></div>
         </section>
+        <section className="re-card mb-6"><h2>Try the speaking partner</h2><p>Test a live AI conversation yourself before a lesson. Your test stays separate from student work.</p><button type="button" className="teacher-primary mt-3" onClick={() => setTestingVoice(true)}>Test AI voice</button></section>
         {loadState === "loading" && <div className="teacher-student-grid" role="status" aria-label="Loading students">{[0,1].map(i=><div key={i} className="h-72 animate-pulse rounded-card bg-amber-soft dark:bg-amber-dusk"/>)}</div>}
         {loadState === "error" && <div className="teacher-empty" role="alert"><ChartIcon/><h2>Let’s try that again</h2><p>Your students’ records could not be loaded.</p><button className="teacher-primary" onClick={()=>setRefreshKey(k=>k+1)}>Reload students</button></div>}
         {loadState === "ok" && students && <>

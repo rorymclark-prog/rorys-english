@@ -9,6 +9,12 @@
     "progressLinks": [],
     "units": [
       {
+        "id": "english-in-context5-unit01-2026",
+        "title": "English in Context 5 · Unit 1: Family life",
+        "active": true,
+        "schoolYear": "2026–27"
+      },
+      {
         "id": "unit10",
         "title": "A Fair World",
         "active": false
