@@ -6,6 +6,8 @@ import { isStudentPreview } from "@/lib/student-preview";
 import { savedSession } from "@/lib/api";
 import { currentAccount } from "@/lib/account-auth";
 import { ConversationArt, MicrophoneIcon } from "@/components/LearningVisuals";
+import {saveSpeaking,analyseSpeaking,attachSpeakingAudio} from "@/lib/learning";
+import {documentRequest,fileBase64,MAX_DOCUMENT_BYTES} from "@/lib/documents";
 const topics = [
   { id: "general", title: "Open chat", target: "Talk about anything you like.", prompt: "What would you like to talk about today?" },
   { id: "everyday", title: "Everyday conversation", target: "Answer, add a reason, ask a question.", prompt: "Tell me about something you enjoyed this week. Why did you enjoy it?" },
@@ -35,6 +37,11 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
   const [state, setState] = useState<State>("idle"); const [status, setStatus] = useState("");
   const [muted, setMuted] = useState(false); const [elapsed, setElapsed] = useState(0);
   const [fragments, setFragments] = useState<Fragment[]>([]); const [reflection, setReflection] = useState("");
+  const [saveState,setSaveState]=useState("");
+  const [saving,setSaving]=useState(false),[sampleDownload,setSampleDownload]=useState('');
+  const sampleUrl=useRef('');
+  const fragmentsRef=useRef<Fragment[]>([]),sessionId=useRef(''),savedId=useRef(''),topicRef=useRef(0),reflectionRef=useRef('');
+  const liveRecorder=useRef<MediaRecorder|null>(null),sampleReady=useRef<Promise<Blob|null>|null>(null),sampleStop=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [recording, setRecording] = useState(false); const [recorded, setRecorded] = useState("");
   const [recordError, setRecordError] = useState(""); const [recordBusy, setRecordBusy] = useState(false);
   const audio = useRef<HTMLAudioElement>(null); const peer = useRef<RTCPeerConnection | null>(null);
@@ -52,7 +59,30 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
     peer.current?.close(); peer.current = null; mic.current?.getTracks().forEach(t => t.stop()); mic.current = null;
     if (audio.current) audio.current.srcObject = null;
   }
-  function finish(message: string) { dispose(); if (mounted.current) { setState("ended"); setStatus(message); setMuted(false); } }
+  function finish(message: string) { if(liveRecorder.current?.state==='recording')liveRecorder.current.stop();if(sampleStop.current)clearTimeout(sampleStop.current);dispose(); if (mounted.current) { setState("ended"); setStatus(message); setMuted(false); if(!teacherTest&&fragmentsRef.current.some(f=>f.speaker==='You'))void persistConversation(); } }
+  async function persistConversation(){
+    const id=sessionId.current;if(!id||savedId.current===id)return;savedId.current=id;
+    setSaving(true);
+    const text=fragmentsRef.current.map(f=>`[${(f.start_ms/1000).toFixed(1)}s] ${f.speaker}: ${f.delta}`).join('\n').slice(0,24000);
+    setSaveState('Saving your conversation…');
+    const result=await saveSpeaking(code,id,topics[topicRef.current].title,text,reflectionRef.current);
+    if(!result.ok){savedId.current='';setSaving(false);setSaveState('Could not confirm the save. Keep this page open and choose Retry save.');return;}
+    setSaveState('Conversation saved. Preparing transcript feedback…');
+    const analysis=await analyseSpeaking(code,id);
+    const sample=await sampleReady.current;
+    if(sample&&sample.size>0&&sample.size<=MAX_DOCUMENT_BYTES){
+      if(sampleUrl.current)URL.revokeObjectURL(sampleUrl.current);sampleUrl.current=URL.createObjectURL(sample);setSampleDownload(sampleUrl.current);
+      const ext=sample.type==='audio/mp4'?'m4a':sample.type==='audio/ogg'?'ogg':'webm',documentId=crypto.randomUUID();
+      const uploaded=await documentRequest(code,false,{action:'documentUpload',id:documentId,title:`AI conversation audio · ${topics[topicRef.current].title}`,context:`Student voice sample for speaking record ${id}. Up to three minutes; AI feedback uses captions, while Rory can listen to this recording.`,files:[{name:`speaking-${id}.${ext}`,type:sample.type,data:await fileBase64(sample)}]});
+      if(uploaded.ok&&uploaded.received)await attachSpeakingAudio(code,id,documentId);
+      setSaveState(uploaded.ok?'Transcript feedback and a short audio sample are saved for Rory and your parents.':'Transcript saved. The audio sample could not be confirmed; download the conversation and ask Rory if you want to keep the sound.');
+    }else setSaveState(analysis.ok?'Saved with transcript feedback. No audio sample was available from this browser.':'Conversation saved. AI transcript feedback is unavailable; Rory can review it.');
+    setSaving(false);
+  }
+  function startSample(stream:MediaStream){
+    if(teacherTest||!window.MediaRecorder)return;
+    try {const type=['audio/webm;codecs=opus','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported(t));const recorder=new MediaRecorder(stream,{...(type?{mimeType:type}:{}),audioBitsPerSecond:24000});const chunks:BlobPart[]=[];sampleReady.current=new Promise(resolve=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType.split(';')[0]||'audio/webm'}));recorder.onerror=()=>resolve(null);});liveRecorder.current=recorder;recorder.start();sampleStop.current=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},180000);}catch{sampleReady.current=null;}
+  }
   function end() {
     if (events.current?.readyState === "open") {
       setState("closing"); setStatus("Finishing your conversation…");
@@ -67,11 +97,11 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
     fetch(endpoint, { cache: "no-store" }).then(r => r.json()).then(r => { if (mounted.current) setAvailable(r.available === true); }).catch(() => { if (mounted.current) setAvailable(false); });
     const leave = () => { if (events.current?.readyState === "open") events.current.send(JSON.stringify({ type: "session.close" })); dispose(); stopRecording(); };
     window.addEventListener("pagehide", leave);
-    return () => { mounted.current = false; recordGeneration.current++; leave(); window.removeEventListener("pagehide", leave); if (recordingUrl.current) URL.revokeObjectURL(recordingUrl.current); };
+    return () => { mounted.current = false; recordGeneration.current++; leave(); window.removeEventListener("pagehide", leave); if (recordingUrl.current) URL.revokeObjectURL(recordingUrl.current);if(sampleUrl.current)URL.revokeObjectURL(sampleUrl.current); };
   }, [endpoint]);
   async function start() {
-    if (preview || !available || busy || recording || recordBusy) return;
-    dispose(); const run = generation.current; setState("connecting"); setStatus("Connecting your microphone…"); setFragments([]); setElapsed(0); setReflection(""); setSessionTopic(topic);
+    if (preview || !available || busy || saving || recording || recordBusy) return;
+    dispose(); const run = generation.current;sessionId.current=crypto.randomUUID();savedId.current='';topicRef.current=topic;reflectionRef.current='';fragmentsRef.current=[];sampleReady.current=null;liveRecorder.current=null;if(sampleUrl.current)URL.revokeObjectURL(sampleUrl.current);sampleUrl.current='';setSampleDownload('');setSaveState('');setState("connecting"); setStatus("Connecting your microphone…"); setFragments([]); setElapsed(0); setReflection(""); setSessionTopic(topic);
     const check = () => { if (!mounted.current || run !== generation.current) throw new Error("cancelled"); };
     try {
       let token: string;
@@ -96,11 +126,12 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
         let event; try { event = JSON.parse(data); } catch { return; }
         if (event.type === "session.started") {
           if (timeout.current) clearTimeout(timeout.current); setState("live"); setStatus("Connected. Say hello when you’re ready.");
+          if(mic.current)startSample(mic.current);
           const started = Date.now(); timer.current = setInterval(() => { const seconds = Math.floor((Date.now() - started) / 1000); setElapsed(seconds); if (seconds >= 900) { if (timer.current) clearInterval(timer.current); end(); } }, 1000);
         } else if (event.type === "session.closed") finish("Conversation ended. Keep one useful phrase and one next step.");
         else if (["session.input_transcript.delta", "session.output_transcript.delta"].includes(event.type) && typeof event.delta === "string") {
           const f: Fragment = { speaker: event.type === "session.input_transcript.delta" ? "You" : "AI partner", delta: event.delta, start_ms: Number(event.start_ms) || 0, end_ms: Number(event.end_ms) || 0 };
-          setFragments(prev => [...prev, f].slice(-3000));
+          fragmentsRef.current=[...fragmentsRef.current,f].slice(-3000);setFragments(fragmentsRef.current);
         } else if (event.type === "error") setStatus("The voice service reported a problem. End the conversation if it does not recover.");
       });
       channel.addEventListener("close", () => { if (run === generation.current) finish("The connection ended. Your visible transcript is still here."); });
@@ -148,10 +179,10 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
       <section className="re-card re-live-panel"><div className={`re-voice-orb ${state === "live" ? "is-live" : ""}`} aria-hidden><MicrophoneIcon /></div><p className="re-eyebrow">LIVE AI CONVERSATION · GPT-LIVE-1</p><h2>{state === "live" ? "Make yourself heard." : state === "connecting" ? "Opening your conversation…" : "A conversation, at your pace."}</h2><p>{topics[topic].target}</p>
         <p className="re-voice-status" role="status">{status || (preview ? "Teacher preview is read-only. Voice is disabled here." : available === null ? "Checking live voice…" : available ? "Ready for a conversation of up to 15 minutes." : "Live AI voice is awaiting connection. Try a rehearsal below in the meantime.")}</p>
         {busy && <p className="re-timer">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} <small>/ 15:00</small></p>}
-        <div className="re-voice-actions">{!busy ? <button className="re-button" disabled={!available || preview || recording || recordBusy} onClick={() => void start()}>Start conversation</button> : <><button className="re-button re-secondary" disabled={state !== "live"} onClick={() => { const next = !muted; mic.current?.getAudioTracks().forEach(t => { t.enabled = !next; }); setMuted(next); }}>{muted ? "Unmute microphone" : "Mute microphone"}</button><button className="re-button" disabled={state === "closing"} onClick={end}>{state === "closing" ? "Finishing…" : state === "connecting" ? "Cancel" : "End conversation"}</button></>}</div>
+        <div className="re-voice-actions">{!busy ? <button className="re-button" disabled={!available || preview || saving || recording || recordBusy} onClick={() => void start()}>{saving?'Saving this conversation…':'Start conversation'}</button> : <><button className="re-button re-secondary" disabled={state !== "live"} onClick={() => { const next = !muted; mic.current?.getAudioTracks().forEach(t => { t.enabled = !next; }); setMuted(next); }}>{muted ? "Unmute microphone" : "Mute microphone"}</button><button className="re-button" disabled={state === "closing"} onClick={end}>{state === "closing" ? "Finishing…" : state === "connecting" ? "Cancel" : "End conversation"}</button></>}</div>
         <audio ref={audio} autoPlay controls className={busy ? "re-live-audio" : "hidden"} aria-label="AI partner audio" />
-        <small>When connected, your microphone audio goes to OpenAI. This is an AI partner. Muting keeps the session running; choose End to finish.</small></section>
-      {!!fragments.length && <section className="re-card"><h2>Conversation captions</h2><p className="re-small-copy">Captions may contain mistakes. Both speakers can speak at once.</p><div className="re-caption-columns">{(["You", "AI partner"] as const).map(s => <div key={s}><h3>{s}</h3><p>{transcript(s)}</p></div>)}</div><label className="re-reflection">One useful phrase & my next target<textarea rows={3} maxLength={3000} value={reflection} onChange={e => setReflection(e.target.value)} placeholder="What will you try again?" /></label><button className="re-button re-secondary" onClick={saveTranscript}>Download conversation & reflection</button><p className="re-small-copy">{teacherTest ? "This test stays in this tab. Download it before leaving if you want to keep it. No student record is created." : "Kept in this tab until you leave. Download it before leaving. Nothing has been submitted to Rory."}</p>{!teacherTest && <Link className="re-text-link" href={`/s/${code}/homework/`}>Open homework to submit your practice →</Link>}</section>}
+        <small>When connected, your microphone audio goes to OpenAI. The first three minutes of your voice are also saved privately for Rory and your parents to review. Caption feedback is separate from audio review. Muting keeps the session running; choose End to finish.</small></section>
+      {!!fragments.length && <section className="re-card"><h2>Conversation captions</h2><p className="re-small-copy">Captions may contain mistakes. Both speakers can speak at once.</p><div className="re-caption-columns">{(["You", "AI partner"] as const).map(s => <div key={s}><h3>{s}</h3><p>{transcript(s)}</p></div>)}</div><label className="re-reflection">One useful phrase & my next target<textarea rows={3} maxLength={3000} value={reflection} onChange={e => {setReflection(e.target.value);reflectionRef.current=e.target.value;}} placeholder="What will you try again?" /></label><button className="re-button re-secondary" onClick={saveTranscript}>Download conversation & reflection</button>{sampleDownload&&<a className="re-button re-secondary" href={sampleDownload} download="my-speaking-sample">Download my audio sample</a>}{!teacherTest&&<p className="re-small-copy" role="status">{saveState||'When you end, the caption transcript is saved to your progress record for Rory and your parents to see.'}</p>}{!teacherTest&&state==='ended'&&saveState.startsWith('Could not')&&<button className="re-button re-secondary" onClick={()=>void persistConversation()}>Retry save</button>}{teacherTest&&<p className="re-small-copy">This test stays in this tab. No student record is created.</p>}{!teacherTest&&<Link className="re-text-link" href={`/s/${code}/progress/`}>View your speaking record →</Link>}</section>}
     </section><aside><div className="re-card"><ConversationArt/><h2>A little structure helps.</h2><ol className="re-speaking-steps"><li><strong>Get started</strong>Choose a mode and bring one idea or useful word.</li><li><strong>Keep it going</strong>Say more, then ask a question back.</li><li><strong>Make it stick</strong>Try one correction in your own sentence. Ask for shorter chunks if you need them.</li></ol><p className="re-small-copy">This is supplementary practice, not a school assessment. Follow Rory’s assignment for what to submit.</p></div>
       <section className="re-card"><p className="re-eyebrow">QUICK REHEARSAL · ON THIS DEVICE</p><h2>Try it out loud.</h2><p className="re-rehearsal-prompt">{topics[topic].id === "unit" && lines.length ? lines[0] : topics[topic].prompt}</p><p className="re-small-copy">Record up to three minutes, listen back and try again. Your recording stays in this tab and is not sent to anyone.</p><button className="re-button re-secondary" disabled={preview || busy || recordBusy} onClick={() => recording ? stopRecording() : void record()}>{recording ? "Stop recording" : recordBusy ? "Opening microphone…" : "Record a rehearsal"}</button><p role="status">{recording ? "Recording…" : recordError}</p>{recorded && !recording && <audio controls src={recorded} className="re-live-audio" aria-label="Your rehearsal recording" />}</section>
     </aside></div>

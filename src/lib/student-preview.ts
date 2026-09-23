@@ -1,6 +1,6 @@
 // Preview is a tab-local mode; it never creates or borrows a student account.
 export const PREVIEW_KEY = "re_teacher_preview_v1";
-export const PREVIEW_READS = new Set(["progress", "resources", "assignments", "note", "submissions", "documents", "document", "documentFile"]);
+export const PREVIEW_READS = new Set(["progress", "resources", "assignments", "note", "submissions", "documents", "document", "documentFile", "learningRecords"]);
 export const PREVIEW_NOTICE = "Student preview is read-only. Return to your teacher workspace to make changes.";
 export function previewCode(): string | null {
   if (typeof window === "undefined") return null;
