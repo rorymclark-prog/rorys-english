@@ -3,6 +3,7 @@ import {useEffect,useState} from "react";
 import {isStudentPreview} from "@/lib/student-preview";
 import {deliver,outbox,type PendingEvent} from "@/lib/sync";
 import {fetchSubmissions,type Submission} from "@/lib/remote";
+import FeedbackText from "@/components/FeedbackText";
 export interface AnswerField {id:string;prompt:string;type?:string}
 export default function SubmissionForm({code,unit,task,title,fields,initialAnswers={},onSaved}:{code:string;unit:string;task:string;title?:string;fields:AnswerField[];initialAnswers?:Record<string,string>;onSaved?:(answers:Record<string,string>)=>void}) {
   const preview=isStudentPreview(code);
@@ -52,7 +53,7 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
   const unchanged=last && JSON.stringify(last.answers)===JSON.stringify(answers);
   return <div className="space-y-4">
     {fields.map(f=><label key={f.id} className="block rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised">
-      <span className="mb-2 block font-semibold">{f.prompt}</span>
+      <span className="mb-2 block font-semibold"><FeedbackText text={f.prompt}/></span>
       {f.type==="voice" && <span className="mb-2 block text-sm">This box submits your note, not an audio file. A Speaking studio rehearsal stays on your device. Send a recording privately only if the task asks you to.</span>}
       {f.type==="checkbox" && <span className="mb-2 block text-sm">Tell Rory what you practised or what you found difficult.</span>}
       <textarea aria-label={f.prompt} disabled={preview||!ready||!!pending||busy} value={answers[f.id]||""} onChange={e=>edit(f.id,e.target.value)} rows={f.type==="written"?5:2} maxLength={6000} className="w-full rounded-lg border border-slate-300 bg-transparent p-3 disabled:opacity-60"/>
@@ -65,7 +66,7 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
     {message && <p role="status" className="text-sm">{message}</p>}
     {last && <section className="rounded-card border border-indigo-200 p-4">
       <h3 className="font-bold">{last.status==="revision-needed"?"Your next revision":last.status==="reviewed"?"Reviewed by Rory":"Received — waiting for Rory’s review"}</h3>
-      {last.feedback && <p className="mt-2 whitespace-pre-wrap">{last.feedback}</p>}
+      {last.feedback && <p className="mt-2 whitespace-pre-wrap"><FeedbackText text={last.feedback}/></p>}
       <p className="mt-2 text-xs">{last.submitted} · {history.length} submitted version{history.length===1?"":"s"}</p>
       <details className="mt-3"><summary>View last submitted copy</summary>{Object.entries(last.answers).map(([id,value])=><p key={id} className="mt-2 whitespace-pre-wrap">{value}</p>)}</details>
     </section>}

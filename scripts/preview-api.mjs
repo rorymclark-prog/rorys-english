@@ -4,6 +4,7 @@ import {randomUUID} from "node:crypto";
 const sessions=new Map(),submissions=[],documents=[],chats=[];
 const student={code:"valentin-q9m2",name:"Valentin",summary:{homeworkDone:0,quizRounds:0,bestQuizPct:"—",schoolTests:0,writingSamples:0,lastUpdated:"Demo only",daysSinceActivity:null},focusNote:"Demo preview — not a real assignment."};
 const assignments={headers:["Date","Title","Details","Due","Status","Id"],rows:[["2026-09-17","Demo writing task","TEST DATA: Write two sentences about a hobby. This is a workflow check, not Unit 1 textbook content.","2026-09-21","open","demo-task"]]};
+const ferdiAssignments={headers:assignments.headers,rows:[["2026-09-23","Demo weekly speaking","Chat 1: Tell a story about a holiday or climbing day. Chat 2: Compare what your family usually does with what they are doing now.","","open","demo-voice"]]};
 const empty={headers:[],rows:[]};
 const server=http.createServer(async(req,res)=>{
   res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Headers","Content-Type");res.setHeader("Content-Type","application/json");
@@ -38,7 +39,7 @@ const server=http.createServer(async(req,res)=>{
       }
     }
     else if(p.action==="note")result={ok:true,note:"Demo preview — no real homework has been assigned."};
-    else if(p.action==="assignments")result={ok:true,assignments};
+    else if(p.action==="assignments")result={ok:true,assignments:p.code==="ferdi-7h3k"?ferdiAssignments:assignments};
     else if(p.action==="submissions")result={ok:true,submissions:submissions.filter(s=>s.code===p.code)};
     else if(p.action==="resources")result={ok:true,resources:[]};
     else if(p.action==="teacherDashboard")result={ok:true,students:[student],generatedAt:"Local demo"};
