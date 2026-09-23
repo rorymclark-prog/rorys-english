@@ -53,7 +53,7 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
   return <div className="space-y-4">
     {fields.map(f=><label key={f.id} className="block rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised">
       <span className="mb-2 block font-semibold">{f.prompt}</span>
-      {f.type==="voice" && <span className="mb-2 block text-sm">Send the recording using your agreed private channel. This box submits a note, not an audio file.</span>}
+      {f.type==="voice" && <span className="mb-2 block text-sm">This box submits your note, not an audio file. A Speaking studio rehearsal stays on your device. Send a recording privately only if the task asks you to.</span>}
       {f.type==="checkbox" && <span className="mb-2 block text-sm">Tell Rory what you practised or what you found difficult.</span>}
       <textarea aria-label={f.prompt} disabled={preview||!ready||!!pending||busy} value={answers[f.id]||""} onChange={e=>edit(f.id,e.target.value)} rows={f.type==="written"?5:2} maxLength={6000} className="w-full rounded-lg border border-slate-300 bg-transparent p-3 disabled:opacity-60"/>
     </label>)}
