@@ -5,6 +5,8 @@ import type {Unit} from "@/lib/types";
 import {useStudent} from "@/components/StudentContext";
 import Screen from "@/components/Screen";
 import SubmissionForm from "@/components/SubmissionForm";
+import SpeakingHomeworkCard from "@/components/views/SpeakingHomeworkCard";
+import {isFerdiSpeakingHomework} from "@/lib/speaking-homework";
 import {fetchAssignments,rowToAssignment,isCurrentAssignment,type Assignment} from "@/lib/remote";
 export default function HomeworkListView({unit}:{unit:Unit|null}) {
   const {code}=useStudent();
@@ -19,12 +21,13 @@ export default function HomeworkListView({unit}:{unit:Unit|null}) {
   useEffect(()=>{void refresh();},[code]);
   const current=assignments.filter(isCurrentAssignment);
   const previous=assignments.filter(a=>!isCurrentAssignment(a));
+  const hasSpeakingHomework=current.some(a=>isFerdiSpeakingHomework(code,a));
   return <Screen title="Homework & feedback" subtitle={unit?.title}>
-    <Link className="doc-homework-link" href={`/s/${code}/documents/`}>Working on paper? Scan or upload your work <span aria-hidden>↗</span></Link>
-    <p className="mt-3 text-sm">Short tasks between lessons during term time. No holiday or school-break work is assumed; Rory sets each deadline.</p>
+    {!hasSpeakingHomework && <Link className="doc-homework-link" href={`/s/${code}/documents/`}>Working on paper? Scan or upload your work <span aria-hidden>↗</span></Link>}
+    {!hasSpeakingHomework && <p className="mt-3 text-sm">Short tasks between lessons during term time. No holiday or school-break work is assumed; Rory sets each deadline.</p>}
     {error && <div role="alert" className="mt-4 rounded-xl border p-4">{error}<button className="ml-3 underline" onClick={()=>void refresh()}>Retry</button></div>}
     {!loaded && <p role="status" className="mt-4">Loading your assignments…</p>}
-    {current.map(a=><details key={a.id} className="mt-4 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised">
+    {current.map(a=>isFerdiSpeakingHomework(code,a)?<SpeakingHomeworkCard key={a.id} code={code} assignment={a}/>:<details key={a.id} className="mt-4 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised">
       <summary className="cursor-pointer font-bold">{!isCurrentAssignment(a)?"Previous material · ":""}{a.title}{a.status==="done"?" · Reviewed":""}{a.due?" · "+a.due:""}</summary>
       <p className="my-3 whitespace-pre-wrap">{a.details}</p>
       <SubmissionForm code={code} unit="assigned" task={a.id} title={a.title} fields={[{id:"answer",prompt:"Your answer or practice notes",type:"written"}]}/>

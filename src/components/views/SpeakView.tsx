@@ -6,6 +6,10 @@ import { isStudentPreview } from "@/lib/student-preview";
 import { savedSession } from "@/lib/api";
 import { currentAccount } from "@/lib/account-auth";
 import { ConversationArt, MicrophoneIcon } from "@/components/LearningVisuals";
+import FeedbackText from "@/components/FeedbackText";
+import { fetchAssignments, rowToAssignment } from "@/lib/remote";
+import { deliver, outbox, type PendingEvent } from "@/lib/sync";
+import { captionParts, isFerdiSpeakingHomework } from "@/lib/speaking-homework";
 const topics = [
   { id: "general", title: "Open chat", target: "Talk about anything you like.", prompt: "What would you like to talk about today?" },
   { id: "everyday", title: "Everyday conversation", target: "Answer, add a reason, ask a question.", prompt: "Tell me about something you enjoyed this week. Why did you enjoy it?" },
@@ -24,6 +28,7 @@ const grammarTargets = [
 ];
 type State = "idle" | "connecting" | "live" | "closing" | "ended";
 type Fragment = { speaker: "You" | "AI partner"; delta: string; start_ms: number; end_ms: number };
+type HomeworkContext = { id: string; title: string; chat: 1 | 2 };
 export default function SpeakView({ lines, unitTitle }: { lines: string[]; unitTitle?: string }) {
   const { code } = useStudent();
   return <VoiceStudio code={code} lines={lines} unitTitle={unitTitle} />;
@@ -35,6 +40,13 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
   const [state, setState] = useState<State>("idle"); const [status, setStatus] = useState("");
   const [muted, setMuted] = useState(false); const [elapsed, setElapsed] = useState(0);
   const [fragments, setFragments] = useState<Fragment[]>([]); const [reflection, setReflection] = useState("");
+  const [homework, setHomework] = useState<HomeworkContext | null>(null);
+  const [homeworkRequested, setHomeworkRequested] = useState(false);
+  const [homeworkError, setHomeworkError] = useState("");
+  const [homeworkReady, setHomeworkReady] = useState(false);
+  const [sendingHomework, setSendingHomework] = useState(false);
+  const [homeworkMessage, setHomeworkMessage] = useState("");
+  const [homeworkSent, setHomeworkSent] = useState(false);
   const [recording, setRecording] = useState(false); const [recorded, setRecorded] = useState("");
   const [recordError, setRecordError] = useState(""); const [recordBusy, setRecordBusy] = useState(false);
   const audio = useRef<HTMLAudioElement>(null); const peer = useRef<RTCPeerConnection | null>(null);
@@ -69,8 +81,36 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
     window.addEventListener("pagehide", leave);
     return () => { mounted.current = false; recordGeneration.current++; leave(); window.removeEventListener("pagehide", leave); if (recordingUrl.current) URL.revokeObjectURL(recordingUrl.current); };
   }, [endpoint]);
+  useEffect(() => {
+    if (teacherTest) return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("homework"); const chat = Number(params.get("chat"));
+    if (!id) return;
+    setHomeworkRequested(true);
+    if (chat !== 1 && chat !== 2) { setHomeworkError("Open this chat from your homework page."); return; }
+    let live = true;
+    fetchAssignments(code).then(r => {
+      if (!live) return;
+      const assignment = r.ok ? (r.assignments?.rows || []).map(rowToAssignment).find(a => a.id === id && isFerdiSpeakingHomework(code, a)) : null;
+      if (!assignment) { setHomeworkError(r.error || "This homework chat could not be opened. Return to the homework page and try again."); return; }
+      const context: HomeworkContext = { id: assignment.id, title: assignment.title, chat: chat as 1 | 2 };
+      setHomework(context); setTopic(chat === 1 ? 3 : 4); setSessionTopic(chat === 1 ? 3 : 4);
+      try {
+        const draft = JSON.parse(localStorage.getItem(`re_voice_draft_${code}_${id}_${chat}`) || "null");
+        if (draft && Array.isArray(draft.fragments)) { setFragments(draft.fragments); setElapsed(Number(draft.elapsed) || 0); setReflection(String(draft.reflection || "")); setState("ended"); }
+      } catch { /* The chat can still be practised and sent. */ }
+      setHomeworkReady(true);
+    }).catch(() => { if (live) setHomeworkError("Could not load this homework chat. Try again from the homework page."); });
+    return () => { live = false; };
+  }, [code, teacherTest]);
+  useEffect(() => {
+    if (!homework || !homeworkReady || homeworkSent || !fragments.length) return;
+    try { localStorage.setItem(`re_voice_draft_${code}_${homework.id}_${homework.chat}`, JSON.stringify({ fragments, elapsed, reflection })); }
+    catch { /* The visible conversation can still be sent before leaving. */ }
+  }, [code, homework, homeworkReady, homeworkSent, fragments, elapsed, reflection]);
   async function start() {
-    if (preview || !available || busy || recording || recordBusy) return;
+    if (preview || !available || busy || recording || recordBusy || (homeworkRequested && !homeworkReady)) return;
+    setHomeworkSent(false); setHomeworkMessage("");
     dispose(); const run = generation.current; setState("connecting"); setStatus("Connecting your microphone…"); setFragments([]); setElapsed(0); setReflection(""); setSessionTopic(topic);
     const check = () => { if (!mounted.current || run !== generation.current) throw new Error("cancelled"); };
     try {
@@ -100,7 +140,7 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
         } else if (event.type === "session.closed") finish("Conversation ended. Keep one useful phrase and one next step.");
         else if (["session.input_transcript.delta", "session.output_transcript.delta"].includes(event.type) && typeof event.delta === "string") {
           const f: Fragment = { speaker: event.type === "session.input_transcript.delta" ? "You" : "AI partner", delta: event.delta, start_ms: Number(event.start_ms) || 0, end_ms: Number(event.end_ms) || 0 };
-          setFragments(prev => [...prev, f].slice(-3000));
+          setFragments(prev => homework ? [...prev, f] : [...prev, f].slice(-3000));
         } else if (event.type === "error") setStatus("The voice service reported a problem. End the conversation if it does not recover.");
       });
       channel.addEventListener("close", () => { if (run === generation.current) finish("The connection ended. Your visible transcript is still here."); });
@@ -113,7 +153,7 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
       });
       check(); controller.current = new AbortController();
       timeout.current = setTimeout(() => finish("The voice connection timed out. Please try again."), 55000);
-      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.current.signal, body: JSON.stringify({ code, token, teacherTest, preview, topic: topics[topic].id, grammar, practiceStudent: teacherTest ? practiceStudent : undefined, sdp: connection.localDescription?.sdp }) });
+      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.current.signal, body: JSON.stringify({ code, token, teacherTest, preview, topic: topics[topic].id, grammar, homeworkFocus: homework ? `ferdi-chat-${homework.chat}` : undefined, practiceStudent: teacherTest ? practiceStudent : undefined, sdp: connection.localDescription?.sdp }) });
       const result = await response.json(); check(); if (!response.ok) throw new Error(result.error || "Live voice could not connect.");
       await connection.setRemoteDescription({ type: "answer", sdp: result.transport.sdp }); check();
     } catch (error) { if (run === generation.current) finish(error instanceof Error && error.name === "NotAllowedError" ? "Microphone access was declined. Allow it in your browser to try again." : error instanceof Error ? error.message : "Could not connect."); }
@@ -134,26 +174,59 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
     } catch (error) { recordingMic.current?.getTracks().forEach(t => t.stop()); if (mounted.current) setRecordError(error instanceof Error && error.name !== "NotAllowedError" ? error.message : "Allow microphone access to record yourself."); }
     finally { if (mounted.current) setRecordBusy(false); }
   }
+  async function sendHomework() {
+    if (!homework || preview || busy || sendingHomework || homeworkSent || !elapsed) return;
+    setSendingHomework(true); setHomeworkMessage("");
+    const pending = outbox(code).filter(e => e.action === "submit" && e.unit === "assigned" && e.task === homework.id && (e.answers as Record<string, string> | undefined)?.chat === String(homework.chat));
+    const parts = captionParts(fragments);
+    const groups = parts.length ? Array.from({ length: Math.ceil(parts.length / 5) }, (_, i) => parts.slice(i * 5, (i + 1) * 5)) : [[]];
+    const events: PendingEvent[] = pending.length ? pending : groups.map((group, i) => {
+      const answers: Record<string, string> = {
+        chat: String(homework.chat),
+        minutes: String(Math.max(1, Math.round(elapsed / 60))),
+        part: `${i + 1} of ${groups.length}`,
+        reflection: reflection.trim().slice(0, 3000) || "No written note added.",
+      };
+      group.forEach((part, j) => { answers[`captions_${j + 1}`] = part; });
+      if (!parts.length) answers.caption_note = "Live conversation completed, but captions were unavailable. This is a practice record, not a transcript.";
+      return {
+        action: "submit", id: crypto.randomUUID(), code, unit: "assigned", task: homework.id,
+        title: `${homework.title} · Chat ${homework.chat}${groups.length > 1 ? ` · Part ${i + 1}` : ""}`.slice(0, 150),
+        prompts: { chat: "Chat", minutes: "Approximate minutes", part: "Transcript part", reflection: "My note", caption_note: "Caption status", ...Object.fromEntries(group.map((_, j) => [`captions_${j + 1}`, "Conversation captions · both speakers"])) },
+        answers,
+      };
+    });
+    let sendError = "";
+    for (const event of events) {
+      const result = await deliver(event);
+      if (!result.ok) sendError = result.error || "Saved on this device. Tap again to retry sending.";
+    }
+    if (sendError) { setHomeworkMessage(sendError); setSendingHomework(false); return; }
+    try { localStorage.removeItem(`re_voice_draft_${code}_${homework.id}_${homework.chat}`); } catch { /* Sent copy is stored by Rory. */ }
+    setHomeworkSent(true); setHomeworkMessage("Received by Rory. You can leave this page now."); setSendingHomework(false);
+  }
   function saveTranscript() {
     const text = `Rory's English — speaking practice\n${topics[sessionTopic].title}\nAI feedback is practice advice, not a teacher assessment.\n\n` + fragments.map(f => `[${(f.start_ms / 1000).toFixed(1)}s] ${f.speaker}: ${f.delta}`).join("\n") + `\n\nMy reflection\n${reflection}`;
     const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "my-speaking-practice.txt"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   const transcript = (speaker: Fragment["speaker"]) => fragments.filter(f => f.speaker === speaker).map(f => f.delta).join("");
-  return <main className="re-home re-speaking"><header className="re-page-heading"><p className="re-eyebrow">{teacherTest ? "TEACHER VOICE TEST" : "SPEAKING STUDIO"}</p><h1>{teacherTest ? "Try your AI conversation partner." : "Your voice. Your ideas."}</h1><p>{teacherTest ? "Use the same conversation partner your students use. This test uses your API credit and is not saved to a student’s work." : "One topic, one useful target, a little more confidence."}</p></header>
-    <div className="re-speaking-grid"><section><div className="re-card"><p className="re-eyebrow">1 · CHOOSE A CONVERSATION</p><div className="re-topic-options">{topics.map((t, i) => <button key={t.id} disabled={busy || recording || recordBusy} aria-pressed={topic === i} onClick={() => setTopic(i)}><strong>{t.title}</strong><small>{t.target}</small></button>)}</div>
+  return <main className={`re-home re-speaking ${homework ? "hw-speaking-studio" : ""}`}><header className="re-page-heading"><p className="re-eyebrow">{teacherTest ? "TEACHER VOICE TEST" : homework ? `HOMEWORK · CHAT ${homework.chat}` : "SPEAKING STUDIO"}</p><h1>{teacherTest ? "Try your AI conversation partner." : homework ? homework.chat === 1 ? "Tell your story." : "Talk about family life." : "Your voice. Your ideas."}</h1><p>{teacherTest ? "Use the same conversation partner your students use. This test uses your API credit and is not saved to a student’s work." : homework ? "Talk for about 12–15 minutes. At the end, tap Send to Rory. The app handles the captions." : "One topic, one useful target, a little more confidence."}</p></header>
+    {homeworkRequested && !homeworkReady && <div className="re-card hw-studio-note" role={homeworkError ? "alert" : "status"}>{homeworkError || "Opening your homework chat…"} <Link href={`/s/${code}/homework/`}>Back to homework</Link></div>}
+    {homework && <div className="re-card hw-studio-note"><strong>Chat {homework.chat} · {homework.chat === 1 ? "First → then → finally" : "Usually ↔ now"}</strong><p>{homework.chat === 1 ? "Talk about a holiday or climbing day. Start with First, continue with Then, and finish with Finally." : "Compare a normal family day with today. Try ‘We usually …’ and ‘Today, we are …’."}</p><p>If you get stuck, say: “Please ask me a simpler question.”</p></div>}
+    <div className="re-speaking-grid"><section><div className="re-card">{homework ? <><p className="re-eyebrow">YOUR FOCUS</p><p>{homework.chat === 1 ? "Tell a short story in order." : "Compare what usually happens with what is happening now."}</p></> : <><p className="re-eyebrow">1 · CHOOSE A CONVERSATION</p><div className="re-topic-options">{topics.map((t, i) => <button key={t.id} disabled={busy || recording || recordBusy} aria-pressed={topic === i} onClick={() => setTopic(i)}><strong>{t.title}</strong><small>{t.target}</small></button>)}</div></>}
       {topics[topic].id === "grammar" && <label className="re-voice-choice">Choose a grammar focus<select value={grammar} onChange={e => setGrammar(e.target.value)} disabled={busy || recording || recordBusy}>{grammarTargets.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}</select></label>}
       {teacherTest && topics[topic].id === "unit" && <label className="re-voice-choice">Test this student&apos;s current unit<select value={practiceStudent} onChange={e => setPracticeStudent(e.target.value)} disabled={busy || recording || recordBusy}>{practiceOptions.map(p => <option key={p.code} value={p.code}>{p.name}{p.unit ? ` · ${p.unit}` : ""}</option>)}</select></label>}
       {!teacherTest && topics[topic].id === "unit" && <p className="re-small-copy">{unitTitle ? `Current unit: ${unitTitle}` : "Tell the partner your current school topic and a few words you want to practise."}</p>}
       </div>
-      <section className="re-card re-live-panel"><div className={`re-voice-orb ${state === "live" ? "is-live" : ""}`} aria-hidden><MicrophoneIcon /></div><p className="re-eyebrow">LIVE AI CONVERSATION · GPT-LIVE-1</p><h2>{state === "live" ? "Make yourself heard." : state === "connecting" ? "Opening your conversation…" : "A conversation, at your pace."}</h2><p>{topics[topic].target}</p>
-        <p className="re-voice-status" role="status">{status || (preview ? "Teacher preview is read-only. Voice is disabled here." : available === null ? "Checking live voice…" : available ? "Ready for a conversation of up to 15 minutes." : "Live AI voice is awaiting connection. Try a rehearsal below in the meantime.")}</p>
+      <section className="re-card re-live-panel"><div className={`re-voice-orb ${state === "live" ? "is-live" : ""}`} aria-hidden><MicrophoneIcon /></div><p className="re-eyebrow">{homework ? "VOICE CHAT" : "LIVE AI CONVERSATION · GPT-LIVE-1"}</p><h2>{state === "live" ? "Make yourself heard." : state === "connecting" ? "Opening your conversation…" : "A conversation, at your pace."}</h2><p>{homework ? homework.chat === 1 ? <><mark>First</mark> → <mark>Then</mark> → <mark>Finally</mark></> : <><mark>Usually</mark> → <mark>Now</mark></> : topics[topic].target}</p>
+        <p className="re-voice-status" role="status">{status || (preview ? "Teacher preview is read-only. Voice is disabled here." : available === null ? "Checking live voice…" : available ? "Ready for a conversation of up to 15 minutes." : homework ? "Live voice is unavailable right now. Try another day; there is no catch-up task." : "Live AI voice is awaiting connection. Try a rehearsal below in the meantime.")}</p>
         {busy && <p className="re-timer">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} <small>/ 15:00</small></p>}
-        <div className="re-voice-actions">{!busy ? <button className="re-button" disabled={!available || preview || recording || recordBusy} onClick={() => void start()}>Start conversation</button> : <><button className="re-button re-secondary" disabled={state !== "live"} onClick={() => { const next = !muted; mic.current?.getAudioTracks().forEach(t => { t.enabled = !next; }); setMuted(next); }}>{muted ? "Unmute microphone" : "Mute microphone"}</button><button className="re-button" disabled={state === "closing"} onClick={end}>{state === "closing" ? "Finishing…" : state === "connecting" ? "Cancel" : "End conversation"}</button></>}</div>
+        <div className="re-voice-actions">{!busy ? <button className="re-button" disabled={!available || preview || recording || recordBusy || (homeworkRequested && !homeworkReady) || sendingHomework} onClick={() => void start()}>Start conversation</button> : <><button className="re-button re-secondary" disabled={state !== "live"} onClick={() => { const next = !muted; mic.current?.getAudioTracks().forEach(t => { t.enabled = !next; }); setMuted(next); }}>{muted ? "Unmute microphone" : "Mute microphone"}</button><button className="re-button" disabled={state === "closing"} onClick={end}>{state === "closing" ? "Finishing…" : state === "connecting" ? "Cancel" : "End conversation"}</button></>}</div>
         <audio ref={audio} autoPlay controls className={busy ? "re-live-audio" : "hidden"} aria-label="AI partner audio" />
         <small>When connected, your microphone audio goes to OpenAI. This is an AI partner. Muting keeps the session running; choose End to finish.</small></section>
-      {!!fragments.length && <section className="re-card"><h2>Conversation captions</h2><p className="re-small-copy">Captions may contain mistakes. Both speakers can speak at once.</p><div className="re-caption-columns">{(["You", "AI partner"] as const).map(s => <div key={s}><h3>{s}</h3><p>{transcript(s)}</p></div>)}</div><label className="re-reflection">One useful phrase & my next target<textarea rows={3} maxLength={3000} value={reflection} onChange={e => setReflection(e.target.value)} placeholder="What will you try again?" /></label><button className="re-button re-secondary" onClick={saveTranscript}>Download conversation & reflection</button><p className="re-small-copy">{teacherTest ? "This test stays in this tab. Download it before leaving if you want to keep it. No student record is created." : "Kept in this tab until you leave. Download it before leaving. Nothing has been submitted to Rory."}</p>{!teacherTest && <Link className="re-text-link" href={`/s/${code}/homework/`}>Open homework to submit your practice →</Link>}</section>}
-    </section><aside><div className="re-card"><ConversationArt/><h2>A little structure helps.</h2><ol className="re-speaking-steps"><li><strong>Get started</strong>Choose a mode and bring one idea or useful word.</li><li><strong>Keep it going</strong>Say more, then ask a question back.</li><li><strong>Make it stick</strong>Try one correction in your own sentence. Ask for shorter chunks if you need them.</li></ol><p className="re-small-copy">This is supplementary practice, not a school assessment. Follow Rory’s assignment for what to submit.</p></div>
+      {(!!fragments.length || (homework && state === "ended" && elapsed > 0)) && <section className="re-card"><h2>Conversation captions</h2><p className="re-small-copy">{fragments.length ? "Captions may contain mistakes. Both speakers can speak at once." : "Captions were unavailable for this chat. You can still send a practice record to Rory."}</p>{!!fragments.length && <div className="re-caption-columns">{(["You", "AI partner"] as const).map(s => <div key={s}><h3>{s}</h3><p><FeedbackText text={transcript(s)}/></p></div>)}</div>}{homework ? <div className="hw-send-panel"><h3>Finished this chat?</h3><p>Send your practice to Rory with one tap. The app includes any captions it captured. Your microphone recording is not sent.</p><button className="re-button" disabled={preview || busy || sendingHomework || homeworkSent || !elapsed} onClick={() => void sendHomework()}>{sendingHomework ? "Sending…" : homeworkSent ? "Sent to Rory ✓" : "Send to Rory"}</button><p role="status">{homeworkMessage}</p>{homeworkSent && <Link className="re-text-link" href={`/s/${code}/homework/`}>Return to homework and feedback →</Link>}</div> : <><label className="re-reflection">One useful phrase & my next target<textarea rows={3} maxLength={3000} value={reflection} onChange={e => setReflection(e.target.value)} placeholder="What will you try again?" /></label><button className="re-button re-secondary" onClick={saveTranscript}>Download conversation & reflection</button><p className="re-small-copy">{teacherTest ? "This test stays in this tab. Download it before leaving if you want to keep it. No student record is created." : "Kept in this tab until you leave. Download it before leaving. Nothing has been submitted to Rory."}</p>{!teacherTest && <Link className="re-text-link" href={`/s/${code}/homework/`}>Open homework to submit your practice →</Link>}</>}</section>}
+    </section>{!homework && <aside><div className="re-card"><ConversationArt/><h2>A little structure helps.</h2><ol className="re-speaking-steps"><li><strong>Get started</strong>Choose a mode and bring one idea or useful word.</li><li><strong>Keep it going</strong>Say more, then ask a question back.</li><li><strong>Make it stick</strong>Try one correction in your own sentence. Ask for shorter chunks if you need them.</li></ol><p className="re-small-copy">This is supplementary practice, not a school assessment. Follow Rory’s assignment for what to submit.</p></div>
       <section className="re-card"><p className="re-eyebrow">QUICK REHEARSAL · ON THIS DEVICE</p><h2>Try it out loud.</h2><p className="re-rehearsal-prompt">{topics[topic].id === "unit" && lines.length ? lines[0] : topics[topic].prompt}</p><p className="re-small-copy">Record up to three minutes, listen back and try again. Your recording stays in this tab and is not sent to anyone.</p><button className="re-button re-secondary" disabled={preview || busy || recordBusy} onClick={() => recording ? stopRecording() : void record()}>{recording ? "Stop recording" : recordBusy ? "Opening microphone…" : "Record a rehearsal"}</button><p role="status">{recording ? "Recording…" : recordError}</p>{recorded && !recording && <audio controls src={recorded} className="re-live-audio" aria-label="Your rehearsal recording" />}</section>
-    </aside></div>
+    </aside>}</div>
   </main>;
 }
