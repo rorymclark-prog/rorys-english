@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 
-const operativeWords = /\b(next step|try again|last weekend|right now|first|then|finally|usually|today|now|because|but|try|check|remember)\b/gi;
-const isOperativeWord = /^(next step|try again|last weekend|right now|first|then|finally|usually|today|now|because|but|try|check|remember)$/i;
+const operativeWords = /\b(next step|try again|last weekend|right now|first|then|finally|usually|today|now|because|but|tell|write|compare|use|include|explain|ask|send|try|check|remember)\b/gi;
+const isOperativeWord = /^(next step|try again|last weekend|right now|first|then|finally|usually|today|now|because|but|tell|write|compare|use|include|explain|ask|send|try|check|remember)$/i;
 
 /** Small, consistent emphasis for instructions and teacher feedback. */
 export default function FeedbackText({ text }: { text: string }) {

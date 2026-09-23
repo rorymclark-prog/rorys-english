@@ -18,7 +18,7 @@ const weeks = [
       <><mark>Then</mark>, my brother went to the wrong platform.</>,
       <><mark>Finally</mark>, we found him <mark>because</mark> we called.</>,
     ],
-    starter: "First, … / Then, … / Finally, …",
+    starter: <><mark>First</mark>, … / <mark>Then</mark>, … / <mark>Finally</mark>, …</>,
     writing: "Write 5–7 sentences",
   },
   {
@@ -32,7 +32,7 @@ const weeks = [
       <>Today, we <mark>are eating</mark> at my grandparents&apos; house.</>,
       <>My brother <mark>usually plays</mark> football, but <mark>now he is reading</mark>.</>,
     ],
-    starter: "We usually … / Today, we are …",
+    starter: <>We <mark>usually</mark> … / <mark>Today</mark>, we <mark>are</mark> …</>,
     writing: "Write a short email",
   },
 ] as const;
