@@ -42,6 +42,8 @@ test('learning reviews keep tutor reflection private while parents see learner w
  assert.equal(f.post({action:'learningRecords'},'student').records[0].body.tutorPrivate,undefined);
  const parent=f.post({action:'learningRecords',code:'parent-a'},'parent');assert.equal(parent.ok,true);assert.equal(parent.records[0].body.summary,'A clear reason.');assert.equal(parent.records[0].body.tutorPrivate,undefined);
  assert.equal(f.post({action:'learningRecords'},'teacher').records[0].body.tutorPrivate.worked,'Good oral rehearsal');
+ assert.equal(f.post({action:'teacherSaveLearningRecord',id:randomUUID(),date:'2026-09-23',kind:'lesson',title:'Private tutor note',visibility:'teacher',body:{summary:'Teacher-only next plan.'}},'teacher').ok,true);
+ const preview=f.post({action:'learningRecords',preview:true},'teacher');assert.equal(preview.records.length,1);assert.equal(preview.records[0].body.tutorPrivate,undefined);
  assert.equal(f.post({action:'learningReply',id:randomUUID(),reviewId:id,answer:'My new conclusion.'}).received,true);
  assert.equal(f.post({action:'learningRecords',code:'parent-a'},'parent').replies.length,1);
  assert.equal(f.post({action:'learningReply',id:randomUUID(),reviewId:id,answer:'forged',code:'parent-a'},'parent').ok,false);

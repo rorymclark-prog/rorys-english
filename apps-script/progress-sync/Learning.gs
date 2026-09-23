@@ -45,8 +45,9 @@ function learningService_(p,s) {
     if(s.role!=='teacher'&&s.code!==p.code)return {ok:false,error:'Access denied'};
     var code=student.code;
     if(p.action==='learningRecords') {
-      var rows=learningLatest_(code).filter(function(r){return s.role==='teacher'||r[5]!=='teacher';});
-      return {ok:true,records:rows.map(function(r){return learningPublic_(r,s.role);}),replies:learningReplies_(code,rows.map(function(r){return String(r[0]);}))};
+      var readerRole=p.preview?'student':s.role;
+      var rows=learningLatest_(code).filter(function(r){return readerRole==='teacher'||r[5]!=='teacher';});
+      return {ok:true,records:rows.map(function(r){return learningPublic_(r,readerRole);}),replies:learningReplies_(code,rows.map(function(r){return String(r[0]);}))};
     }
     if(s.role==='parent'||p.preview)return {ok:false,error:'Read-only access.'};
     if(p.action==='teacherSaveLearningRecord'&&s.role==='teacher') {
