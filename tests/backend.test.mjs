@@ -7,7 +7,7 @@ function fixture() {
   const props=new Map([["TEACHER_PASSWORD","synthetic-teacher"],["sheet_student-a","sheet-a"]]);
   const cache=new Map(), sheets=new Map();
   const identity={status:200,user:{localId:'managed-user',emailVerified:true,customAttributes:JSON.stringify({studentCode:'student-a',role:'student'})},calls:0};
-  const property={getProperty:k=>props.get(k)||null,setProperty:(k,v)=>props.set(k,v)};
+  const property={getProperty:k=>props.get(k)||null,setProperty:(k,v)=>props.set(k,v),deleteProperty:k=>props.delete(k),getProperties:()=>Object.fromEntries(props)};
   function sheet(name) {
     const data=[];
     const s={data,getDataRange:()=>({getValues:()=>data.map(r=>r.slice())}),appendRow:r=>data.push(r.slice()),getRange:(r,c,rows=1,cols=1)=>({
@@ -45,6 +45,50 @@ function fixture() {
 test("GET is version-only; route codes and legacy secret do not authenticate",()=>{
   const f=fixture();assert.equal(f.ctx.doGet({parameter:{action:"progress"}}).version,2);
   assert.equal(f.post({action:"progress",code:"student-a",secret:"server-internal-v2"}).authRequired,true);
+});
+test("remembered teacher sign-in lasts 30 days despite cache eviction and stores only a token hash",()=>{
+  const f=fixture(),before=Date.now();
+  const s=f.post({action:"login",code:"__teacher__",credential:"synthetic-teacher",remember:true});
+  assert.equal(s.ok,true);assert.equal(s.role,"teacher");
+  assert.ok(s.expires>=before+30*86400000&&s.expires<=Date.now()+30*86400000);
+  f.cache.clear();
+  assert.equal(f.post({action:"teacherDashboard",session:s.token}).ok,true);
+  const records=[...f.props].filter(([k])=>k.startsWith("remembered_teacher_"));
+  assert.equal(records.length,1);
+  assert.equal(JSON.stringify(records).includes(s.token),false);
+  assert.equal(f.post({action:"logout",session:s.token}).ok,true);
+  assert.equal(f.post({action:"teacherDashboard",session:s.token}).authRequired,true);
+});
+test("remembered teacher sessions are invalidated by expiry or password rotation",()=>{
+  for(const reason of ["expiry","password"]){
+    const f=fixture(),s=f.post({action:"login",code:"__teacher__",credential:"synthetic-teacher",remember:true});
+    if(reason==="password")f.props.set("TEACHER_PASSWORD","different-synthetic-password");
+    else {const k=[...f.props.keys()].find(k=>k.startsWith("remembered_teacher_"));f.props.set(k,JSON.stringify({...JSON.parse(f.props.get(k)),expires:Date.now()-1}));}
+    assert.equal(f.post({action:"teacherDashboard",session:s.token}).authRequired,true);
+  }
+});
+test("shared-device sessions keep the six-hour limit; only an authenticated teacher can remember",()=>{
+  const f=fixture(),s=f.post({action:"login",code:"__teacher__",credential:"synthetic-teacher",remember:false});
+  assert.ok(s.expires-Date.now()<=21600000);f.cache.clear();
+  assert.equal(f.post({action:"teacherDashboard",session:s.token}).authRequired,true);
+  assert.equal(f.post({action:"login",code:"__teacher__",credential:"wrong",remember:true}).ok,false);
+  const access=f.post({action:"teacherAccess",code:"student-a",session:f.teacher()});
+  const student=f.post({action:"login",code:"student-a",credential:access.access,remember:true});
+  assert.equal(student.role,"student");assert.ok(student.expires-Date.now()<=21600000);
+  assert.equal([...f.props.keys()].some(k=>k.startsWith("remembered_teacher_")),false);
+});
+test("remembered session storage is bounded and prunes invalid records without deleting other properties",()=>{
+  const f=fixture();
+  for(let i=0;i<23;i++)assert.equal(f.ctx.issueRememberedTeacher_().ok,true);
+  assert.equal([...f.props.keys()].filter(k=>k.startsWith("remembered_teacher_")).length,20);
+  f.props.set("remembered_teacher_bad","not json");f.ctx.issueRememberedTeacher_();
+  assert.equal(f.props.has("remembered_teacher_bad"),false);assert.equal(f.props.get("sheet_student-a"),"sheet-a");
+});
+test("photo-only homework submits and retries without replacing the original reference",()=>{
+  const f=fixture(),s=f.student(),event={action:"submit",id:randomUUID(),code:"student-a",session:s,unit:"synthetic-unit",task:"synthetic-photo-task",answers:{handwritten_work:"[Handwritten answer: synthetic-document-0001]"}};
+  assert.equal(f.post(event).ok,true);assert.equal(f.post(event).ok,true);
+  const received=f.ctx.submissions_({code:"student-a"}).submissions;
+  assert.equal(received.length,1);assert.equal(received[0].answers.handwritten_work,event.answers.handwritten_work);
 });
 test("generated access credentials are salted hashes; rotation revokes sessions",()=>{
   const f=fixture();const issued=f.post({action:"teacherAccess",code:"student-a",session:f.teacher()});

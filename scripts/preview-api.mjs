@@ -15,7 +15,7 @@ const server=http.createServer(async(req,res)=>{
   let result={ok:true};
   if(p.action==="login"){
     if(p.credential!=="demo-only")result={ok:false,error:"Use demo-only for this local test."};
-    else {const token=randomUUID();sessions.set(token,{code:p.code,role:p.code==="__teacher__"?"teacher":"student"});result={ok:true,token,expires:Date.now()+21600000,role:p.code==="__teacher__"?"teacher":"student"};}
+    else {const token=randomUUID();sessions.set(token,{code:p.code,role:p.code==="__teacher__"?"teacher":"student"});result={ok:true,token,expires:Date.now()+(p.code==="__teacher__"&&p.remember===true?30*86400000:21600000),role:p.code==="__teacher__"?"teacher":"student"};}
   } else if(!sessions.has(p.session))result={ok:false,authRequired:true,error:"Sign in to the local demo."};
   else {
     const session=sessions.get(p.session);

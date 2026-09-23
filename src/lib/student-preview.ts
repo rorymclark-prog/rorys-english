@@ -1,4 +1,5 @@
 // Preview is a tab-local mode; it never creates or borrows a student account.
+import { readSession } from "./session-storage";
 export const PREVIEW_KEY = "re_teacher_preview_v1";
 export const PREVIEW_READS = new Set(["progress", "resources", "assignments", "note", "submissions", "documents", "document", "documentFile", "learningRecords"]);
 export const PREVIEW_NOTICE = "Student preview is read-only. Return to your teacher workspace to make changes.";
@@ -16,11 +17,7 @@ export function isStudentPreview(code?: string): boolean {
   return !!selected && (!code || selected === code);
 }
 export function previewTeacherSession(): { token: string; expires: number; role: string } | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const session = JSON.parse(sessionStorage.getItem("re_session_v2___teacher__") || "null");
-    return session?.role === "teacher" && typeof session.token === "string" && session.expires > Date.now() ? session : null;
-  } catch { return null; }
+  return readSession("__teacher__");
 }
 export function startStudentPreview(code: string): boolean {
   if (!previewTeacherSession()) return false;

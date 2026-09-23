@@ -4,6 +4,9 @@ import {isStudentPreview} from "@/lib/student-preview";
 import {deliver,outbox,type PendingEvent} from "@/lib/sync";
 import {fetchSubmissions,type Submission} from "@/lib/remote";
 import FeedbackText from "@/components/FeedbackText";
+import HandwrittenAnswer from "@/components/HandwrittenAnswer";
+import AnswerWithPhotos from "@/components/AnswerWithPhotos";
+import {handwritingParts} from "@/lib/handwritten-answer";
 export interface AnswerField {id:string;prompt:string;type?:string}
 export default function SubmissionForm({code,unit,task,title,fields,initialAnswers={},onSaved}:{code:string;unit:string;task:string;title?:string;fields:AnswerField[];initialAnswers?:Record<string,string>;onSaved?:(answers:Record<string,string>)=>void}) {
   const preview=isStudentPreview(code);
@@ -58,6 +61,8 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
       {f.type==="checkbox" && <span className="mb-2 block text-sm">Tell Rory what you practised or what you found difficult.</span>}
       <textarea aria-label={f.prompt} disabled={preview||!ready||!!pending||busy} value={answers[f.id]||""} onChange={e=>edit(f.id,e.target.value)} rows={f.type==="written"?5:2} maxLength={6000} className="w-full rounded-lg border border-slate-300 bg-transparent p-3 disabled:opacity-60"/>
     </label>)}
+    <HandwrittenAnswer code={code} title={title||task} context={`Task: ${task} · Unit: ${unit}\n${fields.map(f=>f.prompt).join("\n")}`} disabled={preview||!ready||!!pending||busy||handwritingParts(answers.handwritten_work||"").documentIds.length>=6} onSaved={reference=>edit("handwritten_work",[answers.handwritten_work,reference].filter(Boolean).join("\n"))}/>
+    {answers.handwritten_work&&<AnswerWithPhotos key={answers.handwritten_work} code={code} answer={answers.handwritten_work}/>}
     <p className="text-xs">Drafts stay on this device. Submitted copies and Rory’s feedback are saved privately to your progress record. Avoid personal details.</p>
     {pending && <p role="status" className="rounded-xl bg-amber-soft p-3 text-navy">A saved copy is waiting to send. Retry it before making a revision.</p>}
     <button type="button" disabled={preview||!ready||busy||(!pending&&(!Object.values(answers).some(v=>v.trim())||!!unchanged))} onClick={()=>void submit()} className="min-h-12 w-full rounded-xl bg-indigo-700 p-3 font-bold text-white disabled:opacity-50">
@@ -68,7 +73,7 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
       <h3 className="font-bold">{last.status==="revision-needed"?"Your next revision":last.status==="reviewed"?"Reviewed by Rory":"Received — waiting for Rory’s review"}</h3>
       {last.feedback && <p className="mt-2 whitespace-pre-wrap"><FeedbackText text={last.feedback}/></p>}
       <p className="mt-2 text-xs">{last.submitted} · {history.length} submitted version{history.length===1?"":"s"}</p>
-      <details className="mt-3"><summary>View last submitted copy</summary>{Object.entries(last.answers).map(([id,value])=><p key={id} className="mt-2 whitespace-pre-wrap">{value}</p>)}</details>
+      <details className="mt-3"><summary>View last submitted copy</summary>{Object.entries(last.answers).map(([id,value])=><div key={id} className="mt-2"><AnswerWithPhotos code={code} answer={value}/></div>)}</details>
     </section>}
   </div>;
 }

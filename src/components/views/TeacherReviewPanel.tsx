@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createAccess, fetchResources, fetchSubmissions, publishResources, reviewSubmission, type Submission, type ResourceItem } from "@/lib/remote";
 import { BookIcon, CheckSquareIcon, GearIcon } from "@/components/Icons";
+import AnswerWithPhotos from "@/components/AnswerWithPhotos";
 
 type Filter = "waiting" | "revision" | "all";
 const statusLabel = (status:string) => status === "reviewed" ? "Feedback given" : status === "revision-needed" ? "Revision requested" : "Ready for feedback";
@@ -52,7 +53,7 @@ function Review({row,code,onSaved}:{row:Submission;code:string;onSaved:()=>void}
   return <article className="teacher-review-item space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-bold">{row.title||row.task}</h3><span className="teacher-status" data-status={row.status}>{statusLabel(row.status)}</span></div>
     <p className="text-xs text-navy-soft dark:text-navy-mist">{row.unit} · Sent {row.submitted}</p>
-    {Object.entries(row.answers).map(([prompt,answer])=><div key={prompt} className="teacher-answer"><p>{row.prompts?.[prompt]||prompt}</p><p className="whitespace-pre-wrap">{answer}</p></div>)}
+    {Object.entries(row.answers).map(([prompt,answer])=><div key={prompt} className="teacher-answer"><p>{row.prompts?.[prompt]||(prompt==="handwritten_work"?"Handwritten answer":prompt)}</p><AnswerWithPhotos answer={answer} code={code} teacher/></div>)}
     <label className="block text-sm font-bold">Your feedback<textarea value={feedback} onChange={e=>setFeedback(e.target.value)} className="mt-2 w-full font-normal" rows={4} maxLength={2000} placeholder="What went well? What could they try next?"/><span className="mt-1 block text-xs font-normal">Key instruction words are highlighted for the student. Add **double stars** around any other short phrase you want to highlight.</span></label>
     <div className="flex flex-wrap gap-2">{['reviewed','revision-needed'].map(status=><button type="button" disabled={saving} key={status} className={status==='reviewed'?"teacher-primary disabled:opacity-50":"teacher-quiet-button border disabled:opacity-50"} onClick={async()=>{setSaving(true);const r=await reviewSubmission(code,row.id,status,feedback);setSaving(false);setMessage(r.ok?"Feedback saved.":r.error || "Could not save");if(r.ok)onSaved();}}>{saving?"Saving…":status==='reviewed'?'Save feedback · reviewed':'Ask for a revision'}</button>)}</div>
     <p role="status" className="text-sm">{message}</p>

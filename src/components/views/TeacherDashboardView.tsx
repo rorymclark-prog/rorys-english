@@ -49,15 +49,14 @@ export default function TeacherDashboardView() {
   const [rememberTeacher,setRememberTeacher]=useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Read any previously-verified password once on mount (pre-paint gate flash
-  // isn't worth solving here — this page is never linked from student flows).
+  // Restore the server-issued session; never save the teacher password.
   useEffect(() => {
     try {window.localStorage.removeItem(STORAGE_KEY);} catch { /* no stored password */ }
     const refresh=()=>setSecret(savedSession("__teacher__")?.token || null);
-    refresh();window.addEventListener("re-auth-change",refresh);
+    refresh();window.addEventListener("re-auth-change",refresh);window.addEventListener("storage",refresh);
     const timer=setInterval(refresh,30000);
     setReady(true);
-    return()=>{window.removeEventListener("re-auth-change",refresh);clearInterval(timer);};
+    return()=>{window.removeEventListener("re-auth-change",refresh);window.removeEventListener("storage",refresh);clearInterval(timer);};
   }, []);
 
   useEffect(() => {
@@ -72,7 +71,7 @@ export default function TeacherDashboardView() {
           setGeneratedAt(d.generatedAt);
           setLoadState("ok");
         } else if(d.authRequired) {
-          // Stored password no longer valid (e.g. Rory rotated it) — drop it
+          // Session no longer valid (e.g. Rory changed the password) — drop it
           // and fall back to the gate rather than looping on a 401.
           forgetSession("__teacher__");
           setSecret(null);
@@ -222,7 +221,8 @@ function PasswordGate({
           className="w-full rounded-xl border border-black/10 bg-surface px-4 py-3 text-center text-navy shadow-card outline-none dark:border-white/10 dark:bg-navy-raised dark:text-cream dark:shadow-card-dark"
         />
         {authError && <p className="text-sm text-bad dark:text-bad-bright">{authError}</p>}
-        <label className="flex items-center gap-2 text-left text-sm"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Keep me signed in on this device for up to six hours</label>
+        <label className="flex items-center gap-2 text-left text-sm"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Keep me signed in on this device for 30 days</label>
+        <p className="text-left text-xs">Use this on your own device only. Leave it unticked on a shared computer. Signing out or changing your teacher password ends remembered access.</p>
         <button
           type="submit"
           disabled={authing || !input.trim()}

@@ -1,18 +1,14 @@
 "use client";
 import { isStudentPreview, previewTeacherSession, PREVIEW_READS, PREVIEW_NOTICE } from "./student-preview";
+import { readSession, sessionKey as key } from "./session-storage";
 
 const endpoint = process.env.NEXT_PUBLIC_SYNC_URL || "";
 export interface ApiResult { ok: boolean; error?: string; authRequired?: boolean }
 export interface Session extends ApiResult { token: string; expires: number; role: string; authProvider?: "firebase"; accountUid?: string; verificationRequired?: boolean }
 const accountsEnabled = !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 let accountEpoch = 0;
-const key = (code: string) => `re_session_v2_${code}`;
 export function savedSession(code: string): Session | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const value = JSON.parse(sessionStorage.getItem(key(code)) || (code === "__teacher__" ? localStorage.getItem(key(code)) : null) || "null");
-    return value?.expires > Date.now() ? value : null;
-  } catch { return null; }
+  return readSession<Session>(code);
 }
 export function forgetSession(code: string) {
   try { sessionStorage.removeItem(key(code)); } catch { /* nothing persisted */ }
@@ -54,7 +50,7 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
     : "Could not reach Rory’s app. Your saved draft is still on this device. Try again when connected." } as T;
 }
 export async function login(code: string, credential: string, remember = false): Promise<Session> {
-  const result = await request<Session>({ action: "login", code, credential });
+  const result = await request<Session>({ action: "login", code, credential, remember: code === "__teacher__" && remember });
   if (result.ok && result.token) {
     try {sessionStorage.setItem(key(code), JSON.stringify(result));if(code === "__teacher__"){if(remember)localStorage.setItem(key(code),JSON.stringify(result));else localStorage.removeItem(key(code));}}
     catch {return {...result,ok:false,error:"This browser cannot store a sign-in. Enable session storage or use a private device."};}

@@ -189,7 +189,7 @@ export interface Settings {
   textScale: TextScale;
   theme: Theme;
 }
-export const DEFAULT_SETTINGS: Settings = { textScale: "normal", theme: "system" };
+export const DEFAULT_SETTINGS: Settings = { textScale: "normal", theme: "light" };
 
 function settingsKey(studentId: string): string {
   return `${studentId}_settings`;
@@ -199,7 +199,9 @@ export function getSettings(studentId: string): Settings {
   const raw = read(settingsKey(studentId));
   if (!raw) return { ...DEFAULT_SETTINGS };
   try {
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<Settings>) };
+    const s = { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<Settings>) };
+    if (!["light", "dark", "system"].includes(s.theme)) s.theme = "light";
+    return s;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

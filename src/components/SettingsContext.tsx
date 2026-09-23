@@ -6,8 +6,8 @@ import {
   getSettings,
   saveSettings,
   type Settings,
-  type Theme,
 } from "@/lib/storage";
+import { themeScript, usesDarkTheme } from "@/lib/appearance";
 
 interface SettingsCtx {
   settings: Settings;
@@ -17,62 +17,14 @@ interface SettingsCtx {
 
 const Ctx = createContext<SettingsCtx | null>(null);
 
-// ── Dark is the app default ──────────────────────────────────────────────────
-// A student with NO stored theme choice gets dark mode. An explicit stored
-// choice (including "system"/Auto) always wins and is never overridden.
-// `getSettings` merges DEFAULT_SETTINGS over the stored blob, which hides
-// whether a theme was actually stored — so we peek at the raw record here.
-
-/** Mirrors `settingsKey()` in lib/storage.ts (not exported from there). */
-function rawSettingsKey(studentId: string): string {
-  return `${studentId}_settings`;
-}
-
-/** The theme the student explicitly saved, or null if they never chose one. */
-function storedTheme(studentId: string): Theme | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(rawSettingsKey(studentId));
-    if (!raw) return null;
-    const t = (JSON.parse(raw) as Partial<Settings>).theme;
-    return t === "light" || t === "dark" || t === "system" ? t : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Stored settings with the dark default applied when no theme was chosen. */
-function loadSettings(studentId: string): Settings {
-  const s = getSettings(studentId);
-  if (storedTheme(studentId) === null) s.theme = "dark";
-  return s;
-}
-
 function applyToDocument(s: Settings) {
   const root = document.documentElement;
   root.setAttribute("data-text-scale", s.textScale);
   root.setAttribute("data-palette", ["blue","indigo","clay"].includes(s.palette||"")?s.palette!:"blue");
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const dark = s.theme === "dark" || (s.theme === "system" && prefersDark);
+  const dark = usesDarkTheme(s.theme, prefersDark);
   root.classList.toggle("dark", dark);
-}
-
-/**
- * Pre-paint theme script: SSR'd into the HTML, so it runs while the document
- * is still parsing — before first paint. Must mirror loadSettings():
- * stored "light" → light, stored "system" → follow OS, anything else → dark.
- */
-function themeScript(studentId: string): string {
-  const key = JSON.stringify(rawSettingsKey(studentId)).replace(/</g, "\\u003c");
-  return (
-    `(function(){try{var t=null;try{var r=localStorage.getItem(${key});` +
-    `if(r){var s=JSON.parse(r);t=s.theme;var p=s.palette;if(p==="blue"||p==="indigo"||p==="clay")document.documentElement.setAttribute("data-palette",p);var z=s.textScale;` +
-    `if(z==="normal"||z==="large"||z==="xl")document.documentElement.setAttribute("data-text-scale",z)}}catch(e){}` +
-    `var d;if(t==="light"){d=false}` +
-    `else if(t==="system"){d=matchMedia("(prefers-color-scheme: dark)").matches}` +
-    `else{d=true}` +
-    `document.documentElement.classList.toggle("dark",d)}catch(e){}})()`
-  );
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach(meta => { meta.content = dark ? "#151C2B" : "#F7F6F2"; });
 }
 
 export function SettingsProvider({ studentId, children }: { studentId: string; children: React.ReactNode }) {
@@ -80,7 +32,7 @@ export function SettingsProvider({ studentId, children }: { studentId: string; c
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const s = loadSettings(studentId);
+    const s = getSettings(studentId);
     setSettings(s);
     applyToDocument(s);
     setReady(true);

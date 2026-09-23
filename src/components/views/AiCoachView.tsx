@@ -214,6 +214,7 @@ export default function AiCoachView({ code }: { code: string }) {
 
       {/* Input */}
       <div className="mt-4">
+        {mode === "writing" && <p className="mb-3 text-sm">Type below, or <Link className="font-semibold underline" href={`/s/${code}/documents/`}>photograph your handwritten work in My documents</Link> for document-based writing help.</p>}
         {mode === "writing" ? (
           <textarea
             value={input}

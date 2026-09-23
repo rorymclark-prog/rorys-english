@@ -12,8 +12,8 @@ const students = JSON.parse(readFileSync(join(root, "content", "students.json"),
 const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const icons = [
-  { src: `${base}/icons/r-icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
-  { src: `${base}/icons/r-icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any maskable" },
+  { src: `${base}/icons/r-icon-192.png?v=20260923`, sizes: "192x192", type: "image/png", purpose: "any" },
+  { src: `${base}/icons/r-icon-512.png?v=20260923`, sizes: "512x512", type: "image/png", purpose: "any maskable" },
 ];
 
 const outDir = join(root, "public", "m");
@@ -28,7 +28,7 @@ for (const s of students) {
     display: "standalone",
     orientation: "portrait",
     background_color: "#FAF8F5",
-    theme_color: "#17161C",
+    theme_color: "#F7F6F2",
     icons,
     // Long-press the installed icon → jump straight to a section.
     shortcuts: [
@@ -64,7 +64,7 @@ writeFileSync(
       scope: `${base}/`,
       display: "standalone",
       background_color: "#FAF8F5",
-      theme_color: "#17161C",
+      theme_color: "#F7F6F2",
       icons,
     },
     null,

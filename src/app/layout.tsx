@@ -28,16 +28,13 @@ export const metadata: Metadata = {
     title: "Rory's English",
   },
   icons: {
-    icon: `${base}/icons/r-icon-192.png`,
-    apple: `${base}/icons/r-apple-touch-icon.png`,
+    icon: `${base}/icons/r-icon-192.png?v=20260923`,
+    apple: `${base}/icons/r-apple-touch-icon.png?v=20260923`,
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7F6F2" },
-    { media: "(prefers-color-scheme: dark)", color: "#151C2B" },
-  ],
+  themeColor: "#F7F6F2",
   width: "device-width",
   initialScale: 1,
   // Allow pinch-zoom (accessibility) — the in-app text-size setting is a

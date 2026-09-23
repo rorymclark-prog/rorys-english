@@ -1,5 +1,7 @@
 // Public API: POST only, authenticated sessions, no browser-shipped secret.
 var SESSION_TTL_ = 21600;
+var REMEMBERED_TEACHER_TTL_ = 30 * 24 * 60 * 60;
+var REMEMBERED_TEACHER_PREFIX_ = 'remembered_teacher_';
 var SUBMISSION_HEADERS_ = ['Id','Task','Unit','Submitted','Answers JSON','Status','Feedback','Reviewed','Title','Prompts JSON'];
 function digest_(text) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(text))).replace(/=+$/, ''); }
 function authProps_() { return PropertiesService.getScriptProperties(); }
@@ -8,11 +10,35 @@ function version_(code) {
   return code==='__teacher__' ? digest_(authProps_().getProperty(TEACHER_PASSWORD_PROP)||'') : authProps_().getProperty('access_version_' + code) || '0';
 }
 function session_(token) {
-  if (!token || typeof token !== 'string') return null;
-  var raw=CacheService.getScriptCache().get('session_' + digest_(token));
+  if (!token || typeof token !== 'string' || token.length>200) return null;
+  var remembered=token.indexOf('rt_')===0;
+  var key=(remembered?REMEMBERED_TEACHER_PREFIX_:'session_')+digest_(token);
+  // CacheService is best-effort and capped at six hours. Remembered teacher
+  // sessions use durable properties and are rechecked on EVERY request so
+  // logout/password rotation cannot leave a valid cached copy behind.
+  var raw=remembered?authProps_().getProperty(key):CacheService.getScriptCache().get(key);
   if (!raw) return null;
-  var s=JSON.parse(raw);
-  return s.expires > Date.now() && s.version === version_(s.code) ? s : null;
+  try {
+    var s=JSON.parse(raw);
+    if (remembered && (s.code!=='__teacher__'||s.role!=='teacher')) return null;
+    if (s.expires > Date.now() && s.version === version_(s.code)) return s;
+  } catch(e) { /* Invalid records fail closed. */ }
+  if(remembered)authProps_().deleteProperty(key);
+  return null;
+}
+function issueRememberedTeacher_() {
+  var props=authProps_(), all=props.getProperties(), currentVersion=version_('__teacher__'), valid=[];
+  Object.keys(all).forEach(function(key){
+    if(key.indexOf(REMEMBERED_TEACHER_PREFIX_)!==0)return;
+    try {var s=JSON.parse(all[key]);if(s.expires>Date.now()&&s.version===currentVersion){valid.push({key:key,expires:s.expires});return;}}catch(e){}
+    props.deleteProperty(key);
+  });
+  // Bound storage if a client repeatedly signs in; retain the newest devices.
+  valid.sort(function(a,b){return a.expires-b.expires;});
+  while(valid.length>=20)props.deleteProperty(valid.shift().key);
+  var token='rt_'+token_(), expires=Date.now()+REMEMBERED_TEACHER_TTL_*1000;
+  props.setProperty(REMEMBERED_TEACHER_PREFIX_+digest_(token),JSON.stringify({code:'__teacher__',role:'teacher',expires:expires,version:currentVersion}));
+  return {ok:true,token:token,expires:expires,role:'teacher'};
 }
 function issueSession_(code,role,ttl) {
   ttl=Math.max(1,Math.min(SESSION_TTL_,Number(ttl)||SESSION_TTL_));
@@ -41,7 +67,7 @@ function login_(p) {
     }
     if(!valid) return {ok:false,error:'Sign-in failed. Check your access code with Rory.'};
     cache.remove(key);
-    return issueSession_(code,role);
+    return role==='teacher' && p.remember===true ? issueRememberedTeacher_() : issueSession_(code,role);
   } finally {lock.releaseLock();}
 }
 function setAccess_(p) {
@@ -65,7 +91,7 @@ function doPost(e) {
     if(p.action==='firebaseLogin') return json_(firebaseLogin_(p));
     var s=session_(p.session);
     if(!s) return json_({ok:false,error:'Sign in again to continue.',authRequired:true});
-    if(p.action==='logout') {CacheService.getScriptCache().remove('session_'+digest_(p.session));return json_({ok:true});}
+    if(p.action==='logout') {CacheService.getScriptCache().remove('session_'+digest_(p.session));authProps_().deleteProperty(REMEMBERED_TEACHER_PREFIX_+digest_(p.session));return json_({ok:true});}
     var teacher=s.role==='teacher', student=studentByAnyCode_(s.code);
     if(!teacher && (!student || p.code!==s.code)) return json_({ok:false,error:'Access denied'});
     var reads=['progress','resources','assignments','note','submissions','documents','document','documentFile','learningRecords'];
