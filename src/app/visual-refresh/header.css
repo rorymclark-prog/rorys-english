@@ -1,0 +1,5 @@
+.re-screen-header{position:relative!important;top:auto!important;z-index:1!important;padding:12px 20px 20px!important;background:transparent!important;border-bottom:1px solid var(--re-line)}
+.re-screen-header h1{font-size:clamp(1.75rem,2.6vw,2.4rem);line-height:1.2;letter-spacing:-.045em}
+.re-screen-header p{margin-top:7px;line-height:1.55}
+.re-screen-main{padding:20px 20px 48px;max-width:1200px}
+@media(max-width:700px){.re-screen-header{padding:8px 20px 17px!important}.re-screen-main{padding:17px 20px 32px}}

@@ -1,0 +1,12 @@
+.teacher-workspace .teacher-welcome-compact{padding:24px 0 16px}
+.teacher-workspace .teacher-welcome-compact h1{font-size:clamp(1.9rem,3vw,2.65rem);margin:7px 0}
+.teacher-workspace .teacher-section-nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.teacher-workspace .teacher-section-nav button{min-width:0;min-height:81px;padding:12px;align-items:flex-start}
+.teacher-workspace .teacher-section-nav button[aria-pressed=true]{border-width:2px}
+.teacher-voice-tool{display:flex;align-items:center;gap:15px;margin:20px 0;padding:18px;border:1px solid var(--re-line);border-radius:16px;background:var(--re-surface)}
+.teacher-voice-tool>svg{width:25px;height:25px;flex-shrink:0;color:var(--re-accent)}
+.teacher-voice-tool>div{flex:1}
+.teacher-voice-tool h2{font-size:.88rem;font-weight:800}
+.teacher-voice-tool p{color:var(--re-muted);font-size:.72rem;line-height:1.5;margin-top:3px}
+.teacher-voice-tool button{flex-shrink:0}
+@media(max-width:700px){.teacher-workspace .teacher-section-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.teacher-workspace .teacher-section-nav button{min-height:65px;flex-direction:row;align-items:center;text-align:left;gap:9px;padding:10px}.teacher-voice-tool{flex-wrap:wrap}.teacher-voice-tool button{width:100%}}
