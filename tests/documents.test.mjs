@@ -46,6 +46,13 @@ test('learning reviews keep tutor reflection private while parents see learner w
  assert.equal(f.post({action:'learningRecords',code:'parent-a'},'parent').replies.length,1);
  assert.equal(f.post({action:'learningReply',id:randomUUID(),reviewId:id,answer:'forged',code:'parent-a'},'parent').ok,false);
 });
+test('learning reviews return a short date when Sheets converts the date cell',()=>{
+ const f=fixture(),id=randomUUID();
+ assert.equal(f.post({action:'teacherSaveLearningRecord',id,date:'2026-09-21',kind:'lesson',title:'Lesson note',body:{summary:'A useful practice.'}},'teacher').ok,true);
+ const sheet=f.books.get('sheet-a').sheets.get('Learning reviews');
+ sheet.data[1][2]=new Date('2026-09-21T00:00:00+02:00');
+ assert.equal(f.post({action:'learningRecords'},'teacher').records[0].date,'2026-09-21');
+});
 test('a speaking record links only to its own private audio sample',()=>{
  const f=fixture(),id=randomUUID(),voice={name:'sample.webm',type:'audio/webm',data:Buffer.from([0x1a,0x45,0xdf,0xa3,1,2,3,4,5,6,7,8]).toString('base64')};
  assert.equal(f.post({action:'speakingSave',id,title:'Conversation',transcript:'You: A short answer.',reflection:'I gave a reason.'}).received,true);
