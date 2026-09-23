@@ -6,8 +6,8 @@ import { handwritingReference } from "@/lib/handwritten-answer";
 import { isStudentPreview } from "@/lib/student-preview";
 const Scanner = dynamic(() => import("./DocumentScanner"), { ssr: false });
 
-export default function HandwrittenAnswer({ code, title, context, disabled = false, onSaved }: {
-  code: string; title: string; context: string; disabled?: boolean; onSaved: (reference: string) => void;
+export default function HandwrittenAnswer({ code, title, context, disabled = false, onSaved, onBusyChange }: {
+  code: string; title: string; context: string; disabled?: boolean; onSaved: (reference: string) => void; onBusyChange?: (busy: boolean) => void;
 }) {
   const [scanning, setScanning] = useState(false), [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
@@ -28,7 +28,7 @@ export default function HandwrittenAnswer({ code, title, context, disabled = fal
   }
   async function save() {
     if (blocked || busy || !files.length) return;
-    setBusy(true); setMessage("");
+    setBusy(true); onBusyChange?.(true); setMessage("");
     try {
       const r = await documentRequest(code, false, { action: "documentUpload", id: uploadId.current,
         title: `Handwritten answer · ${title}`.slice(0, 150), context: context.slice(0, 2000),
@@ -38,7 +38,7 @@ export default function HandwrittenAnswer({ code, title, context, disabled = fal
       uploadId.current = crypto.randomUUID();
       setMessage("Photo saved privately and attached to your draft. Now send or save your answer below so Rory sees it with this task.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not confirm the upload. Keep the photos here and retry."); }
-    finally { setBusy(false); }
+    finally { setBusy(false); onBusyChange?.(false); }
   }
   return <section className="rounded-xl border border-indigo-200 p-4 dark:border-white/20" aria-label="Handwritten answer">
     <h4 className="font-semibold">Prefer to write by hand?</h4>

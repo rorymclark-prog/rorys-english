@@ -15,6 +15,7 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
   const [history,setHistory]=useState<Submission[]>([]);
   const [pending,setPending]=useState<PendingEvent|null>(null);
   const [busy,setBusy]=useState(false);
+  const [photoBusy,setPhotoBusy]=useState(false);
   const [message,setMessage]=useState("");
   const [ready,setReady]=useState(false);
   async function refresh() {
@@ -59,13 +60,13 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
       <span className="mb-2 block font-semibold"><FeedbackText text={f.prompt}/></span>
       {f.type==="voice" && <span className="mb-2 block text-sm">This box submits your note, not an audio file. A Speaking studio rehearsal stays on your device. Send a recording privately only if the task asks you to.</span>}
       {f.type==="checkbox" && <span className="mb-2 block text-sm">Tell Rory what you practised or what you found difficult.</span>}
-      <textarea aria-label={f.prompt} disabled={preview||!ready||!!pending||busy} value={answers[f.id]||""} onChange={e=>edit(f.id,e.target.value)} rows={f.type==="written"?5:2} maxLength={6000} className="w-full rounded-lg border border-slate-300 bg-transparent p-3 disabled:opacity-60"/>
+      <textarea aria-label={f.prompt} disabled={preview||!ready||!!pending||busy||photoBusy} value={answers[f.id]||""} onChange={e=>edit(f.id,e.target.value)} rows={f.type==="written"?5:2} maxLength={6000} className="w-full rounded-lg border border-slate-300 bg-transparent p-3 disabled:opacity-60"/>
     </label>)}
-    <HandwrittenAnswer code={code} title={title||task} context={`Task: ${task} · Unit: ${unit}\n${fields.map(f=>f.prompt).join("\n")}`} disabled={preview||!ready||!!pending||busy||handwritingParts(answers.handwritten_work||"").documentIds.length>=6} onSaved={reference=>edit("handwritten_work",[answers.handwritten_work,reference].filter(Boolean).join("\n"))}/>
+    <HandwrittenAnswer code={code} title={title||task} context={`Task: ${task} · Unit: ${unit}\n${fields.map(f=>f.prompt).join("\n")}`} disabled={preview||!ready||!!pending||busy||handwritingParts(answers.handwritten_work||"").documentIds.length>=6} onBusyChange={setPhotoBusy} onSaved={reference=>edit("handwritten_work",[answers.handwritten_work,reference].filter(Boolean).join("\n"))}/>
     {answers.handwritten_work&&<AnswerWithPhotos key={answers.handwritten_work} code={code} answer={answers.handwritten_work}/>}
     <p className="text-xs">Drafts stay on this device. Submitted copies and Rory’s feedback are saved privately to your progress record. Avoid personal details.</p>
     {pending && <p role="status" className="rounded-xl bg-amber-soft p-3 text-navy">A saved copy is waiting to send. Retry it before making a revision.</p>}
-    <button type="button" disabled={preview||!ready||busy||(!pending&&(!Object.values(answers).some(v=>v.trim())||!!unchanged))} onClick={()=>void submit()} className="min-h-12 w-full rounded-xl bg-indigo-700 p-3 font-bold text-white disabled:opacity-50">
+    <button type="button" disabled={preview||!ready||busy||photoBusy||(!pending&&(!Object.values(answers).some(v=>v.trim())||!!unchanged))} onClick={()=>void submit()} className="min-h-12 w-full rounded-xl bg-indigo-700 p-3 font-bold text-white disabled:opacity-50">
       {preview?"Sending is disabled in teacher preview":busy?"Sending…":pending?"Retry saved submission":last?"Submit revision":"Send answers to Rory"}
     </button>
     {message && <p role="status" className="text-sm">{message}</p>}
