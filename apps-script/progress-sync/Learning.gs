@@ -61,6 +61,23 @@ function learningService_(p,s) {
         return {ok:true,record:learningPublic_(row,'teacher')};
       } finally {lock.releaseLock();}
     }
+    if(p.action==='teacherReviewSpeaking'&&s.role==='teacher') {
+      if(!documentId_(p.id)||!documentId_(p.reviewId)||!p.review||typeof p.review!=='object')throw new Error('The audio review is incomplete.');
+      var review=p.review,keys=['fluency','accuracy','organisation','interaction','intelligibility'],ratings={};
+      if(!documentText_(review.summary,2000)||!review.summary.trim()||!documentText_(review.nextStep,1000))throw new Error('Add a short audio observation and next step.');
+      ['strengths','targets'].forEach(function(key){if(!Array.isArray(review[key])||review[key].length>3||review[key].some(function(v){return !documentText_(v,400);}))throw new Error('Keep strengths and targets short.');});
+      if(review.ratings&&typeof review.ratings==='object')keys.forEach(function(key){var value=review.ratings[key];if(value!=null){if(!Number.isInteger(value)||value<1||value>4)throw new Error('Choose ratings from 1 to 4, or leave them blank.');ratings[key]=value;}});
+      var lock=LockService.getScriptLock();lock.waitLock(10000);
+      try {
+        var current=learningFind_(code,p.id),body=JSON.parse(current[6]||'{}');
+        if(current[3]!=='speaking'||current[7]!=='Student'||!body.audioDocumentId)return {ok:false,error:'A student audio sample is needed for this review.'};
+        if(body.audioReview&&body.audioReview.reviewId===p.reviewId)return {ok:true,record:learningPublic_(current,'teacher')};
+        body.audioReview={reviewId:p.reviewId,summary:sanitize_(review.summary.trim()),strengths:review.strengths.map(function(v){return sanitize_(v.trim());}).filter(Boolean),targets:review.targets.map(function(v){return sanitize_(v.trim());}).filter(Boolean),nextStep:sanitize_((review.nextStep||'').trim()),reviewedAt:new Date().toISOString(),reviewedBy:'Rory'};
+        body.ratings=ratings;
+        var update=[p.id,new Date().toISOString(),current[2],current[3],current[4],current[5],JSON.stringify(body),current[7]];
+        learningSheet_(code,true,false).appendRow(update);return {ok:true,record:learningPublic_(update,'teacher')};
+      } finally {lock.releaseLock();}
+    }
     if(p.action==='learningReply'&&s.role==='student') {
       if(!documentId_(p.id)||!documentId_(p.reviewId)||!documentText_(p.answer,12000)||!p.answer.trim())throw new Error('Write an answer before saving.');
       var target=learningFind_(code,p.reviewId);if(target[5]==='teacher')return {ok:false,error:'Access denied'};

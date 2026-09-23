@@ -73,7 +73,7 @@ function doPost(e) {
     if(!teacher && permitted.indexOf(p.action)<0) return json_({ok:false,error:'Access denied'});
     if(p.preview && reads.indexOf(p.action)<0)return json_({ok:false,error:'Student preview is read-only.'});
     if(['documents','document','documentFile','documentUpload','documentAnalyse','documentChat','teacherDocumentReview'].indexOf(p.action)>=0)return json_(documentService_(p,s));
-    if(['learningRecords','teacherSaveLearningRecord','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio'].indexOf(p.action)>=0)return json_(learningService_(p,s));
+    if(['learningRecords','teacherSaveLearningRecord','teacherReviewSpeaking','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio'].indexOf(p.action)>=0)return json_(learningService_(p,s));
     // Discard legacy client credentials. Only inject after validating session.
     p.secret=SECRET;
     delete p.callback;

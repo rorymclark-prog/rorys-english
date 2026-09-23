@@ -65,6 +65,21 @@ test('a speaking record links only to its own private audio sample',()=>{
  assert.equal(f.post({action:'documentAnalyse',id:upload.document.id}).ok,false);
  assert.equal(f.calls,0);
 });
+test('a tutor can review a saved speaking sample without replacing its original',()=>{
+ const f=fixture(),id=randomUUID(),voice={name:'sample.webm',type:'audio/webm',data:Buffer.from([0x1a,0x45,0xdf,0xa3,1,2,3,4,5,6,7,8]).toString('base64')};
+ assert.equal(f.post({action:'speakingSave',id,title:'Conversation',transcript:'You: I gave a reason.',reflection:'A useful phrase.'}).ok,true);
+ const audio=f.upload({files:[voice]}).document.id;
+ assert.equal(f.post({action:'speakingAttachAudio',id,documentId:audio}).ok,true);
+ const reviewId=randomUUID(),review={summary:'The learner gave a clear reason.',strengths:['Audible, complete answer'],targets:['Pause between ideas'],nextStep:'Try the same task again.',ratings:{organisation:3,intelligibility:3}};
+ assert.equal(f.post({action:'teacherReviewSpeaking',id,reviewId,review},'student').ok,false);
+ assert.equal(f.post({action:'teacherReviewSpeaking',id,reviewId,review,preview:true},'teacher').ok,false);
+ assert.equal(f.post({action:'teacherReviewSpeaking',id,reviewId,review},'teacher').ok,true);
+ const parent=f.post({action:'learningRecords',code:'parent-a'},'parent').records[0];
+ assert.equal(parent.body.audioDocumentId,audio);assert.equal(parent.body.transcript,'You: I gave a reason.');
+ assert.equal(parent.body.audioReview.summary,review.summary);assert.equal(parent.body.ratings.organisation,3);
+ assert.equal(f.post({action:'teacherReviewSpeaking',id,reviewId,review},'teacher').ok,true);
+ assert.equal(f.books.get('sheet-a').sheets.get('Learning reviews').data.length,4);
+});
 test('upload stores original bytes privately, receipts are idempotent, revisions keep both originals',()=>{
  const f=fixture(),id=randomUUID(),first=f.upload({id},'teacher');assert.equal(first.received,true);assert.equal(first.document.uploadedBy,'Rory');
  assert.equal(f.upload({id,title:'Changed after uncertain response'}).document.title,'Synthetic work');assert.equal(f.files.size,1);
