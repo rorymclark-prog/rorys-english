@@ -17,7 +17,7 @@ try{
   }
   if(url.pathname==='/api/voice/'){
    if(r.method()==='GET'){await r.respond({status:200,contentType:'application/json',body:'{"available":true}'});return;}
-   const b=JSON.parse(r.postData());requests.push({teacherTest:b.teacherTest,code:b.code,token:b.token,preview:b.preview,topic:b.topic,sdpValid:b.sdp.startsWith('v=0')});
+   const b=JSON.parse(r.postData());requests.push({teacherTest:b.teacherTest,code:b.code,token:b.token,preview:b.preview,topic:b.topic,practiceStudent:b.practiceStudent,sdpValid:b.sdp.startsWith('v=0')});
    await r.respond({status:503,contentType:'application/json',body:'{"error":"Synthetic connection check complete."}'});return;
   }
   await r.continue();
@@ -25,12 +25,21 @@ try{
  await page.setViewport({width:1440,height:1000});
  await page.goto('http://127.0.0.1:4190/teacher/',{waitUntil:'networkidle0'});
  await page.type('input[type=password]','synthetic-password');await page.click('button[type=submit]');
- await page.waitForSelector('button::-p-text(Test AI voice)');await page.click('button::-p-text(Test AI voice)');
+ try { await page.waitForSelector('button::-p-text(Test AI voice)',{timeout:10000}); }
+ catch(error){console.log(JSON.stringify({stage:'teacher-login',requests,errors,body:(await page.evaluate(()=>document.body.innerText)).slice(0,1500)}));throw error;}
+ await page.click('button::-p-text(Test AI voice)');
  await page.waitForFunction(()=>document.body.innerText.includes('Ready for a conversation'));
  assert.equal(await page.$('a[href*="__teacher__"]'),null);
+ assert.equal(await page.$eval('.re-topic-options button[aria-pressed=true]',e=>e.textContent.includes('Open chat')),true);
+ await page.click('button::-p-text(Build sentences)');
+ await page.select('select','past-perfect');
+ assert.equal(await page.$eval('select',e=>e.value),'past-perfect');
+ await page.click('button::-p-text(My current unit)');
+ await page.select('select','ferdi-7h3k');
+ assert.ok((await page.$eval('select',e=>e.selectedOptions[0].textContent)).includes('Family life'));
  await page.click('button::-p-text(Start conversation)');
  await page.waitForFunction(()=>document.body.innerText.includes('Synthetic connection check complete.'),{timeout:20000});
- const voice=requests.find(r=>r.teacherTest);assert.deepEqual(voice,{teacherTest:true,code:'__teacher__',token:'synthetic-teacher-session',preview:false,topic:'everyday',sdpValid:true});
+ const voice=requests.find(r=>r.teacherTest);assert.deepEqual(voice,{teacherTest:true,code:'__teacher__',token:'synthetic-teacher-session',preview:false,topic:'unit',practiceStudent:'ferdi-7h3k',sdpValid:true});
  assert.ok(!requests.some(r=>['submit','event','teacherAssignHomework'].includes(r.action)));
  await fs.mkdir('/tmp/rory-teacher-voice-qa',{recursive:true});
  for(const width of [1440,390]){

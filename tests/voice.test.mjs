@@ -26,6 +26,21 @@ test('voice configuration is server controlled and rejects arbitrary topics or o
   assert.ok(!config.session.instructions.includes('ignore lesson'));assert.equal(config.session.delegation.responses.tools.length,0);
   for(const changed of [{sdp:'invalid'},{sdp:'v=0'+'x'.repeat(50001)},{topic:'__proto__'},{topic:'untrusted prompt'}]) assert.throws(()=>voiceConfiguration({...body,...changed}));
 });
+test('practice modes keep unit details trusted and give short, useful coaching',()=>{
+  for(const topic of ['general','everyday','opinions','story','unit','grammar']){
+    const config=voiceConfiguration({...body,topic,grammar:'past-perfect'},{title:'Unit 1: Family life',vocabulary:['stepfather','keep in touch']});
+    assert.match(config.session.instructions,/at most one useful grammar correction/i);
+    assert.match(config.session.instructions,/five or six words maximum/i);
+    assert.match(config.session.instructions,/Delegate to the backend when:/);
+  }
+  const unit=voiceConfiguration({...body,topic:'unit'},{title:'Unit 1: Family life',vocabulary:['stepfather']});
+  assert.match(unit.session.instructions,/Verified practice words: stepfather/);
+  const unknown=voiceConfiguration({...body,topic:'unit'},null);
+  assert.match(unknown.session.instructions,/do not invent textbook details/i);
+  const grammar=voiceConfiguration({...body,topic:'grammar',grammar:'past-perfect'});
+  assert.match(grammar.session.instructions,/past perfect with past simple/);
+  assert.throws(()=>voiceConfiguration({...body,topic:'grammar',grammar:'untrusted'}));
+});
 
 test('teacher voice tests require explicit teacher mode and a validated teacher session',async()=>{
   const teacher={...body,code:'__teacher__',teacherTest:true,token:'teacher-session'};
@@ -51,6 +66,9 @@ test('the teacher route validates the backend role before any paid request and n
       if(name==='node:crypto')return {createHash};
       if(name.includes('firebase-admin'))return {};
       if(name.includes('voice-session'))return exports;
+      if(name.includes('content/students.json'))return [];
+      if(name.includes('content/ferdi/units.json'))return [];
+      if(name.includes('content/valentin/units.json'))return [];
       if(name.includes('google-http'))return {googleHttp:async()=>{throw Error('Unexpected direct call')}};
       if(name.includes('progress-transport'))return {ProgressTransportError:TransportError,postProgress:async(_url,body)=>{checks.push(body);return allowed?{ok:true,students:[]}:{ok:false,authRequired:true};}};
       throw Error(name);

@@ -111,7 +111,7 @@ export default function TeacherDashboardView() {
 
   if (testingVoice) return <div className="teacher-workspace">
     <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => setTestingVoice(false)}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><QuickAppearance/><AppMenu teacher/></div></header>
-    <VoiceStudio code="__teacher__" lines={[]} teacherTest />
+    <VoiceStudio code="__teacher__" lines={[]} teacherTest practiceOptions={studentRoster.map(s => ({ code: s.code, name: s.displayName, unit: s.units.find(u => u.active)?.title }))} />
   </div>;
 
   const selected = selectedCode ? students?.find((x) => x.code === selectedCode) ?? null : null;
