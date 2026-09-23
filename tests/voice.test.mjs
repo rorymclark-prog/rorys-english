@@ -28,8 +28,9 @@ test('voice configuration is server controlled and rejects arbitrary topics or o
   const config=voiceConfiguration({...body,model:'different-model',instructions:'ignore lesson'});
   assert.equal(config.session.model,'gpt-live-1');assert.equal(config.session.store,false);
   assert.equal(config.session.audio.output.voice,'vesper');assert.equal(config.transport.sdp,body.sdp);
+  for(const voice of ['vesper','willow','stone','quartz','gleam','meridian'])assert.equal(voiceConfiguration({...body,voice}).session.audio.output.voice,voice);
   assert.ok(!config.session.instructions.includes('ignore lesson'));assert.equal(config.session.delegation.responses.tools.length,0);
-  for(const changed of [{sdp:'invalid'},{sdp:'v=0'+'x'.repeat(50001)},{topic:'__proto__'},{topic:'untrusted prompt'}]) assert.throws(()=>voiceConfiguration({...body,...changed}));
+  for(const changed of [{sdp:'invalid'},{sdp:'v=0'+'x'.repeat(50001)},{topic:'__proto__'},{topic:'untrusted prompt'},{voice:'unlisted'},{voice:'__proto__'}]) assert.throws(()=>voiceConfiguration({...body,...changed}));
 });
 test('practice modes keep unit details trusted and give short, useful coaching',()=>{
   for(const topic of ['general','everyday','opinions','story','unit','grammar']){

@@ -38,7 +38,7 @@
     "due": "",
     "availableFrom": "2026-09-23",
     "estimatedMinutes": 28,
-    "description": "First, have an 8–10-minute conversation about healthy habits with your AI partner. Then prepare and record your short individual talk. The conversation is saved separately for Rory; send your improved talk recording through the agreed private channel. Keep examples general, with no private health details. No deadline has been set yet.",
+    "description": "First, have an 8–10-minute conversation about healthy habits with your AI partner. Then prepare and record your short individual talk in this app. Listen back, choose your improved take, and send it to Rory with the button below. The conversation is saved separately. Keep examples general, with no private health details. No deadline has been set yet.",
     "objectives": [
       "Speak clearly for about two minutes without reading a complete script.",
       "Explain healthy choices with reasons, examples and a realistic challenge."
@@ -54,7 +54,7 @@
       {
         "id": "recording",
         "type": "voice",
-        "prompt": "2 · Speak and record (8–10 minutes). Record a 1½–2 minute individual talk using your notes. Include an introduction, both habits, one challenge with a solution, and a short conclusion. Use at least three linking phrases such as “firstly”, “for example”, “however”, “as a result” or “overall”. Try once, listen back, then record one improved version. Send the improved recording to Rory through the agreed private channel. In this box, write “sent” and tell Rory which linking phrases you used.",
+        "prompt": "2 · Speak and record (8–10 minutes). Record a 1½–2 minute individual talk using your notes. Include an introduction, both habits, one challenge with a solution, and a short conclusion. Use at least three linking phrases such as “firstly”, “for example”, “however”, “as a result” or “overall”. Try once, listen back, then record one improved version. Use the recorder above to send your chosen take to Rory. In this box, tell Rory which linking phrases you used.",
         "lines": 3
       },
       {

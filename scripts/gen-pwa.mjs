@@ -12,8 +12,8 @@ const students = JSON.parse(readFileSync(join(root, "content", "students.json"),
 const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const icons = [
-  { src: `${base}/icons/icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
-  { src: `${base}/icons/icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any maskable" },
+  { src: `${base}/icons/r-icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
+  { src: `${base}/icons/r-icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any maskable" },
 ];
 
 const outDir = join(root, "public", "m");

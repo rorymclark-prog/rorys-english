@@ -121,6 +121,16 @@ export default function ResourcesView({
 }) {
   const [state, setState] = useState<"loading" | "ok" | "error" | "off">("loading");
   const [items, setItems] = useState<ResourceItem[]>([]);
+  const [transcripts,setTranscripts]=useState<Record<string,string>>({});
+  const transcriptPairs=lessonResources.filter(item=>item.url.endsWith("_Transcript.txt"));
+  useEffect(()=>{
+    let live=true;
+    for(const item of transcriptPairs){
+      const path=item.url.startsWith("/")?`${process.env.NEXT_PUBLIC_BASE_PATH||""}${item.url}`:item.url;
+      void fetch(path).then(r=>{if(!r.ok)throw new Error();return r.text();}).then(text=>{if(live)setTranscripts(previous=>({...previous,[item.url]:text}));}).catch(()=>{if(live)setTranscripts(previous=>({...previous,[item.url]:"Transcript unavailable. Please try again when connected."}));});
+    }
+    return()=>{live=false;};
+  },[lessonResources]);
 
   useEffect(() => {
     if (!remoteEnabled()) {
@@ -156,7 +166,11 @@ export default function ResourcesView({
         </p>
       </header>
 
-      {lessonResources.length>0&&<section className="my-5"><h2 className="mb-3 text-sm font-bold uppercase tracking-wide">From your lessons</h2><ul className="re-resources-grid">{lessonResources.map(item=><li key={item.url}><a href={item.url.startsWith("/")?`${process.env.NEXT_PUBLIC_BASE_PATH||""}${item.url}`:item.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised"><span aria-hidden="true" className="rounded-xl bg-amber-soft p-3 text-amber-deep dark:bg-amber-dusk dark:text-amber">{item.url.endsWith(".pdf")?<SlidesIcon/>:item.url.endsWith(".mp3")?<AudioIcon/>:<DocIcon/>}</span><span className="min-w-0"><span className="block font-bold">{item.title}</span><span className="mt-1 block text-xs text-navy-soft dark:text-navy-mist">{item.unit} · {item.schoolYear}</span>{item.blurb&&<span className="mt-2 block text-sm">{item.blurb}</span>}</span><ExternalIcon className="ml-auto shrink-0" width={18}/></a></li>)}</ul></section>}
+      {lessonResources.length>0&&<section className="my-5"><h2 className="mb-3 text-sm font-bold uppercase tracking-wide">From your lessons</h2><ul className="re-resources-grid">{lessonResources.filter(item=>!transcriptPairs.some(t=>t.url===item.url)).map(item=>{
+        const transcript=transcriptPairs.find(t=>item.url.replace(/\.mp3$/i,"_Transcript.txt")===t.url);
+        const url=item.url.startsWith("/")?`${process.env.NEXT_PUBLIC_BASE_PATH||""}${item.url}`:item.url;
+        return <li key={item.url}>{transcript?<div className="rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised"><div className="flex items-start gap-3"><span aria-hidden="true" className="rounded-xl bg-amber-soft p-3 text-amber-deep dark:bg-amber-dusk dark:text-amber"><AudioIcon/></span><div className="min-w-0"><h3 className="font-bold">{item.title}</h3><p className="mt-1 text-xs text-navy-soft dark:text-navy-mist">{item.unit} · {item.schoolYear}</p>{item.blurb&&<p className="mt-2 text-sm">{item.blurb}</p>}</div></div><audio controls preload="none" src={url} className="mt-4 w-full" aria-label={item.title}/><div className="mt-5 border-t border-black/10 pt-4 dark:border-white/10"><h4 className="font-bold">Transcript</h4><p className="mt-1 text-xs text-navy-soft dark:text-navy-mist">Read after listening to check what you heard.</p><div className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap text-sm leading-7">{transcripts[transcript.url]||"Loading transcript…"}</div></div></div>:<a href={url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised"><span aria-hidden="true" className="rounded-xl bg-amber-soft p-3 text-amber-deep dark:bg-amber-dusk dark:text-amber">{item.url.endsWith(".pdf")?<SlidesIcon/>:item.url.endsWith(".mp3")?<AudioIcon/>:<DocIcon/>}</span><span className="min-w-0"><span className="block font-bold">{item.title}</span><span className="mt-1 block text-xs text-navy-soft dark:text-navy-mist">{item.unit} · {item.schoolYear}</span>{item.blurb&&<span className="mt-2 block text-sm">{item.blurb}</span>}</span><ExternalIcon className="ml-auto shrink-0" width={18}/></a>}</li>;
+      })}</ul></section>}
       <h2 className="mt-5 text-sm font-bold uppercase tracking-wide">Shared by Rory</h2>
       {state === "loading" && (
         <div className="mt-4 space-y-3">

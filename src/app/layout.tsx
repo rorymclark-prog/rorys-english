@@ -27,8 +27,8 @@ export const metadata: Metadata = {
     title: "Rory's English",
   },
   icons: {
-    icon: `${base}/icons/icon-192.png`,
-    apple: `${base}/icons/apple-touch-icon.png`,
+    icon: `${base}/icons/r-icon-192.png`,
+    apple: `${base}/icons/r-apple-touch-icon.png`,
   },
 };
 

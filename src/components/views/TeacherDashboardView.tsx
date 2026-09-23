@@ -22,6 +22,7 @@ import LearningView from "./LearningView";
 import TeachingProgress from "./TeachingProgress";
 import TeacherReviewPanel from "./TeacherReviewPanel";
 import AppMenu from "@/components/AppMenu";
+import ProfileAvatar from "@/components/ProfileAvatar";
 import QuickAppearance from "@/components/QuickAppearance";
 import StudentPreviewButton from "@/components/StudentPreviewButton";
 import studentRoster from "../../../content/students.json";
@@ -45,6 +46,7 @@ export default function TeacherDashboardView() {
 
   const [input, setInput] = useState("");
   const [authing, setAuthing] = useState(false);
+  const [rememberTeacher,setRememberTeacher]=useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Read any previously-verified password once on mount (pre-paint gate flash
@@ -91,7 +93,7 @@ export default function TeacherDashboardView() {
     if (!attempt) return;
     setAuthing(true);
     setAuthError(null);
-    const session = await login("__teacher__", attempt);
+    const session = await login("__teacher__", attempt, rememberTeacher);
     setAuthing(false);
     if (session.ok) {
       // The session effect loads the dashboard once after sign-in.
@@ -109,7 +111,7 @@ export default function TeacherDashboardView() {
   }
 
   if (!ready) return null;
-  if (!secret) return <PasswordGate input={input} setInput={setInput} authing={authing} authError={authError} onSubmit={submitGate} />;
+  if (!secret) return <PasswordGate input={input} setInput={setInput} authing={authing} authError={authError} remember={rememberTeacher} setRemember={setRememberTeacher} onSubmit={submitGate} />;
 
   if (testingVoice) return <div className="teacher-workspace">
     <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => setTestingVoice(false)}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><QuickAppearance/><AppMenu teacher/></div></header>
@@ -146,7 +148,7 @@ export default function TeacherDashboardView() {
   return (
     <div className="teacher-workspace">
       <header className="teacher-topbar">
-        <a href="/teacher/" className="teacher-brand"><span aria-hidden>RE</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
+        <a href="/teacher/" className="teacher-brand"><span aria-hidden>r.</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
         <div className="flex items-center gap-2">
           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
           <QuickAppearance/><AppMenu teacher/>
@@ -185,12 +187,16 @@ function PasswordGate({
   setInput,
   authing,
   authError,
+  remember,
+  setRemember,
   onSubmit,
 }: {
   input: string;
   setInput: (v: string) => void;
   authing: boolean;
   authError: string | null;
+  remember: boolean;
+  setRemember: (v: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
   return (
@@ -217,6 +223,7 @@ function PasswordGate({
           className="w-full rounded-xl border border-black/10 bg-surface px-4 py-3 text-center text-navy shadow-card outline-none dark:border-white/10 dark:bg-navy-raised dark:text-cream dark:shadow-card-dark"
         />
         {authError && <p className="text-sm text-bad dark:text-bad-bright">{authError}</p>}
+        <label className="flex items-center gap-2 text-left text-sm"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/>Keep me signed in on this device for up to six hours</label>
         <button
           type="submit"
           disabled={authing || !input.trim()}
@@ -241,7 +248,7 @@ function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () 
   const s = student.summary;
   const unit = studentRoster.find(entry=>entry.code===student.code)?.units.find(unit=>unit.active);
   return <button type="button" onClick={onOpen} className={`teacher-student-card ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`} aria-label={`Open ${student.name}’s teaching workspace`}>
-    <div className="teacher-card-heading"><span className="teacher-avatar">{student.name.slice(0,1).toUpperCase()}</span><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
+    <div className="teacher-card-heading"><ProfileAvatar code={student.code} name={student.name} className="teacher-avatar"/><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
     <div className="teacher-card-data"><ScoreRing value={s?.bestQuizPct}/><div className="teacher-card-counts"><div><CheckSquareIcon/><span><strong>{s?.homeworkDone ?? "—"}</strong> homework recorded</span></div><div><BookIcon/><span><strong>{s?.writingSamples ?? "—"}</strong> writing samples</span></div><div><ChartIcon/><span><strong>{s?.quizRounds ?? "—"}</strong> quiz rounds</span></div></div></div>
     <div className="teacher-focus"><span>{student.focusNote ? "CURRENT FOCUS" : "NEXT STEP"}</span><p>{student.focusNote || "Open their workspace to review answers or assign a little practice."}</p></div>
     <div className="teacher-card-footer"><span>{s?.lastUpdated ? `Last activity ${s.lastUpdated}` : "No activity recorded yet"}</span><strong>Open workspace <span aria-hidden>↗</span></strong></div>
@@ -322,7 +329,7 @@ function TeacherStudentPanel({
       </header>
       <main>
         <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`}>
-          <div className="teacher-banner-name"><span className="teacher-avatar">{student.name.slice(0,1).toUpperCase()}</span><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Last activity ${s.lastUpdated}` : "Ready for the first step"}</p></div></div>
+          <div className="teacher-banner-name"><ProfileAvatar code={student.code} name={student.name} editable className="teacher-avatar"/><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Last activity ${s.lastUpdated}` : "Ready for the first step"}</p></div></div>
           <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ScoreRing value={s?.bestQuizPct}/><span>Full progress <span aria-hidden>↗</span></span></button>
         </section>
         <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>

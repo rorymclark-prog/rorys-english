@@ -10,12 +10,13 @@ const key = (code: string) => `re_session_v2_${code}`;
 export function savedSession(code: string): Session | null {
   if (typeof window === "undefined") return null;
   try {
-    const value = JSON.parse(sessionStorage.getItem(key(code)) || "null");
+    const value = JSON.parse(sessionStorage.getItem(key(code)) || (code === "__teacher__" ? localStorage.getItem(key(code)) : null) || "null");
     return value?.expires > Date.now() ? value : null;
   } catch { return null; }
 }
 export function forgetSession(code: string) {
   try { sessionStorage.removeItem(key(code)); } catch { /* nothing persisted */ }
+  if(code === "__teacher__")try {localStorage.removeItem(key(code));}catch{/* nothing persisted */}
   window.dispatchEvent(new CustomEvent("re-auth-change"));
 }
 export async function request<T extends ApiResult>(body: Record<string, unknown>): Promise<T> {
@@ -52,10 +53,10 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
     : ["documentAnalyse","documentChat"].includes(String(body.action)) ? "Could not confirm the AI result yet. Your original is saved. Check for updates before retrying."
     : "Could not reach Rory’s app. Your saved draft is still on this device. Try again when connected." } as T;
 }
-export async function login(code: string, credential: string): Promise<Session> {
+export async function login(code: string, credential: string, remember = false): Promise<Session> {
   const result = await request<Session>({ action: "login", code, credential });
   if (result.ok && result.token) {
-    try {sessionStorage.setItem(key(code), JSON.stringify(result));}
+    try {sessionStorage.setItem(key(code), JSON.stringify(result));if(code === "__teacher__"){if(remember)localStorage.setItem(key(code),JSON.stringify(result));else localStorage.removeItem(key(code));}}
     catch {return {...result,ok:false,error:"This browser cannot store a sign-in. Enable session storage or use a private device."};}
     window.dispatchEvent(new CustomEvent("re-auth-change"));
   }

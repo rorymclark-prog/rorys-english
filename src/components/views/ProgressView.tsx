@@ -222,9 +222,7 @@ function SummaryTiles({ data }: { data: Progress }) {
   );
 }
 
-// ── a Sheet tab rendered as a compact, scrollable table ──────────────────────
-/** "85", "85%", "9/10", "12.07.2026", "7:30" — anything numeral-shaped */
-const NUMERAL_RE = /^-?\d+([.,:/\s]\d+)*\s*%?$/;
+// ── Sheet records rendered as full-width, expandable feedback cards ─────────
 
 /** Austrian school-year terms, derived from the row's date — no schema
  * change, no manual tagging. Sept–Jan = Semester 1, Feb–Jul = Semester 2;
@@ -251,86 +249,38 @@ function SectionCard({
   groupBySemester?: boolean;
 }) {
   if (!section || section.rows.length === 0) return null;
-  // a column is numeric if every non-empty cell is numeral-shaped (→ right-align + tnum)
-  const numericCols = section.headers.map((_, ci) => {
-    let seen = false;
-    for (const row of section.rows) {
-      const v = String(row[ci] ?? "").trim();
-      if (v === "" || v === "—" || v === "-") continue;
-      if (!NUMERAL_RE.test(v)) return false;
-      seen = true;
-    }
-    return seen;
-  });
+  const dateIndex=section.headers.findIndex(h=>/date|submitted|recorded/i.test(String(h)));
+  const titleIndex=section.headers.findIndex(h=>/title|topic|task|assignment|activity|conversation/i.test(String(h)));
+  const display=(value:unknown)=>{
+    const text=String(value??'').trim();
+    const d=/^\d{4}-\d{2}-\d{2}T/.test(text)?new Date(text):null;
+    return d&&!isNaN(d.getTime())?d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):text||'—';
+  };
+  const rows=section.rows.slice().reverse();
+  let lastTerm:string|null|undefined;
   return (
     <section className="mt-5">
       <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">
         {title}
       </h2>
-      <div className="max-h-[70vh] overflow-auto rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark">
-        <table className="w-full min-w-max text-left text-sm">
-          <thead>
-            <tr>
-              {section.headers.map((h, i) => (
-                <th
-                  key={i}
-                  className={`sticky top-0 z-[1] whitespace-nowrap bg-surface px-3 py-2 font-bold text-navy shadow-[inset_0_-1px_0_rgba(0,0,0,.06)] dark:bg-navy-raised dark:text-cream dark:shadow-[inset_0_-1px_0_rgba(255,255,255,.08)] ${
-                    numericCols[i] ? "text-right" : ""
-                  }`}
-                >
-                  {String(h)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(() => {
-              const rows = section.rows.slice().reverse(); // newest first
-              let lastTerm: string | null | undefined; // undefined = before the first row
-              return rows.map((row, ri) => {
-                const term = groupBySemester ? termFor(String(row[0] ?? "")) : null;
-                const showDivider = groupBySemester && term && term !== lastTerm;
-                // Only update the sentinel on a REAL term — a row with a
-                // malformed/blank date (term=null, e.g. hand-entered into
-                // the Sheet directly) must not reset it, or the next valid
-                // row would look like a semester change even when it isn't.
-                if (groupBySemester && term) lastTerm = term;
-                return (
-                  <Fragment key={ri}>
-                    {showDivider && (
-                      <tr>
-                        <td
-                          colSpan={section.headers.length}
-                          className="bg-amber-soft px-3 py-1 text-[0.625rem] font-bold uppercase tracking-wide text-amber-deep dark:bg-amber-dusk dark:text-amber"
-                        >
-                          {term}
-                        </td>
-                      </tr>
-                    )}
-                    <tr className="border-b border-black/[.04] last:border-0 dark:border-white/[.04]">
-                      {row.map((cell, ci) => {
-                        const v = String(cell);
-                        const d = /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v) : null;
-                        return (
-                          <td
-                            key={ci}
-                            className={`whitespace-nowrap px-3 py-2 text-navy-soft dark:text-navy-mist ${
-                              numericCols[ci] ? "tnum text-right" : ""
-                            }`}
-                          >
-                            {d
-                              ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-                              : v}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  </Fragment>
-                );
-              });
-            })()}
-          </tbody>
-        </table>
+      <div className="space-y-2">
+        {rows.map((row,ri)=>{
+          const dateCell=dateIndex>=0?row[dateIndex]:row[0];
+          const term=groupBySemester?termFor(String(dateCell??'')):null;
+          const divider=groupBySemester&&term&&term!==lastTerm;
+          if(term)lastTerm=term;
+          const firstIsDate=/^\d{4}-\d{2}-\d{2}T/.test(String(row[0]??''));
+          const headingIndex=titleIndex>=0?titleIndex:firstIsDate?1:0;
+          const heading=display(row[headingIndex]);
+          const badges=section.headers.map((header,index)=>({header:String(header),value:display(row[index]),index})).filter(item=>item.index!==headingIndex&&item.index!==dateIndex&&item.value!=='—'&&item.value.length<=14&&!/feedback|error|note|comment/i.test(item.header)).slice(0,2);
+          return <Fragment key={ri}>
+            {divider&&<p className="rounded-lg bg-amber-soft px-3 py-2 text-[.65rem] font-bold uppercase tracking-wide text-amber-deep dark:bg-amber-dusk dark:text-amber">{term}</p>}
+            <details className="group min-w-0 rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark">
+              <summary className="flex min-w-0 cursor-pointer list-none items-start justify-between gap-3 p-4 marker:hidden"><span className="min-w-0"><strong className="block break-words text-sm text-navy dark:text-cream">{heading}</strong>{dateIndex>=0&&<small className="mt-1 block text-xs text-navy-soft dark:text-navy-mist">{display(dateCell)}</small>}{badges.length>0&&<span className="mt-2 flex flex-wrap gap-2">{badges.map(b=><span key={b.index} className="rounded-full bg-black/5 px-2 py-1 text-xs text-navy-soft dark:bg-white/10 dark:text-navy-mist">{b.header}: {b.value}</span>)}</span>}</span><span className="shrink-0 text-sm font-bold text-indigo-700 dark:text-amber">{['Writing','Speaking','Homework'].includes(title)?'Feedback':'Details'} <span aria-hidden>▾</span></span></summary>
+              <dl className="grid min-w-0 gap-3 border-t border-black/10 p-4 text-sm dark:border-white/10 sm:grid-cols-2">{section.headers.map((header,index)=><div key={index} className={`min-w-0 ${String(row[index]??'').length>80?'sm:col-span-2':''}`}><dt className="text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">{String(header)}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-navy dark:text-cream" style={{overflowWrap:'anywhere'}}>{display(row[index])}</dd></div>)}</dl>
+            </details>
+          </Fragment>;
+        })}
       </div>
     </section>
   );
