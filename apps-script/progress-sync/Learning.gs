@@ -8,15 +8,19 @@ function learningSheet_(code,create,replies) {
   return sh;
 }
 function learningRows_(code,replies) {var sh=learningSheet_(code,false,replies);return sh?sh.getDataRange().getValues().slice(1):[];}
+function learningDate_(value) {
+  if(Object.prototype.toString.call(value)==='[object Date]'&&!isNaN(value.getTime()))return Utilities.formatDate(value,Session.getScriptTimeZone(),'yyyy-MM-dd');
+  return String(value||'');
+}
 function learningLatest_(code) {
   var map={},rows=learningRows_(code,false);
   rows.forEach(function(r){if(r[0])map[String(r[0])]=r;});
-  return Object.keys(map).map(function(id){return map[id];}).sort(function(a,b){return String(b[2]||b[1]).localeCompare(String(a[2]||a[1]));});
+  return Object.keys(map).map(function(id){return map[id];}).sort(function(a,b){return learningDate_(b[2]||b[1]).localeCompare(learningDate_(a[2]||a[1]));});
 }
 function learningPublic_(row,role) {
   var body=JSON.parse(row[6]||'{}');
   if(role!=='teacher')delete body.tutorPrivate;
-  return {id:String(row[0]),created:String(row[1]),date:String(row[2]),kind:String(row[3]),title:String(row[4]),visibility:String(row[5]),author:String(row[7]),body:body};
+  return {id:String(row[0]),created:String(row[1]),date:learningDate_(row[2]),kind:String(row[3]),title:String(row[4]),visibility:String(row[5]),author:String(row[7]),body:body};
 }
 function learningFind_(code,id) {
   var rows=learningLatest_(code);
@@ -41,8 +45,9 @@ function learningService_(p,s) {
     if(s.role!=='teacher'&&s.code!==p.code)return {ok:false,error:'Access denied'};
     var code=student.code;
     if(p.action==='learningRecords') {
-      var rows=learningLatest_(code).filter(function(r){return s.role==='teacher'||r[5]!=='teacher';});
-      return {ok:true,records:rows.map(function(r){return learningPublic_(r,s.role);}),replies:learningReplies_(code,rows.map(function(r){return String(r[0]);}))};
+      var readerRole=p.preview?'student':s.role;
+      var rows=learningLatest_(code).filter(function(r){return readerRole==='teacher'||r[5]!=='teacher';});
+      return {ok:true,records:rows.map(function(r){return learningPublic_(r,readerRole);}),replies:learningReplies_(code,rows.map(function(r){return String(r[0]);}))};
     }
     if(s.role==='parent'||p.preview)return {ok:false,error:'Read-only access.'};
     if(p.action==='teacherSaveLearningRecord'&&s.role==='teacher') {
@@ -75,7 +80,7 @@ function learningService_(p,s) {
       var today=new Date().toISOString(),row=[p.id,today,today.slice(0,10),'speaking',sanitize_(p.title||'AI conversation'),'shared',JSON.stringify(body),'Student'];
       var lock=LockService.getScriptLock();lock.waitLock(10000);
       try {
-        if(learningRows_(code,false).filter(function(r){return String(r[2])===row[2]&&r[7]==='Student';}).length>=8)throw new Error('Today’s speaking save limit has been reached.');
+        if(learningRows_(code,false).filter(function(r){return learningDate_(r[2])===row[2]&&r[7]==='Student';}).length>=8)throw new Error('Today’s speaking save limit has been reached.');
         learningSheet_(code,true,false).appendRow(row);
       } finally {lock.releaseLock();}
       return {ok:true,received:true,record:learningPublic_(row,'student')};
