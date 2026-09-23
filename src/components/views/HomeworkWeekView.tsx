@@ -14,6 +14,7 @@ export default function HomeworkWeekView({unitId,week,backHref,archived=false}:{
     {archived&&<p className="rounded-xl border p-3">Previous-year archive · optional revision, not current homework.</p>}
     {week.estimatedMinutes&&<p className="font-semibold">About {week.estimatedMinutes} minutes</p>}
     {week.description&&<p>{week.description}</p>}
+    {week.tasks.some(task=>task.type==="voice")&&<Link className="inline-block rounded-xl border p-3 font-semibold underline" href={`/s/${code}/speak/`}>Open Speaking studio →</Link>}
     {week.objectives&&<ul className="list-disc pl-5">{week.objectives.map(o=><li key={o}>{o}</li>)}</ul>}
     <p>{week.due?"Due "+week.due:"No deadline assigned"}</p>
     <SubmissionForm code={code} unit={unitId} task={"hw:"+week.week} title={week.title} fields={week.tasks}
