@@ -15,9 +15,9 @@ const card='rounded-card bg-surface p-5 shadow-card dark:bg-navy-raised dark:sha
 const button='rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40';
 const today=()=>new Date().toISOString().slice(0,10);
 
-export default function LearningView({code,name,mode}:{code:string;name:string;mode:'student'|'parent'|'teacher'}) {
+export default function LearningView({code,name,mode,initialFilter='all'}:{code:string;name:string;mode:'student'|'parent'|'teacher';initialFilter?:'all'|LearningKind}) {
   const [records,setRecords]=useState<LearningRecord[]>([]),[replies,setReplies]=useState<LearningReply[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
-  const [filter,setFilter]=useState<'all'|LearningKind>('all');
+  const [filter,setFilter]=useState<'all'|LearningKind>(initialFilter);
   const [kind,setKind]=useState<LearningKind>('homework'),[title,setTitle]=useState(''),[date,setDate]=useState(today()),[visibility,setVisibility]=useState<'shared'|'teacher'>('shared');
   const [summary,setSummary]=useState(''),[strengths,setStrengths]=useState(''),[targets,setTargets]=useState(''),[nextStep,setNextStep]=useState(''),[evidenceType,setEvidenceType]=useState(''),[source,setSource]=useState('');
   const [studentNotes,setStudentNotes]=useState(''),[lessonPoints,setLessonPoints]=useState(''),[original,setOriginal]=useState(''),[corrected,setCorrected]=useState(''),[model,setModel]=useState(''),[practice,setPractice]=useState('');

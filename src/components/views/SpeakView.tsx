@@ -63,21 +63,23 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
   async function persistConversation(){
     const id=sessionId.current;if(!id||savedId.current===id)return;savedId.current=id;
     setSaving(true);
-    const text=fragmentsRef.current.map(f=>`[${(f.start_ms/1000).toFixed(1)}s] ${f.speaker}: ${f.delta}`).join('\n').slice(0,24000);
-    setSaveState('Saving your conversation…');
-    const result=await saveSpeaking(code,id,topics[topicRef.current].title,text,reflectionRef.current);
-    if(!result.ok){savedId.current='';setSaving(false);setSaveState('Could not confirm the save. Keep this page open and choose Retry save.');return;}
-    setSaveState('Conversation saved. Preparing transcript feedback…');
-    const analysis=await analyseSpeaking(code,id);
-    const sample=await sampleReady.current;
-    if(sample&&sample.size>0&&sample.size<=MAX_DOCUMENT_BYTES){
-      if(sampleUrl.current)URL.revokeObjectURL(sampleUrl.current);sampleUrl.current=URL.createObjectURL(sample);setSampleDownload(sampleUrl.current);
-      const ext=sample.type==='audio/mp4'?'m4a':sample.type==='audio/ogg'?'ogg':'webm',documentId=crypto.randomUUID();
-      const uploaded=await documentRequest(code,false,{action:'documentUpload',id:documentId,title:`AI conversation audio · ${topics[topicRef.current].title}`,context:`Student voice sample for speaking record ${id}. Up to three minutes; AI feedback uses captions, while Rory can listen to this recording.`,files:[{name:`speaking-${id}.${ext}`,type:sample.type,data:await fileBase64(sample)}]});
-      if(uploaded.ok&&uploaded.received)await attachSpeakingAudio(code,id,documentId);
-      setSaveState(uploaded.ok?'Transcript feedback and a short audio sample are saved for Rory and your parents.':'Transcript saved. The audio sample could not be confirmed; download the conversation and ask Rory if you want to keep the sound.');
-    }else setSaveState(analysis.ok?'Saved with transcript feedback. No audio sample was available from this browser.':'Conversation saved. AI transcript feedback is unavailable; Rory can review it.');
-    setSaving(false);
+    try {
+      const text=fragmentsRef.current.map(f=>`[${(f.start_ms/1000).toFixed(1)}s] ${f.speaker}: ${f.delta}`).join('\n').slice(0,24000);
+      setSaveState('Saving your conversation…');
+      const result=await saveSpeaking(code,id,topics[topicRef.current].title,text,reflectionRef.current);
+      if(!result.ok){savedId.current='';setSaveState('Could not confirm the save. Keep this page open and choose Retry save.');return;}
+      setSaveState('Conversation saved. Preparing transcript feedback…');
+      const analysis=await analyseSpeaking(code,id);
+      const sample=await sampleReady.current;
+      if(sample&&sample.size>0&&sample.size<=MAX_DOCUMENT_BYTES){
+        if(sampleUrl.current)URL.revokeObjectURL(sampleUrl.current);sampleUrl.current=URL.createObjectURL(sample);setSampleDownload(sampleUrl.current);
+        const ext=sample.type==='audio/mp4'?'m4a':sample.type==='audio/ogg'?'ogg':'webm',documentId=crypto.randomUUID();
+        const uploaded=await documentRequest(code,false,{action:'documentUpload',id:documentId,title:`AI conversation audio · ${topics[topicRef.current].title}`,context:`Student voice sample for speaking record ${id}. Up to three minutes; AI feedback uses captions, while Rory can listen to this recording.`,files:[{name:`speaking-${id}.${ext}`,type:sample.type,data:await fileBase64(sample)}]});
+        const attached=uploaded.ok&&uploaded.received?await attachSpeakingAudio(code,id,documentId):null;
+        setSaveState(attached?.ok?(analysis.ok?'Transcript feedback and a short audio sample are saved for Rory and your parents.':'Conversation and audio sample saved. AI transcript feedback is unavailable; Rory can review it.'):'Conversation saved. The audio sample could not be confirmed; download it and ask Rory if you want to keep the sound.');
+      }else setSaveState(analysis.ok?'Saved with transcript feedback. No audio sample was available from this browser.':'Conversation saved. AI transcript feedback is unavailable; Rory can review it.');
+    } catch {savedId.current='';setSaveState('Could not confirm the full save. Keep this page open and choose Retry save.');}
+    finally {setSaving(false);}
   }
   function startSample(stream:MediaStream){
     if(teacherTest||!window.MediaRecorder)return;
