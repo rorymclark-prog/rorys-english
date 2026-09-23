@@ -10,8 +10,37 @@ const base = (p: SVGProps<SVGSVGElement>) => ({
   strokeWidth: 2,
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
+  "aria-hidden": true as const,
   ...p,
 });
+
+export function PencilIcon(p: SVGProps<SVGSVGElement>) {
+  return <svg {...base(p)}><path d="M12 20h9"/><path d="m16.5 3.5 4 4L9 19l-5 1 1-5z"/><path d="m14 6 4 4"/></svg>;
+}
+
+export function FolderIcon(p: SVGProps<SVGSVGElement>) {
+  return <svg {...base(p)}><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3z"/><path d="M3 10h18"/></svg>;
+}
+
+export function TargetIcon(p: SVGProps<SVGSVGElement>) {
+  return <svg {...base(p)}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>;
+}
+
+export function UploadIcon(p: SVGProps<SVGSVGElement>) {
+  return <svg {...base(p)}><path d="M12 16V3m0 0L7 8m5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>;
+}
+
+export function MessageIcon(p: SVGProps<SVGSVGElement>) {
+  return <svg {...base(p)}><path d="M20 17a2 2 0 0 1-2 2H8l-4 3V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8 8h8M8 12h6"/></svg>;
+}
+
+export function ClockIcon(p: SVGProps<SVGSVGElement>) {
+  return <svg {...base(p)}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>;
+}
+
+export function FileIcon(p: SVGProps<SVGSVGElement>) {
+  return <svg {...base(p)}><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h6"/></svg>;
+}
 
 export function HomeIcon(p: SVGProps<SVGSVGElement>) {
   return (

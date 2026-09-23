@@ -4,7 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import type { StudyTool } from "@/lib/types";
 import { fetchProgress, remoteEnabled, type Progress, type Section } from "@/lib/remote";
-import { GearIcon, ExternalIcon, ChevronLeftIcon } from "@/components/Icons";
+import { GearIcon, ExternalIcon, ChevronLeftIcon, ChevronRightIcon, CheckSquareIcon, FileIcon, TargetIcon } from "@/components/Icons";
 import LearningView from "./LearningView";
 import DocumentsView from "./DocumentsView";
 
@@ -57,8 +57,7 @@ export default function ProgressView({
     <>
       {/* Header (self-contained so this works in the app shell AND the parent page) */}
       <header
-        className="sticky top-0 z-10 flex items-start justify-between gap-3 bg-cream px-5 pb-3 dark:bg-navy"
-        style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
+        className="re-screen-header flex items-start justify-between gap-3"
       >
         <div className="flex min-w-0 items-start gap-2">
           {mode === "teacher" && onBack && (
@@ -95,7 +94,8 @@ export default function ProgressView({
         )}
       </header>
 
-      <main className="px-5 pb-10">
+      <main className="re-screen-main progress-page">
+        {mode==="student"&&studentCode&&<nav className="ux-route-grid" aria-label="Related work pages"><Link className="ux-route-card" href={`/s/${studentCode}/homework/`}><CheckSquareIcon/><span><strong>Homework</strong><small>Open your tasks</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${studentCode}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Focus on school tests</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${studentCode}/documents/`}><FileIcon/><span><strong>Documents</strong><small>Find saved work</small></span><ChevronRightIcon/></Link></nav>}
         {state === "loading" && (
           <div className="mt-4 space-y-3">
             <div className="h-20 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark" />
@@ -115,8 +115,10 @@ export default function ProgressView({
 
         {state === "ok" && data && (
           <>
-            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Practice and test history. Quiz scores show attempts, not proof that a topic is mastered.</p>
-            {mode==="student"&&studentCode&&<Link className="mb-4 inline-block underline" href={`/s/${studentCode}/homework/`}>Submitted work, revisions and Rory’s feedback →</Link>}
+            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Rory’s reviews come first. The numbers below show activity, not a grade of what you have mastered.</p>
+            <LearningView code={fetchCode} name={displayName} mode={mode} />
+            <h2 className="progress-history-heading">Practice history</h2>
+            <p className="ux-subtle">Quiz scores show attempts, not proof that a topic is mastered.</p>
             <SummaryTiles data={data} />
             <SectionCard title="Homework" section={data.homework} />
             <SectionCard title="Quizzes & vocab" section={data.quizzes} />
@@ -124,7 +126,6 @@ export default function ProgressView({
             <SectionCard title="Writing" section={data.writing} groupBySemester />
             <SectionCard title="Speaking" section={data.speaking} />
             <SectionCard title="Mock tests" section={data.mockTests} groupBySemester />
-            <LearningView code={fetchCode} name={displayName} mode={mode} />
             {mode === "parent" && <details className="mt-5"><summary className="cursor-pointer rounded-card bg-surface p-4 font-bold shadow-card dark:bg-navy-raised dark:shadow-card-dark">View saved documents and homework files</summary><DocumentsView code={fetchCode} name={displayName} parent /></details>}
             {data.generatedAt && (
               <p className="tnum mt-4 text-center text-xs text-navy-soft dark:text-navy-mist">

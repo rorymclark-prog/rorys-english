@@ -1,7 +1,7 @@
 "use client";
 
 
-/** Standard screen header (title + settings gear) used by the main tabs. */
+/** Consistent heading and content width for student screens. */
 export default function Screen({
   title,
   subtitle,
@@ -14,8 +14,7 @@ export default function Screen({
   return (
     <>
       <header
-        className="sticky top-0 z-10 flex items-start justify-between gap-3 bg-cream px-5 pb-3 dark:bg-navy"
-        style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)" }}
+        className="re-screen-header flex items-start justify-between gap-3"
       >
         <div className="min-w-0">
           <h1 className="display text-2xl text-navy break-words dark:text-cream">{title}</h1>
@@ -23,7 +22,7 @@ export default function Screen({
         </div>
 
       </header>
-      <main className="px-5 pb-10">{children}</main>
+      <main className="re-screen-main">{children}</main>
     </>
   );
 }

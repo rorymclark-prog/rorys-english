@@ -43,14 +43,14 @@ export default function SettingsView() {
   };
 
   return (
-    <Screen title="Settings">
-      <div className="mt-2 space-y-6">
+    <Screen title="Settings" subtitle="Your account, appearance and device options.">
+      <div className="settings-sections mt-2 space-y-6">
         <Row label="Signed in as">
           <span className="font-bold text-navy dark:text-cream">{displayName}</span>
         </Row>
 
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Progress</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Share your progress</p>
           <button
             onClick={shareProgress}
             disabled={preview}
@@ -72,7 +72,7 @@ export default function SettingsView() {
         <AppearanceSettings/>
 
         <div className="pt-2">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Start fresh</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">This device’s saved answers</p>
           {!confirming ? (
             <button
               onClick={() => setConfirming(true)}

@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import {isStudentPreview} from "@/lib/student-preview";
 import { fetchAi, remoteEnabled } from "@/lib/remote";
+import Link from "next/link";
+import {BookIcon,ChevronRightIcon,MessageIcon,PencilIcon,TargetIcon} from "@/components/Icons";
 
 const WRITING_MAX = 4000; // POST body now — full short essays fit
 const TUTOR_MAX = 1000;
@@ -137,7 +139,8 @@ export default function AiCoachView({ code }: { code: string }) {
   return (
     <main className="px-5 pb-10">
       <header className="mb-3 pt-4">
-        <h1 className="display text-2xl text-navy dark:text-cream">English tutor</h1>
+        <p className="work-eyebrow">PRACTISE IN YOUR OWN WORDS</p>
+        <h1 className="display mt-1 text-2xl text-navy dark:text-cream">Writing help</h1>
         <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">
           Ask questions, look up words, or get feedback on your writing. Just for practice — never graded.
         </p>
@@ -145,21 +148,22 @@ export default function AiCoachView({ code }: { code: string }) {
           Keep it about English — please don&apos;t share personal or private information here.
         </p>
       </header>
+      <nav className="ux-route-grid" aria-label="Related learning pages"><Link className="ux-route-card" href={`/s/${code}/lessons/`}><BookIcon/><span><strong>Lessons</strong><small>See your current unit</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${code}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Use Rory’s reviews</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${code}/homework/`}><PencilIcon/><span><strong>Homework</strong><small>Return to your task</small></span><ChevronRightIcon/></Link></nav>
 
       {/* Mode toggle */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="coach-mode-grid">
         {(
           [
-            ["tutor", "💬 Ask"],
-            ["word", "🔍 Words"],
-            ["writing", "✍️ Writing"],
+            ["tutor", "Ask a question"],
+            ["word", "Find a word"],
+            ["writing", "Improve writing"],
           ] as [Mode, string][]
         ).map(([m, label]) => (
           <button
             key={m}
             onClick={() => switchMode(m)}
             aria-pressed={mode === m}
-            className={`min-h-[48px] rounded-xl px-2 text-sm font-bold transition active:scale-[.97] ${
+            className={`coach-mode-button min-h-[48px] rounded-xl px-2 text-sm font-bold transition active:scale-[.97] ${
               mode === m
                 ? "bg-amber-soft text-amber-deep dark:bg-amber-dusk dark:text-amber"
                 : "bg-surface text-navy-soft shadow-card dark:bg-navy-raised dark:text-navy-mist dark:shadow-card-dark"
