@@ -6,6 +6,7 @@ const student={code:"valentin-q9m2",name:"Valentin",summary:{homeworkDone:0,quiz
 const assignments={headers:["Date","Title","Details","Due","Status","Id"],rows:[["2026-09-17","Demo writing task","TEST DATA: Write two sentences about a hobby. This is a workflow check, not Unit 1 textbook content.","2026-09-21","open","demo-task"]]};
 const ferdiAssignments={headers:assignments.headers,rows:[["2026-09-23","Demo weekly speaking","Chat 1: Tell a story about a holiday or climbing day. Chat 2: Compare what your family usually does with what they are doing now.","","open","demo-voice"]]};
 const empty={headers:[],rows:[]};
+const learningRecords=[{id:'demo-writing-review',created:'2026-09-23T09:00:00Z',date:'2026-09-23',kind:'homework',title:'Synthetic writing review',visibility:'shared',author:'Rory',body:{summary:'Demo only: a complete sentence-by-sentence review.',writing:{original:'I enjoy swimming. [Crossed-out wording unclear.] Yesterday I swim in the lake. The water was cold.',corrected:'I enjoy swimming. Yesterday I swam in the lake. The water was cold.',comparisons:[{original:'I swim in the lake.',corrected:'I swam in the lake.',improved:'I enjoyed a swim in the lake.',note:'Yesterday places the action in the past.'}]}}}];
 const server=http.createServer(async(req,res)=>{
   res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Headers","Content-Type");res.setHeader("Content-Type","application/json");
   if(req.method==="OPTIONS"){res.end();return;}
@@ -20,7 +21,12 @@ const server=http.createServer(async(req,res)=>{
     const session=sessions.get(p.session);
     if(session.role!=="teacher"&&p.code!==session.code)result={ok:false,error:"Access denied"};
     else if(p.action==="logout")sessions.delete(p.session);
-    else if(p.preview&&!['documents','document','documentFile','progress','resources','assignments','note','submissions'].includes(p.action))result={ok:false,error:'Student preview is read-only.'};
+    else if(p.preview&&!['documents','document','documentFile','progress','resources','assignments','note','submissions','learningRecords'].includes(p.action))result={ok:false,error:'Student preview is read-only.'};
+    else if(p.action==='learningRecords')result={ok:true,records:learningRecords,replies:[]};
+    else if(p.action==='teacherSaveLearningRecord'&&session.role==='teacher'){
+      const index=learningRecords.findIndex(r=>r.id===p.id),record={id:p.id,created:new Date().toISOString(),date:p.date,kind:p.kind,title:p.title,visibility:p.visibility,body:p.body,author:'Rory'};
+      if(index>=0)learningRecords[index]=record;else learningRecords.push(record);result={ok:true,record};
+    }
     else if(p.action==='documents')result={ok:true,documents:documents.filter(d=>d.code===p.code).map(({storedFiles,...d})=>d).reverse()};
     else if(p.action==='documentUpload'){
       let d=documents.find(d=>d.code===p.code&&d.id===p.id);
@@ -53,4 +59,5 @@ const server=http.createServer(async(req,res)=>{
   }
   res.end(JSON.stringify(result));
 });
-server.listen(4174,"127.0.0.1",()=>console.log("Isolated demo API: http://127.0.0.1:4174 · synthetic data only"));
+const port=Number(process.env.PORT||4174);
+server.listen(port,"127.0.0.1",()=>console.log(`Isolated demo API: http://127.0.0.1:${port} · synthetic data only`));
