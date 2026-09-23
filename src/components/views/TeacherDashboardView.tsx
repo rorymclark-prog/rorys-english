@@ -12,7 +12,7 @@ import {
   type WritingAssessment,
   type TeacherStudent,
 } from "@/lib/remote";
-import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon } from "@/components/Icons";
+import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon, FileIcon, MessageIcon, PencilIcon, TargetIcon } from "@/components/Icons";
 import ProgressView from "./ProgressView";
 import { login, savedSession, forgetSession } from "@/lib/api";
 import { publishAssessment } from "@/lib/remote";
@@ -155,15 +155,13 @@ export default function TeacherDashboardView() {
         </div>
       </header>
       <main>
-        <section className="teacher-welcome">
+        <section className="teacher-welcome teacher-welcome-compact">
           <div>
-            <p className="teacher-eyebrow">YOUR TEACHING, AT A GLANCE</p>
-            <h1>Room to learn.<br/><span>Space to grow.</span></h1>
-            <p>Welcome back, Rory. Choose a student to review their work,<br className="hidden sm:block"/> give feedback or plan their next step.</p>
+            <p className="teacher-eyebrow">TEACHER WORKSPACE</p>
+            <h1>Your students, <span>at a glance.</span></h1>
+            <p>Choose a student to review work, give feedback or plan the next step.</p>
           </div>
-          <div className="teacher-book-art" aria-hidden="true"><BookIcon/><span className="teacher-art-star">✦</span><span className="teacher-art-note"><CheckSquareIcon/> A little practice.<br/>A little progress.</span></div>
         </section>
-        <section className="re-card mb-6"><h2>Try the speaking partner</h2><p>Test a live AI conversation yourself before a lesson. Your test stays separate from student work.</p><button type="button" className="teacher-primary mt-3" onClick={() => setTestingVoice(true)}>Test AI voice</button></section>
         {loadState === "loading" && <div className="teacher-student-grid" role="status" aria-label="Loading students">{[0,1].map(i=><div key={i} className="h-72 animate-pulse rounded-card bg-amber-soft dark:bg-amber-dusk"/>)}</div>}
         {loadState === "error" && <div className="teacher-empty" role="alert"><ChartIcon/><h2>Let’s try that again</h2><p>Your students’ records could not be loaded.</p><button className="teacher-primary" onClick={()=>setRefreshKey(k=>k+1)}>Reload students</button></div>}
         {loadState === "ok" && students && <>
@@ -172,6 +170,7 @@ export default function TeacherDashboardView() {
             {students.length===0 && <div className="teacher-empty"><BookIcon/><h2>Your classroom starts here</h2><p>Add your first student to get started.</p></div>}
             {students.map(student=><StudentCard key={student.code} student={student} onOpen={()=>setSelectedCode(student.code)}/>)}
           </div>
+          <section className="teacher-voice-tool"><MessageIcon/><div><h2>Speaking partner test</h2><p>Try a conversation before a lesson. Your test stays separate from student work.</p></div><button type="button" className="teacher-primary" onClick={() => setTestingVoice(true)}>Test voice</button></section>
           <TeachingProgress students={students} onOpen={setSelectedCode}/>
           <div className="teacher-bottom-note"><CheckSquareIcon/><p>Review the work. Celebrate the effort. Choose the next step.<small>Figures include earlier records. A best quiz score is a snapshot, not a measure of mastery.</small></p></div>
           {generatedAt && <p className="teacher-updated">Records updated {generatedAt}</p>}
@@ -334,11 +333,11 @@ function TeacherStudentPanel({
         </section>
         <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>
         <nav className="teacher-section-nav" aria-label="Student workspace sections">
-          <button type="button" aria-pressed={section === "learning"} onClick={()=>setSection("learning")}><ChartIcon/><span>Learning reviews<small>Writing, speaking & lessons</small></span></button>
-          <button type="button" aria-pressed={section === "documents"} onClick={()=>setSection("documents")}><BookIcon/><span>Documents<small>Scan, upload & discuss</small></span></button>
+          <button type="button" aria-pressed={section === "learning"} onClick={()=>setSection("learning")}><MessageIcon/><span>Reviews<small>Writing, speaking & lessons</small></span></button>
+          <button type="button" aria-pressed={section === "documents"} onClick={()=>setSection("documents")}><FileIcon/><span>Documents<small>Scan, upload & discuss</small></span></button>
           <button type="button" aria-pressed={section === "review"} onClick={()=>setSection("review")}><CheckSquareIcon/><span>Work & feedback<small>Read, respond, encourage</small></span></button>
-          <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><BookIcon/><span>Plan homework<small>Set the next step</small></span></button>
-          <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><ChartIcon/><span>Assessments<small>Record & reflect</small></span></button>
+          <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><PencilIcon/><span>Plan homework<small>Set the next step</small></span></button>
+          <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><TargetIcon/><span>Assessments<small>Record & reflect</small></span></button>
         </nav>
         {section === "documents" && <DocumentsView key={student.code} code={student.code} name={student.name} teacher/>}
         {section === "learning" && <LearningView key={student.code} code={student.code} name={student.name} mode="teacher"/>}

@@ -44,8 +44,8 @@ export default function SettingsView() {
   };
 
   return (
-    <Screen title="Settings">
-      <div className="mt-2 space-y-6">
+    <Screen title="Settings" subtitle="Your account, appearance and device options.">
+      <div className="settings-sections mt-2 space-y-6">
         <Row label="Signed in as">
           <span className="font-bold text-navy dark:text-cream">{displayName}</span>
         </Row>
@@ -53,7 +53,7 @@ export default function SettingsView() {
         <div className="re-card"><p className="re-eyebrow">YOUR PROFILE</p><div className="mt-4"><ProfileAvatar code={code} name={displayName} editable={!preview}/></div><p className="re-small-copy mt-3">Your picture stays on this device. It is not sent to Rory or shown on another phone.</p></div>
 
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Progress</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Share your progress</p>
           <button
             onClick={shareProgress}
             disabled={preview}
@@ -77,7 +77,7 @@ export default function SettingsView() {
         <div className="re-card"><p className="re-eyebrow">MICROPHONE & CAMERA</p><p className="re-small-copy mt-2">Your iPhone or iPad controls access. Choose Allow when you start a voice chat or scan a page. Rory’s English cannot grant permission for you or override a new iOS prompt. If you declined, check this app’s microphone and camera access in device settings.</p></div>
 
         <div className="pt-2">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Start fresh</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">This device’s saved answers</p>
           {!confirming ? (
             <button
               onClick={() => setConfirming(true)}
