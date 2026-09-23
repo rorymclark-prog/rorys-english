@@ -17,7 +17,7 @@ function fixture(){
  sanitize_:s=>/^[=+\-@]/.test(s)?"'"+s:s,json_:v=>v,aiCount_:c=>Number(props.get('ai_'+c)||0),aiKey_:c=>'ai_'+c,pruneAiCounters_(){},legacyPost_:()=>({ok:true}),
  UrlFetchApp:{fetch:(_url,o)=>{aiCalls++;if(aiHook)aiHook();const payload=JSON.parse(o.payload);return {getResponseCode:()=>aiStatus,getContentText:()=>JSON.stringify(payload.tools?{content:[{type:'tool_use',name:'record_document',input:analysis}]}:{content:[{type:'text',text:'In “I go”, use the past simple: “I went”. Try one more sentence.'}]})};}}
  };
- vm.createContext(ctx);for(const f of ['V2.gs','Documents.gs'])vm.runInContext(fs.readFileSync('apps-script/progress-sync/'+f,'utf8'),ctx);
+ vm.createContext(ctx);for(const f of ['V2.gs','Documents.gs','Learning.gs'])vm.runInContext(fs.readFileSync('apps-script/progress-sync/'+f,'utf8'),ctx);
  const session=role=>ctx.issueSession_(role==='teacher'?'__teacher__':role==='parent'?'parent-a':role==='other'?'student-b':'student-a',role==='other'?'student':role).token;
  const post=(body,role='student')=>ctx.doPost({postData:{contents:JSON.stringify({code:'student-a',session:session(role),...body})}});
  const upload=(extra={},role='student')=>post({action:'documentUpload',id:randomUUID(),title:'Synthetic work',context:'A short paragraph',files:[sample],...extra},role);
@@ -28,12 +28,32 @@ test('documents authenticate every entry point and isolate student, teacher, par
  for(const action of ['documents','document','documentFile','documentUpload','documentAnalyse','documentChat','teacherDocumentReview']){
   assert.equal(f.post({action,id,index:0,session:''}).authRequired,true);
   assert.equal(f.post({action,id,index:0},'other').ok,false);
-  assert.equal(f.post({action,id,index:0,code:'parent-a'},'parent').ok,false);
+  assert.equal(f.post({action,id,index:0,code:'parent-a'},'parent').ok,['documents','document','documentFile'].includes(action));
  }
  assert.equal(f.post({action:'document',id},'teacher').ok,true);
  assert.equal(f.post({action:'document',id,code:'student-b'},'teacher').ok,false);
  for(const action of ['documentUpload','documentAnalyse','documentChat','teacherDocumentReview'])assert.equal(f.post({action,id,preview:true},'teacher').ok,false);
  assert.equal(f.post({action:'teacherDocumentReview',id,feedback:'forged'}).ok,false);
+ assert.equal(f.calls,0);
+});
+test('learning reviews keep tutor reflection private while parents see learner work and replies',()=>{
+ const f=fixture(),id=randomUUID(),body={summary:'A clear reason.',strengths:['Uses an example'],targets:['Explain the conclusion'],nextStep:'Rewrite two sentences.',tutorPrivate:{worked:'Good oral rehearsal',improve:'Leave more writing time'}};
+ assert.equal(f.post({action:'teacherSaveLearningRecord',id,date:'2026-09-23',kind:'homework',title:'Writing review',body},'teacher').ok,true);
+ assert.equal(f.post({action:'learningRecords'},'student').records[0].body.tutorPrivate,undefined);
+ const parent=f.post({action:'learningRecords',code:'parent-a'},'parent');assert.equal(parent.ok,true);assert.equal(parent.records[0].body.summary,'A clear reason.');assert.equal(parent.records[0].body.tutorPrivate,undefined);
+ assert.equal(f.post({action:'learningRecords'},'teacher').records[0].body.tutorPrivate.worked,'Good oral rehearsal');
+ assert.equal(f.post({action:'learningReply',id:randomUUID(),reviewId:id,answer:'My new conclusion.'}).received,true);
+ assert.equal(f.post({action:'learningRecords',code:'parent-a'},'parent').replies.length,1);
+ assert.equal(f.post({action:'learningReply',id:randomUUID(),reviewId:id,answer:'forged',code:'parent-a'},'parent').ok,false);
+});
+test('a speaking record links only to its own private audio sample',()=>{
+ const f=fixture(),id=randomUUID(),voice={name:'sample.webm',type:'audio/webm',data:Buffer.from([0x1a,0x45,0xdf,0xa3,1,2,3,4,5,6,7,8]).toString('base64')};
+ assert.equal(f.post({action:'speakingSave',id,title:'Conversation',transcript:'You: A short answer.',reflection:'I gave a reason.'}).received,true);
+ const upload=f.upload({files:[voice]});assert.equal(upload.ok,true);
+ assert.equal(f.post({action:'speakingAttachAudio',id,documentId:upload.document.id}).ok,true);
+ assert.equal(f.post({action:'learningRecords',code:'parent-a'},'parent').records[0].body.audioDocumentId,upload.document.id);
+ assert.equal(f.post({action:'documentFile',id:upload.document.id,index:0,code:'parent-a'},'parent').file.data,voice.data);
+ assert.equal(f.post({action:'documentAnalyse',id:upload.document.id}).ok,false);
  assert.equal(f.calls,0);
 });
 test('upload stores original bytes privately, receipts are idempotent, revisions keep both originals',()=>{

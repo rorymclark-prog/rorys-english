@@ -45,6 +45,13 @@ test("Valentin Unit 1 has separate voice and writing practice for consecutive we
   assert.match(voice.source,/not a textbook exercise/i);
   assert.match(writing.source,/not a textbook exercise/i);
 });
+test("Ferdi has one written answer per week alongside guided voice, within the weekly limit",()=>{
+  const weeks=JSON.parse(fs.readFileSync("content/ferdi/english-in-context5-unit01-2026/homework.json","utf8"));
+  assert.deepEqual(weeks.map(w=>w.availableFrom),["2026-09-23","2026-09-30"]);
+  assert.ok(weeks.every(w=>w.estimatedMinutes<=45 && w.due===""));
+  assert.deepEqual(weeks.map(w=>w.tasks.map(t=>t.id)),[["story-write"],["email-draft"]]);
+  assert.ok(weeks.every(w=>w.tasks[0].type==="written"));
+});
 test("no browser-shipped shared secret, JSONP, or unacknowledged transport",()=>{
   for(const file of ["src/lib/api.ts","src/lib/remote.ts","src/lib/sync.ts","public/study-tools/valentin-unit05.html","public/study-tools/ferdi-unit10.html"]) {
     const code=fs.readFileSync(file,"utf8");

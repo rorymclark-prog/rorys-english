@@ -1,0 +1,12 @@
+import {authed,request,savedSession,type ApiResult} from './api';
+export type LearningKind='homework'|'test'|'speaking'|'lesson';
+export type LearningBody={summary?:string;evidenceType?:string;source?:string;strengths?:string[];targets?:string[];nextStep?:string;studentNotes?:string;lessonPoints?:string;ratings?:Record<string,number|null>;writing?:{original?:string;corrected?:string;model?:string;corrections?:{original:string;corrected:string;note:string}[];practice?:string[]};transcript?:string;reflection?:string;aiAnalysis?:string|null;audioDocumentId?:string;tutorPrivate?:{worked?:string;improve?:string;plan?:string}};
+export type LearningRecord={id:string;created:string;date:string;kind:LearningKind;title:string;visibility:'shared'|'teacher';author:string;body:LearningBody};
+export type LearningReply={id:string;reviewId:string;created:string;answer:string;author:string};
+export type LearningResult=ApiResult&{records?:LearningRecord[];replies?:LearningReply[];record?:LearningRecord;received?:boolean};
+export const getLearning=(code:string,teacher=false)=>teacher?request<LearningResult>({action:'learningRecords',code,session:savedSession('__teacher__')?.token||''}):authed<LearningResult>(code,{action:'learningRecords'});
+export const saveLearning=(code:string,record:Omit<LearningRecord,'created'|'author'>)=>request<LearningResult>({...record,action:'teacherSaveLearningRecord',code,session:savedSession('__teacher__')?.token||''});
+export const replyLearning=(code:string,reviewId:string,id:string,answer:string)=>authed<LearningResult>(code,{action:'learningReply',reviewId,id,answer});
+export const saveSpeaking=(code:string,id:string,title:string,transcript:string,reflection:string)=>authed<LearningResult>(code,{action:'speakingSave',id,title,transcript,reflection});
+export const analyseSpeaking=(code:string,id:string)=>authed<LearningResult>(code,{action:'speakingAnalyse',id});
+export const attachSpeakingAudio=(code:string,id:string,documentId:string)=>authed<LearningResult>(code,{action:'speakingAttachAudio',id,documentId});

@@ -18,6 +18,8 @@ import { login, savedSession, forgetSession } from "@/lib/api";
 import { publishAssessment } from "@/lib/remote";
 import { VoiceStudio } from "./SpeakView";
 import DocumentsView from "./DocumentsView";
+import LearningView from "./LearningView";
+import TeachingProgress from "./TeachingProgress";
 import TeacherReviewPanel from "./TeacherReviewPanel";
 import AppMenu from "@/components/AppMenu";
 import QuickAppearance from "@/components/QuickAppearance";
@@ -168,6 +170,7 @@ export default function TeacherDashboardView() {
             {students.length===0 && <div className="teacher-empty"><BookIcon/><h2>Your classroom starts here</h2><p>Add your first student to get started.</p></div>}
             {students.map(student=><StudentCard key={student.code} student={student} onOpen={()=>setSelectedCode(student.code)}/>)}
           </div>
+          <TeachingProgress students={students} onOpen={setSelectedCode}/>
           <div className="teacher-bottom-note"><CheckSquareIcon/><p>Review the work. Celebrate the effort. Choose the next step.<small>Figures include earlier records. A best quiz score is a snapshot, not a measure of mastery.</small></p></div>
           {generatedAt && <p className="teacher-updated">Records updated {generatedAt}</p>}
         </>}
@@ -259,7 +262,7 @@ function TeacherStudentPanel({
   onViewProgress: () => void;
   onPatch: (patch: Partial<TeacherStudent>) => void;
 }) {
-  const [section, setSection] = useState<"review" | "assign" | "assess" | "documents">("review");
+  const [section, setSection] = useState<"review" | "assign" | "assess" | "documents" | "learning">("review");
   const [note, setNote] = useState(student.focusNote);
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
@@ -324,12 +327,14 @@ function TeacherStudentPanel({
         </section>
         <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>
         <nav className="teacher-section-nav" aria-label="Student workspace sections">
+          <button type="button" aria-pressed={section === "learning"} onClick={()=>setSection("learning")}><ChartIcon/><span>Learning reviews<small>Writing, speaking & lessons</small></span></button>
           <button type="button" aria-pressed={section === "documents"} onClick={()=>setSection("documents")}><BookIcon/><span>Documents<small>Scan, upload & discuss</small></span></button>
           <button type="button" aria-pressed={section === "review"} onClick={()=>setSection("review")}><CheckSquareIcon/><span>Work & feedback<small>Read, respond, encourage</small></span></button>
           <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><BookIcon/><span>Plan homework<small>Set the next step</small></span></button>
           <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><ChartIcon/><span>Assessments<small>Record & reflect</small></span></button>
         </nav>
         {section === "documents" && <DocumentsView key={student.code} code={student.code} name={student.name} teacher/>}
+        {section === "learning" && <LearningView key={student.code} code={student.code} name={student.name} mode="teacher"/>}
         <div hidden={section !== "review"}><TeacherReviewPanel code={student.code}/></div>
         <div hidden={section !== "assign"}>
         <div className="teacher-form-grid">

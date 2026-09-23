@@ -38,10 +38,10 @@ function documentValidateFiles_(files) {
   var checked=files.map(function(f){
     if(!f||!documentText_(f.name,150)||!f.name.trim()||!documentText_(f.data,3400000)||!f.data||(f.data.length%4!==0||!/^[A-Za-z0-9+/]+={0,2}$/.test(f.data)))throw new Error('Invalid file. Choose a PDF, JPEG, PNG or WebP image.');
     var bytes=Utilities.base64Decode(f.data),b=bytes.map(function(x){return (x+256)%256;});
-    var type=(b[0]===37&&b[1]===80&&b[2]===68&&b[3]===70&&b[4]===45)?'application/pdf':(b[0]===255&&b[1]===216&&b[2]===255)?'image/jpeg':(b[0]===137&&b[1]===80&&b[2]===78&&b[3]===71&&b[4]===13&&b[5]===10&&b[6]===26&&b[7]===10)?'image/png':(b[0]===82&&b[1]===73&&b[2]===70&&b[3]===70&&b[8]===87&&b[9]===69&&b[10]===66&&b[11]===80)?'image/webp':'';
+    var type=(b[0]===37&&b[1]===80&&b[2]===68&&b[3]===70&&b[4]===45)?'application/pdf':(b[0]===255&&b[1]===216&&b[2]===255)?'image/jpeg':(b[0]===137&&b[1]===80&&b[2]===78&&b[3]===71&&b[4]===13&&b[5]===10&&b[6]===26&&b[7]===10)?'image/png':(b[0]===82&&b[1]===73&&b[2]===70&&b[3]===70&&b[8]===87&&b[9]===69&&b[10]===66&&b[11]===80)?'image/webp':(b[0]===80&&b[1]===75&&b[2]===3&&b[3]===4&&/\.docx$/i.test(f.name))?'application/vnd.openxmlformats-officedocument.wordprocessingml.document':(b[0]===26&&b[1]===69&&b[2]===223&&b[3]===163)?'audio/webm':(b[0]===79&&b[1]===103&&b[2]===103&&b[3]===83)?'audio/ogg':(b[4]===102&&b[5]===116&&b[6]===121&&b[7]===112)?'audio/mp4':(b[0]===73&&b[1]===68&&b[2]===51)||(b[0]===255&&(b[1]&224)===224)?'audio/mpeg':'';
     total+=bytes.length;
-    if(!type||type!==f.type||bytes.length<12||total>DOCUMENT_MAX_BYTES_)throw new Error('Use PDF, JPEG, PNG or WebP, up to 2.5 MB in total. Export Word documents as PDF first.');
-    if(type==='application/pdf'&&files.length!==1)throw new Error('Upload one PDF at a time, or combine photos in a single scan.');
+    if(!type||type!==f.type||bytes.length<12||total>DOCUMENT_MAX_BYTES_)throw new Error('Use Word, PDF, photos or audio, up to 2.5 MB in total.');
+    if((type==='application/pdf'||/wordprocessingml/.test(type)||type.indexOf('audio/')===0)&&files.length!==1)throw new Error('Upload one document or recording at a time, or combine photos in a single scan.');
     return {name:f.name.replace(/[\x00-\x1f\/\\]/g,'_'),type:type,bytes:bytes,size:bytes.length};
   });return checked;
 }
@@ -116,6 +116,7 @@ function documentAnalysisValid_(a) {
   return JSON.stringify(a).length<=35000;
 }
 function documentAnalyse_(p,s) {
+  if(JSON.parse(documentFind_(p.code,p.id).row[4]).some(function(f){return /wordprocessingml/.test(f.type)||f.type.indexOf('audio/')===0;}))return {ok:false,error:'This file is saved for Rory to review. For AI writing help, also upload a PDF or clear photos.'};
   var work=documentLease_(p,s,false);if(work.reply)return work.reply;
   try {
     var content=JSON.parse(work.row[4]).map(function(f){return {type:f.type==='application/pdf'?'document':'image',source:{type:'base64',media_type:f.type,data:Utilities.base64Encode(DriveApp.getFileById(f.id).getBlob().getBytes())}};});
@@ -146,8 +147,10 @@ function documentChat_(p,s) {
 function documentService_(p,s) {
   try {
     var student=studentByAnyCode_(p.code);
-    if(!student||p.code!==student.code||s.role==='parent')return {ok:false,error:'Access denied'};
-    if(s.role!=='teacher'&&(s.role!=='student'||s.code!==p.code))return {ok:false,error:'Access denied'};
+    if(!student||p.code!==(s.role==='parent'?student.parentCode:student.code))return {ok:false,error:'Access denied'};
+    if(s.role!=='teacher'&&(s.role!=='student'&&s.role!=='parent'||s.code!==p.code))return {ok:false,error:'Access denied'};
+    if(s.role==='parent'&&['documents','document','documentFile'].indexOf(p.action)<0)return {ok:false,error:'Access denied'};
+    p.code=student.code;
     var reads=['documents','document','documentFile'];
     if(p.preview&&reads.indexOf(p.action)<0)return {ok:false,error:'Student preview is read-only.'};
     if(p.action==='documents')return {ok:true,documents:documentRows_(p.code).map(function(r){return documentPublic_(r,false);}).reverse()};

@@ -1,0 +1,44 @@
+[
+  {
+    "week": 1,
+    "title": "Week of 23 September · Tell a family-life story",
+    "due": "",
+    "availableFrom": "2026-09-23",
+    "estimatedMinutes": 30,
+    "description": "For the week of 23 September: one guided chat and one short written answer. The chat replaces the separate speaking rehearsal. A real or made-up story is fine; no deadline has been set.",
+    "objectives": [
+      "Tell connected past events in a clear order and explain why something happened.",
+      "Improve two useful past verbs in your own words."
+    ],
+    "source": "Original Rory’s English practice linked to English in Context 5, Unit 1: Family life (pp. 20–25); not a textbook exercise.",
+    "tasks": [
+      {
+        "id": "story-write",
+        "type": "written",
+        "prompt": "After Chat 1, write your best version of the story here in 5–7 sentences. A family member or friend can be in it. Use first, then and finally, at least four past events, and a reason with because. Include one question the people could ask next time to avoid the mix-up. Check two past verbs, then press Send answers to Rory. You do not need to copy the conversation transcript.",
+        "lines": 7
+      }
+    ]
+  },
+  {
+    "week": 2,
+    "title": "Week of 30 September · An email about a family weekend",
+    "due": "",
+    "availableFrom": "2026-09-30",
+    "estimatedMinutes": 40,
+    "description": "Start from 30 September. One guided chat, one short email and a quick check. The chat replaces the separate speaking rehearsal. A fictional family is fine. This is a shorter first draft towards the book’s roughly 200-word email task; no deadline has been set.",
+    "objectives": [
+      "Organise an informal email for a friend.",
+      "Use present forms for a usual routine and past verbs for a weekend event."
+    ],
+    "source": "Original Rory’s English practice linked to English in Context 5, Unit 1: Family life (especially p. 25); shorter practice draft, not the textbook exercise.",
+    "tasks": [
+      {
+        "id": "email-draft",
+        "type": "written",
+        "prompt": "After Chat 2, write a 120–150-word email to an imaginary friend about family life. Use a greeting and friendly ending. Say what your family or invented group usually does, tell a short story about last weekend in the past tense, and explain one thing you like or would change. Use because and one other linking word. Check one past-tense sentence and one usually sentence in this same box, then press Send answers to Rory. You do not need to copy the conversation transcript.",
+        "lines": 9
+      }
+    ]
+  }
+]

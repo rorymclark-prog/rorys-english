@@ -68,11 +68,12 @@ function doPost(e) {
     if(p.action==='logout') {CacheService.getScriptCache().remove('session_'+digest_(p.session));return json_({ok:true});}
     var teacher=s.role==='teacher', student=studentByAnyCode_(s.code);
     if(!teacher && (!student || p.code!==s.code)) return json_({ok:false,error:'Access denied'});
-    var reads=['progress','resources','assignments','note','submissions','documents','document','documentFile'];
-    var permitted=s.role==='parent'?['progress','resources','note']:reads.concat(['ai','submit','event','documentUpload','documentAnalyse','documentChat']);
+    var reads=['progress','resources','assignments','note','submissions','documents','document','documentFile','learningRecords'];
+    var permitted=s.role==='parent'?['progress','resources','note','documents','document','documentFile','learningRecords']:reads.concat(['ai','submit','event','documentUpload','documentAnalyse','documentChat','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio']);
     if(!teacher && permitted.indexOf(p.action)<0) return json_({ok:false,error:'Access denied'});
     if(p.preview && reads.indexOf(p.action)<0)return json_({ok:false,error:'Student preview is read-only.'});
     if(['documents','document','documentFile','documentUpload','documentAnalyse','documentChat','teacherDocumentReview'].indexOf(p.action)>=0)return json_(documentService_(p,s));
+    if(['learningRecords','teacherSaveLearningRecord','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio'].indexOf(p.action)>=0)return json_(learningService_(p,s));
     // Discard legacy client credentials. Only inject after validating session.
     p.secret=SECRET;
     delete p.callback;

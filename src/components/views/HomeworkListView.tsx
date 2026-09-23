@@ -32,7 +32,7 @@ export default function HomeworkListView({unit}:{unit:Unit|null}) {
       <p className="my-3 whitespace-pre-wrap">{a.details}</p>
       <SubmissionForm code={code} unit="assigned" task={a.id} title={a.title} fields={[{id:"answer",prompt:"Your answer or practice notes",type:"written"}]}/>
     </details>)}
-    {unit?.homework.map(h=><Link key={h.week} className="mt-4 block rounded-card border p-4" href={`/s/${code}/lessons/${unit.id}/homework/${h.week}/`}>{h.title} · {h.due||"No deadline assigned"}</Link>)}
+    {!hasSpeakingHomework && unit?.homework.map(h=><Link key={h.week} className="mt-4 block rounded-card border p-4" href={`/s/${code}/lessons/${unit.id}/homework/${h.week}/`}>{h.title} · {h.due||"No deadline assigned"}</Link>)}
     {loaded&&!error&&!current.length&&!unit?.homework.length && <p className="mt-6">No new homework assigned yet.</p>}
     {previous.length>0&&<details className="mt-6 rounded-card border p-4">
       <summary className="cursor-pointer font-bold">Previous-year assignments · optional reference ({previous.length})</summary>

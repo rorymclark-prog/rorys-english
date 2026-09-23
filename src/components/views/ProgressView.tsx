@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { StudyTool } from "@/lib/types";
 import { fetchProgress, remoteEnabled, type Progress, type Section } from "@/lib/remote";
 import { GearIcon, ExternalIcon, ChevronLeftIcon } from "@/components/Icons";
+import LearningView from "./LearningView";
+import DocumentsView from "./DocumentsView";
 
 type Mode = "student" | "parent" | "teacher";
 
@@ -122,6 +124,8 @@ export default function ProgressView({
             <SectionCard title="Writing" section={data.writing} groupBySemester />
             <SectionCard title="Speaking" section={data.speaking} />
             <SectionCard title="Mock tests" section={data.mockTests} groupBySemester />
+            <LearningView code={fetchCode} name={displayName} mode={mode} />
+            {mode === "parent" && <details className="mt-5"><summary className="cursor-pointer rounded-card bg-surface p-4 font-bold shadow-card dark:bg-navy-raised dark:shadow-card-dark">View saved documents and homework files</summary><DocumentsView code={fetchCode} name={displayName} parent /></details>}
             {data.generatedAt && (
               <p className="tnum mt-4 text-center text-xs text-navy-soft dark:text-navy-mist">
                 Updated {data.generatedAt}
