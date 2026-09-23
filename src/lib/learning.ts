@@ -1,7 +1,8 @@
 import {authed,request,savedSession,type ApiResult} from './api';
 export type LearningKind='homework'|'test'|'speaking'|'lesson';
 export type AudioReview={reviewId?:string;summary:string;strengths:string[];targets:string[];nextStep:string;ratings?:Record<string,number|null>;reviewedAt?:string;reviewedBy?:string};
-export type LearningBody={summary?:string;evidenceType?:string;source?:string;strengths?:string[];targets?:string[];nextStep?:string;studentNotes?:string;lessonPoints?:string;ratings?:Record<string,number|null>;writing?:{original?:string;corrected?:string;model?:string;corrections?:{original:string;corrected:string;note:string}[];practice?:string[]};transcript?:string;reflection?:string;aiAnalysis?:string|null;audioDocumentId?:string;audioReview?:AudioReview;tutorPrivate?:{worked?:string;improve?:string;plan?:string}};
+export type WritingComparison={original:string;corrected:string;improved:string;note:string};
+export type LearningBody={summary?:string;evidenceType?:string;source?:string;strengths?:string[];targets?:string[];nextStep?:string;studentNotes?:string;lessonPoints?:string;ratings?:Record<string,number|null>;writing?:{original?:string;corrected?:string;model?:string;comparisons?:WritingComparison[];corrections?:{original:string;corrected:string;note:string}[];practice?:string[]};transcript?:string;reflection?:string;aiAnalysis?:string|null;audioDocumentId?:string;audioReview?:AudioReview;tutorPrivate?:{worked?:string;improve?:string;plan?:string}};
 export type LearningRecord={id:string;created:string;date:string;kind:LearningKind;title:string;visibility:'shared'|'teacher';author:string;body:LearningBody};
 export type LearningReply={id:string;reviewId:string;created:string;answer:string;author:string};
 export type LearningResult=ApiResult&{records?:LearningRecord[];replies?:LearningReply[];record?:LearningRecord;received?:boolean};
