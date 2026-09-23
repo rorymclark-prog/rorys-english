@@ -4,7 +4,12 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 const exports = {};
-vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/server/voice-session.ts','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports });
+const guidedExports = {};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/guided-speaking.ts','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports: guidedExports });
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/server/voice-session.ts','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports, require: name => {
+  if(name==='../guided-speaking')return guidedExports;
+  throw Error(name);
+} });
 const {authorizeVoice,voiceConfiguration}=exports;
 const roster={student:{uid:'student-uid',email:'learner@example.test'}};
 const identity={uid:'student-uid',email:'LEARNER@example.test',email_verified:true,exp:1900000000};
@@ -40,6 +45,19 @@ test('practice modes keep unit details trusted and give short, useful coaching',
   const grammar=voiceConfiguration({...body,topic:'grammar',grammar:'past-perfect'});
   assert.match(grammar.session.instructions,/past perfect with past simple/);
   assert.throws(()=>voiceConfiguration({...body,topic:'grammar',grammar:'untrusted'}));
+});
+
+test('guided conversation focus is limited to the correct learner and mode',()=>{
+  const valentin=voiceConfiguration({...body,code:'valentin-q9m2',topic:'unit',homeworkFocus:'valentin-chat-2'},{title:'way2go! 8 · Unit 1',vocabulary:['balanced diet']});
+  assert.match(valentin.session.instructions,/two general healthy habits/i);
+  const nextWeek=voiceConfiguration({...body,code:'valentin-q9m2',topic:'unit',homeworkFocus:'valentin-chat-3'},{title:'way2go! 8 · Unit 1'});
+  assert.match(nextWeek.session.instructions,/school representative/i);
+  const ferdi=voiceConfiguration({...body,code:'ferdi-7h3k',topic:'story',homeworkFocus:'ferdi-chat-1'},{title:'Family life'});
+  assert.match(ferdi.session.instructions,/first, then and finally/i);
+  for(const changed of [{code:'ferdi-7h3k'},{topic:'story'},{homeworkFocus:'invented-chat'}]){
+    const config=voiceConfiguration({...body,code:'valentin-q9m2',topic:'unit',homeworkFocus:'valentin-chat-2',...changed});
+    assert.doesNotMatch(config.session.instructions,/two general healthy habits/i);
+  }
 });
 
 test('teacher voice tests require explicit teacher mode and a validated teacher session',async()=>{

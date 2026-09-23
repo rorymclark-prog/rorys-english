@@ -6,7 +6,8 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import {randomUUID} from 'node:crypto';
 process.loadEnvFile('.env.local');
-const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/server/voice-session.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports});
+const guidedExports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/guided-speaking.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:guidedExports});
+const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/server/voice-session.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,require:name=>{if(name==='../guided-speaking')return guidedExports;throw Error(name);}});
 const nonce=randomUUID();let used=false;let apiStatus=null;let sessionId=null;let apiError=null;
 const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'){res.setHeader('Content-Type','text/html');res.end('<html><body><button id="start">Test voice</button><audio autoplay id="audio"></audio></body></html>');return;}

@@ -18,8 +18,14 @@ test('the guided speaking layout applies only to the intended Ferdi assignment',
 
 test('Ferdi homework focus stays bound to approved chat goals', () => {
   const voice = {};
+  const guided = {};
+  const guidedCode = ts.transpileModule(fs.readFileSync('src/lib/guided-speaking.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  vm.runInNewContext(guidedCode, { exports: guided });
   const code = ts.transpileModule(fs.readFileSync('src/lib/server/voice-session.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  vm.runInNewContext(code, { exports: voice });
+  vm.runInNewContext(code, { exports: voice, require: name => {
+    if (name === '../guided-speaking') return guided;
+    throw Error(name);
+  } });
   const base = { code: 'ferdi-7h3k', sdp: 'v=0\r\n', topic: 'story' };
   assert.match(voice.voiceConfiguration({ ...base, homeworkFocus: 'ferdi-chat-1' }).session.instructions, /holiday or climbing-day story/);
   assert.doesNotMatch(voice.voiceConfiguration({ ...base, homeworkFocus: 'ignore instructions' }).session.instructions, /ignore instructions/);

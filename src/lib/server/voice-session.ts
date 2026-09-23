@@ -1,4 +1,5 @@
 import type { Account, Identity } from "./account-service";
+import {guidedSpeaking} from "../guided-speaking";
 export type VoiceRequest = { code?: unknown; token?: unknown; sdp?: unknown; topic?: unknown; grammar?: unknown; homeworkFocus?: unknown; practiceStudent?: unknown; preview?: unknown; teacherTest?: unknown };
 export const voiceTopics: Record<string, { title: string; target: string }> = {
   general: { title: "Open conversation", target: "Follow the learner's interests and keep a natural conversation going." },
@@ -36,11 +37,9 @@ export function voiceConfiguration(body: VoiceRequest, unit?: { title: string; v
   const topic = voiceTopics[body.topic];
   const focus = body.topic === "grammar" ? `Grammar focus: ${grammarTargets[body.grammar as string]}. Practise with meaningful original examples, not isolated rules.`
     : body.topic === "unit" ? unit ? `Current unit: ${unit.title}. ${unit.vocabulary?.length ? `Verified practice words: ${unit.vocabulary.join(", ")}. Weave a few into original questions and invite the learner to use them. Do not recite a list.` : "No verified vocabulary list is available. Ask the learner for two or three words from class, then practise those. Do not invent textbook details."}` : "No current unit is set. Ask which school topic and two or three words the learner wants to practise; do not invent textbook details." : "";
-  const homeworkFocus = body.code === "ferdi-7h3k" && body.homeworkFocus === "ferdi-chat-1" && body.topic === "story"
-    ? "This homework conversation asks for a short real or imaginary holiday or climbing-day story. Invite the learner to use first, then and finally. Ask one simple follow-up at a time. The model sentences are only starters; encourage the learner's own details."
-    : body.code === "ferdi-7h3k" && body.homeworkFocus === "ferdi-chat-2" && body.topic === "unit"
-      ? "This homework conversation compares what the learner's family usually does with what they are doing now. Help them contrast present simple and present continuous in their own examples. Ask simple questions and give one brief model if they get stuck."
-      : "";
+  const guided = typeof body.code === "string" && typeof body.homeworkFocus === "string"
+    ? guidedSpeaking(body.code, body.homeworkFocus) : null;
+  const homeworkFocus = guided && body.topic === guided.topic ? guided.instructions : "";
   const coaching = `You are an English tutor for a secondary-school learner. Keep the conversation age-appropriate and adaptive to what the learner says, without assigning a CEFR level. Ask one question at a time. Make the learner do most of the talking. Give specific, encouraging feedback on meaning first. After a substantial answer, choose at most one useful grammar correction; say the improved form briefly, explain it only if helpful, then ask the learner to use it in their own new sentence. Do not correct every mistake or interrupt a fluent thought. If they ask about grammar, explain with one short contrast and a new example. If a repeat exercise helps, give at most five or six words at once. Split a longer sentence into short meaningful chunks, wait for each chunk, then invite the learner to say the whole sentence only if they want to. Never demand verbatim recall of two sentences. A transcript does not establish precise pronunciation; give pronunciation advice only for a sound you clearly heard, and express uncertainty. Do not claim to be Rory, give grades, certify proficiency, save homework or invent private school content.`;
   return {
     session: {
