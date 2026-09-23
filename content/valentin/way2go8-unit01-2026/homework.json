@@ -31,5 +31,71 @@
         "lines": 6
       }
     ]
+  },
+  {
+    "week": 2,
+    "title": "This week · Healthy habits voice practice",
+    "due": "",
+    "availableFrom": "2026-09-23",
+    "estimatedMinutes": 18,
+    "description": "Prepare and record a short individual talk connected to Unit 1, “Healthy and happy”. Keep the examples general: you do not need to share private health information. No deadline has been set yet.",
+    "objectives": [
+      "Speak clearly for about two minutes without reading a complete script.",
+      "Explain healthy choices with reasons, examples and a realistic challenge."
+    ],
+    "source": "Original Rory’s English practice linked to the published way2go! 8 Unit 1 theme “Healthy and happy”; not a textbook exercise or publisher recording.",
+    "tasks": [
+      {
+        "id": "voice-plan",
+        "type": "written",
+        "prompt": "1 · Plan (5 minutes). Make short notes for a talk called “Two habits for a healthier school week”. Choose two habits linked to sleep, food, movement, study breaks, stress or another suitable idea. For each habit, note: what it is; how it may help body or mind; one realistic example. Add one challenge and a possible solution. Write keywords only, not a full script.",
+        "lines": 5
+      },
+      {
+        "id": "recording",
+        "type": "voice",
+        "prompt": "2 · Speak and record (8–10 minutes). Record a 1½–2 minute individual talk using your notes. Include an introduction, both habits, one challenge with a solution, and a short conclusion. Use at least three linking phrases such as “firstly”, “for example”, “however”, “as a result” or “overall”. Try once, listen back, then record one improved version. Send the improved recording to Rory through the agreed private channel. In this box, write “sent” and tell Rory which linking phrases you used.",
+        "lines": 3
+      },
+      {
+        "id": "voice-reflection",
+        "type": "written",
+        "prompt": "3 · Reflect (3 minutes). Write one thing that sounded good and one specific target for your next talk, for example pace, pronunciation, grammar or clearer examples. Name any help you used.",
+        "lines": 3
+      }
+    ]
+  },
+  {
+    "week": 3,
+    "title": "Next week · A wellbeing idea for school",
+    "due": "",
+    "availableFrom": "2026-09-30",
+    "estimatedMinutes": 20,
+    "description": "Write a short semi-formal email connected to Unit 1, “Healthy and happy”. Keep your example general and do not include private medical information. Start this task next week. No deadline has been set yet.",
+    "objectives": [
+      "Organise a semi-formal email with a clear purpose, proposal and conclusion.",
+      "Support an idea with reasons while using an appropriate register."
+    ],
+    "source": "Original Rory’s English practice linked to the published way2go! 8 Unit 1 theme “Healthy and happy”; not a textbook exercise.",
+    "tasks": [
+      {
+        "id": "email-plan",
+        "type": "written",
+        "prompt": "1 · Plan (4 minutes). Imagine your school wants one new activity to support students’ wellbeing. Choose one realistic idea, for example a quiet break room, a walking club, a phone-free lunch or a short stress-management workshop. Note: the current problem; your proposal; two benefits; one possible concern and your answer to it.",
+        "lines": 5
+      },
+      {
+        "id": "email-draft",
+        "type": "written",
+        "prompt": "2 · Write (12 minutes). Write a 130–160-word email to a teacher or school representative. Include a subject line, greeting and closing. Explain why you are writing, describe your proposal, give two reasons or examples, address one possible concern, and finish with a clear request or next step. Use at least three linking phrases and keep the tone polite and semi-formal.",
+        "lines": 9
+      },
+      {
+        "id": "email-edit",
+        "type": "written",
+        "prompt": "3 · Check and improve (4 minutes). Copy one sentence you changed and give the improved version. Then confirm: 130–160 words; clear paragraphs; suitable greeting and closing; verb forms, articles and prepositions checked. Finish with “I worked independently” or name any help you used, then send your answers to Rory.",
+        "lines": 5
+      }
+    ]
   }
 ]

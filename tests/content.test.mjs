@@ -32,6 +32,19 @@ test("current and archived book units are separate; all archived deadlines inclu
     for(const w of JSON.parse(fs.readFileSync(file,"utf8")))assert.match(w.due,/^2026-06-\d{2}$/);
   }
 });
+test("Valentin Unit 1 has separate voice and writing practice for consecutive weeks",()=>{
+  const homework=JSON.parse(fs.readFileSync("content/valentin/way2go8-unit01-2026/homework.json","utf8"));
+  const voice=homework.find(h=>h.week===2);
+  const writing=homework.find(h=>h.week===3);
+  assert.equal(voice.availableFrom,"2026-09-23");
+  assert.equal(voice.due,"");
+  assert.ok(voice.tasks.some(t=>t.type==="voice"));
+  assert.equal(writing.availableFrom,"2026-09-30");
+  assert.equal(writing.due,"");
+  assert.ok(writing.tasks.every(t=>t.type==="written"));
+  assert.match(voice.source,/not a textbook exercise/i);
+  assert.match(writing.source,/not a textbook exercise/i);
+});
 test("no browser-shipped shared secret, JSONP, or unacknowledged transport",()=>{
   for(const file of ["src/lib/api.ts","src/lib/remote.ts","src/lib/sync.ts","public/study-tools/valentin-unit05.html","public/study-tools/ferdi-unit10.html"]) {
     const code=fs.readFileSync(file,"utf8");
