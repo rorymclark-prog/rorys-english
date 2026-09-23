@@ -51,6 +51,10 @@ test("Ferdi has one written answer per week alongside guided voice, within the w
   assert.ok(weeks.every(w=>w.estimatedMinutes<=45 && w.due===""));
   assert.deepEqual(weeks.map(w=>w.tasks.map(t=>t.id)),[["story-write"],["email-draft"]]);
   assert.ok(weeks.every(w=>w.tasks[0].type==="written"));
+  assert.match(weeks[0].tasks[0].prompt,/family day out/);
+  assert.match(weeks[0].description,/past verbs.*before you write/);
+  assert.ok(weeks.every(w=>w.tasks[0].prompt.includes("OR attach clear photos")));
+  assert.ok(weeks.every(w=>w.tasks[0].prompt.length<=1000));
 });
 test("no browser-shipped shared secret, JSONP, or unacknowledged transport",()=>{
   for(const file of ["src/lib/api.ts","src/lib/remote.ts","src/lib/sync.ts","public/study-tools/valentin-unit05.html","public/study-tools/ferdi-unit10.html"]) {

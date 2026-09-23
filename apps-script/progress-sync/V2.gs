@@ -2,7 +2,18 @@
 var SESSION_TTL_ = 21600;
 var REMEMBERED_TEACHER_TTL_ = 30 * 24 * 60 * 60;
 var REMEMBERED_TEACHER_PREFIX_ = 'remembered_teacher_';
-var SUBMISSION_HEADERS_ = ['Id','Task','Unit','Submitted','Answers JSON','Status','Feedback','Reviewed','Title','Prompts JSON'];
+var SUBMISSION_HEADERS_ = ['Id','Task','Unit','Submitted','Answers JSON','Status','Feedback','Reviewed','Title','Prompts JSON','Feedback available after'];
+var TEACHER_REVIEW_WINDOW_MS_ = 5 * 60 * 60 * 1000;
+function reviewAvailableAfter_() {return new Date(Date.now()+TEACHER_REVIEW_WINDOW_MS_).toISOString();}
+function reviewHeld_(value) {return !!value && (!isFinite(new Date(value).getTime()) || Date.now()<new Date(value).getTime());}
+function ensureReviewColumn_(code,sh,column,label) {
+  var rows=sh.getDataRange().getValues();
+  if(rows[0]&&rows[0][column-1]===label)return;
+  // Back up an existing sheet inside its private workbook before extending it.
+  // No original rows or sharing permissions are changed.
+  if(rows.length>1)sh.copyTo(studentSheet_(code)).setName(('Review backup '+sh.getName()+' '+Utilities.getUuid().slice(0,8)).slice(0,95)).hideSheet();
+  sh.getRange(1,column).setValue(label);
+}
 function digest_(text) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(text))).replace(/=+$/, ''); }
 function authProps_() { return PropertiesService.getScriptProperties(); }
 function token_() { return Utilities.getUuid().replace(/-/g,'') + Utilities.getUuid().replace(/-/g,''); }
@@ -106,7 +117,7 @@ function doPost(e) {
     p.teacherSecret=teacher?authProps_().getProperty(TEACHER_PASSWORD_PROP):'';
     if(p.action==='teacherAccess') return json_(setAccess_(p));
     if(p.action==='teacherResources') return json_(publishResources_(p));
-    if(p.action==='submissions') return json_(submissions_(p));
+    if(p.action==='submissions') return json_(submissions_(p,s));
     if(p.action==='submit') return json_(submit_(p));
     if(p.action==='teacherReview') return json_(review_(p));
     if(p.action==='event') return json_(event_(p));
@@ -155,9 +166,10 @@ function submissionSheet_(code,create) {
   if(!sh && create) {sh=ss.insertSheet('Submissions');sh.getRange(1,1,1,SUBMISSION_HEADERS_.length).setValues([SUBMISSION_HEADERS_]);}
   return sh;
 }
-function submissions_(p) {
+function submissions_(p,s) {
   var sh=submissionSheet_(p.code,false),rows=sh?sh.getDataRange().getValues().slice(1):[];
-  return {ok:true,submissions:rows.map(function(r){return {id:r[0],task:r[1],unit:r[2],submitted:r[3],answers:JSON.parse(r[4]||'{}'),status:r[5],feedback:r[6],reviewed:r[7],title:r[8]||r[1],prompts:JSON.parse(r[9]||'{}')};})};
+  var teacher=s&&s.role==='teacher'&&!p.preview;
+  return {ok:true,submissions:rows.map(function(r){var held=reviewHeld_(r[10]);return {id:r[0],task:r[1],unit:r[2],submitted:r[3],answers:JSON.parse(r[4]||'{}'),status:held&&!teacher?'submitted':r[5],feedback:held&&!teacher?'':r[6],reviewed:held&&!teacher?'':r[7],title:r[8]||r[1],prompts:JSON.parse(r[9]||'{}'),feedbackAvailableAt:r[10]||'',reviewPending:held};})};
 }
 function submit_(p) {
   if(!/^[A-Za-z0-9_-]{16,100}$/.test(String(p.id||''))) return {ok:false,error:'Invalid submission identifier'};
@@ -172,8 +184,10 @@ function submit_(p) {
   try {
     var sh=submissionSheet_(p.code,true),rows=sh.getDataRange().getValues();
     for(var i=1;i<rows.length;i++) if(rows[i][0]===p.id) return {ok:true,id:p.id,received:rows[i][3]};
-    var now=now_();
-    sh.appendRow([p.id,sanitize_(p.task||'Homework'),sanitize_(p.unit||''),now,JSON.stringify(a),'submitted','','',sanitize_(p.title||p.task),JSON.stringify(prompts)]);
+    var now=new Date().toISOString(),available=reviewAvailableAfter_();
+    ensureReviewColumn_(p.code,sh,11,SUBMISSION_HEADERS_[10]);
+    if(typeof holdHandwrittenFeedback_==='function')holdHandwrittenFeedback_(p.code,a,available);
+    sh.appendRow([p.id,sanitize_(p.task||'Homework'),sanitize_(p.unit||''),now,JSON.stringify(a),'submitted','','',sanitize_(p.title||p.task),JSON.stringify(prompts),available]);
     return {ok:true,id:p.id,received:now};
   } finally {lock.releaseLock();}
 }
@@ -188,7 +202,7 @@ function review_(p) {
     for(var i=1;i<rows.length;i++) if(rows[i][0]===p.id) {
       sh.getRange(i+1,6,1,3).setValues([[p.status,sanitize_(p.feedback||''),now_()]]);
       if(rows[i][2]==='assigned') setAssignmentStatus_(studentSheet_(p.code),{id:rows[i][1],status:p.status==='reviewed'?'done':'open'});
-      return {ok:true};
+      return {ok:true,feedbackAvailableAt:rows[i][10]||'',reviewPending:reviewHeld_(rows[i][10])};
     }
     return {ok:false,error:'Submission not found'};
   } finally {lock.releaseLock();}

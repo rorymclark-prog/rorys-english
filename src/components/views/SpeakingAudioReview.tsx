@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {documentRequest} from '@/lib/documents';
 import {reviewSpeakingAudio,type AudioReview,type LearningRecord} from '@/lib/learning';
+import ReviewTiming from '@/components/ReviewTiming';
 
 const areas:Record<string,string>={fluency:'Flow',accuracy:'Grammar and vocabulary',organisation:'Development',interaction:'Interaction',intelligibility:'Intelligibility'};
 const field='w-full rounded-xl border border-black/10 bg-white p-3 text-sm text-navy dark:border-white/15 dark:bg-navy dark:text-cream';
@@ -29,7 +30,7 @@ export default function SpeakingAudioReview({code,name,mode,record,onSaved}:{cod
     const next:AudioReview={summary:summary.trim(),strengths:lines(strengths),targets:lines(targets),nextStep:nextStep.trim(),ratings};
     const result=await reviewSpeakingAudio(code,record.id,attempt.current,next);
     setSaving(false);
-    if(result.ok){attempt.current=crypto.randomUUID();setMessage(`Audio review saved for ${name} and the family.`);await onSaved();}
+    if(result.ok){attempt.current=crypto.randomUUID();setMessage(result.record?.reviewPending?'Audio review approved. It will appear after the five-hour review window.':`Audio review saved for ${name} and the family.`);await onSaved();}
     else setMessage(result.error||'Could not confirm the audio review. Keep this page open and try again.');
   }
   return <section className="mt-4 rounded-xl border border-indigo-200 p-3 text-sm dark:border-white/15">
@@ -37,6 +38,7 @@ export default function SpeakingAudioReview({code,name,mode,record,onSaved}:{cod
     {audioUrl?<audio className="mt-2 w-full" controls src={audioUrl} aria-label="Student voice recording"/>:<button type="button" className="mt-2 rounded-xl border border-indigo-300 px-3 py-2 font-semibold" disabled={loading} onClick={()=>void openAudio()}>{loading?'Opening recording…':'Listen to recording'}</button>}
     {audioError&&<p role="alert" className="mt-2 text-red-700">{audioError}</p>}
     {review&&<div className="mt-3 rounded-xl bg-indigo-50 p-3 dark:bg-navy"><strong>Rory’s audio review</strong><p className="mt-1 whitespace-pre-wrap">{review.summary}</p>{!!review.strengths?.length&&<p className="mt-2">Strengths: {review.strengths.join(' · ')}</p>}{!!review.targets?.length&&<p className="mt-1">Next focus: {review.targets.join(' · ')}</p>}{review.nextStep&&<p className="mt-1">Next try: {review.nextStep}</p>}</div>}
+    {record.feedbackAvailableAt&&<ReviewTiming availableAt={record.feedbackAvailableAt} teacher={mode==='teacher'}/>}
     {mode==='teacher'&&<details className="mt-3"><summary className="cursor-pointer font-semibold">{review?'Update audio review':'Add audio review'}</summary><form className="mt-3 space-y-3" onSubmit={e=>void save(e)}>
       <p className="text-xs">Listen first. Note what you actually heard; leave any unobserved skill blank. These are task based observations, not a school grade.</p>
       <label className="block">What you heard<textarea className={field} rows={3} maxLength={2000} required value={summary} onChange={e=>setSummary(e.target.value)}/></label>

@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import {documentRequest,fileBase64,MAX_DOCUMENT_BYTES} from "@/lib/documents";
 import {isStudentPreview} from "@/lib/student-preview";
+import ReviewTiming from "@/components/ReviewTiming";
 
 export default function HomeworkAudioRecorder({code,unitId,week,title,prompt}:{code:string;unitId:string;week:number;title:string;prompt:string}){
   const preview=isStudentPreview(code);
@@ -43,6 +44,7 @@ export default function HomeworkAudioRecorder({code,unitId,week,title,prompt}:{c
     {recording&&<p role="status" className="re-small-copy mt-3">Recording now. Stop when your talk is finished.</p>}
     {url&&!recording&&<audio controls src={url} className="re-live-audio mt-3" aria-label="Listen to your individual talk"/>}
     {sent&&<p role="status" className="re-small-copy mt-3">Recording received. <Link className="underline" href={`/s/${code}/documents/`}>Open My documents</Link> to listen to the saved file.</p>}
+    <ReviewTiming/>
     {error&&<p role="alert" className="doc-error mt-3">{error}</p>}
   </section>;
 }

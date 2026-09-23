@@ -1,7 +1,7 @@
 // Learning reviews join homework, school-test preparation, speaking and lessons.
 // Each update is appended, so a later edit never destroys the earlier record.
-var LEARNING_HEADERS_=['Id','Created','Date','Kind','Title','Visibility','Record JSON','Author'];
-var LEARNING_REPLY_HEADERS_=['Id','Review id','Created','Answer','Author'];
+var LEARNING_HEADERS_=['Id','Created','Date','Kind','Title','Visibility','Record JSON','Author','Feedback available after'];
+var LEARNING_REPLY_HEADERS_=['Id','Review id','Created','Answer','Author','Feedback available after'];
 function learningSheet_(code,create,replies) {
   var ss=studentSheet_(code),name=replies?'Learning replies':'Learning reviews',sh=ss.getSheetByName(name);
   if(!sh&&create){sh=ss.insertSheet(name);var h=replies?LEARNING_REPLY_HEADERS_:LEARNING_HEADERS_;sh.getRange(1,1,1,h.length).setValues([h]);}
@@ -12,15 +12,17 @@ function learningDate_(value) {
   if(Object.prototype.toString.call(value)==='[object Date]'&&!isNaN(value.getTime()))return Utilities.formatDate(value,Session.getScriptTimeZone(),'yyyy-MM-dd');
   return String(value||'');
 }
-function learningLatest_(code) {
+function learningLatest_(code,readerRole) {
   var map={},rows=learningRows_(code,false);
-  rows.forEach(function(r){if(r[0])map[String(r[0])]=r;});
+  rows.forEach(function(r){if(r[0]&&(!readerRole||readerRole==='teacher'||!reviewHeld_(r[8])))map[String(r[0])]=r;});
   return Object.keys(map).map(function(id){return map[id];}).sort(function(a,b){return learningDate_(b[2]||b[1]).localeCompare(learningDate_(a[2]||a[1]));});
 }
 function learningPublic_(row,role) {
   var body=JSON.parse(row[6]||'{}');
   if(role!=='teacher')delete body.tutorPrivate;
-  return {id:String(row[0]),created:String(row[1]),date:learningDate_(row[2]),kind:String(row[3]),title:String(row[4]),visibility:String(row[5]),author:String(row[7]),body:body};
+  var available=row[8]||body.audioReviewAvailableAt||'',held=reviewHeld_(available);
+  if(role!=='teacher'&&reviewHeld_(body.audioReviewAvailableAt)){delete body.audioReview;body.ratings={};}
+  return {id:String(row[0]),created:String(row[1]),date:learningDate_(row[2]),kind:String(row[3]),title:String(row[4]),visibility:String(row[5]),author:String(row[7]),body:body,feedbackAvailableAt:available,reviewPending:held};
 }
 function learningFind_(code,id) {
   var rows=learningLatest_(code);
@@ -36,7 +38,7 @@ function learningPayload_(p) {
 }
 function learningReplies_(code,ids) {
   var allowed={};ids.forEach(function(id){allowed[id]=true;});
-  return learningRows_(code,true).filter(function(r){return allowed[String(r[1])];}).map(function(r){return {id:String(r[0]),reviewId:String(r[1]),created:String(r[2]),answer:String(r[3]),author:String(r[4])};});
+  return learningRows_(code,true).filter(function(r){return allowed[String(r[1])];}).map(function(r){return {id:String(r[0]),reviewId:String(r[1]),created:String(r[2]),answer:String(r[3]),author:String(r[4]),feedbackAvailableAt:r[5]||''};});
 }
 function learningService_(p,s) {
   try {
@@ -46,7 +48,7 @@ function learningService_(p,s) {
     var code=student.code;
     if(p.action==='learningRecords') {
       var readerRole=p.preview?'student':s.role;
-      var rows=learningLatest_(code).filter(function(r){return readerRole==='teacher'||r[5]!=='teacher';});
+      var rows=learningLatest_(code,readerRole).filter(function(r){return readerRole==='teacher'||r[5]!=='teacher';});
       return {ok:true,records:rows.map(function(r){return learningPublic_(r,readerRole);}),replies:learningReplies_(code,rows.map(function(r){return String(r[0]);}))};
     }
     if(s.role==='parent'||p.preview)return {ok:false,error:'Read-only access.'};
@@ -56,8 +58,9 @@ function learningService_(p,s) {
       try {
         if(learningRows_(code,false).length>=1000)throw new Error('This learner profile needs archiving before more reviews can be added.');
         // The teacher may revise a review; old rows remain in the audit trail.
-        var row=[p.id,new Date().toISOString(),p.date,p.kind,sanitize_(p.title.trim()),visibility,json,'Rory'];
-        learningSheet_(code,true,false).appendRow(row);
+        var replies=learningRows_(code,true).filter(function(r){return r[1]===p.id;}),latestReply=replies[replies.length-1],available=latestReply?latestReply[5]||'':'';
+        var row=[p.id,new Date().toISOString(),p.date,p.kind,sanitize_(p.title.trim()),visibility,json,'Rory',available];
+        var sh=learningSheet_(code,true,false);ensureReviewColumn_(code,sh,9,LEARNING_HEADERS_[8]);sh.appendRow(row);
         return {ok:true,record:learningPublic_(row,'teacher')};
       } finally {lock.releaseLock();}
     }
@@ -73,6 +76,7 @@ function learningService_(p,s) {
         if(current[3]!=='speaking'||current[7]!=='Student'||!body.audioDocumentId)return {ok:false,error:'A student audio sample is needed for this review.'};
         if(body.audioReview&&body.audioReview.reviewId===p.reviewId)return {ok:true,record:learningPublic_(current,'teacher')};
         body.audioReview={reviewId:p.reviewId,summary:sanitize_(review.summary.trim()),strengths:review.strengths.map(function(v){return sanitize_(v.trim());}).filter(Boolean),targets:review.targets.map(function(v){return sanitize_(v.trim());}).filter(Boolean),nextStep:sanitize_((review.nextStep||'').trim()),reviewedAt:new Date().toISOString(),reviewedBy:'Rory'};
+        if(body.submittedAt)body.audioReviewAvailableAt=new Date(new Date(body.submittedAt).getTime()+TEACHER_REVIEW_WINDOW_MS_).toISOString();
         body.ratings=ratings;
         var update=[p.id,new Date().toISOString(),current[2],current[3],current[4],current[5],JSON.stringify(body),current[7]];
         learningSheet_(code,true,false).appendRow(update);return {ok:true,record:learningPublic_(update,'teacher')};
@@ -85,8 +89,9 @@ function learningService_(p,s) {
       try {
         var prior=learningRows_(code,true).filter(function(r){return r[0]===p.id;})[0];
         if(prior)return {ok:true,received:true};
-        var row=[p.id,p.reviewId,new Date().toISOString(),sanitize_(p.answer.trim()),'Student'];
-        learningSheet_(code,true,true).appendRow(row);return {ok:true,received:true};
+        var available=reviewAvailableAfter_(),row=[p.id,p.reviewId,new Date().toISOString(),sanitize_(p.answer.trim()),'Student',available];
+        holdHandwrittenFeedback_(code,{answer:p.answer},available);
+        var sh=learningSheet_(code,true,true);ensureReviewColumn_(code,sh,6,LEARNING_REPLY_HEADERS_[5]);sh.appendRow(row);return {ok:true,received:true};
       } finally {lock.releaseLock();}
     }
     if(p.action==='speakingSave'&&s.role==='student') {
@@ -94,7 +99,7 @@ function learningService_(p,s) {
       var previous=learningLatest_(code).filter(function(r){return r[0]===p.id;})[0];
       if(previous)return {ok:true,received:true,record:learningPublic_(previous,'student')};
       var body={summary:'Speaking practice saved for review.',evidenceType:'AI conversation captions',transcript:p.transcript,reflection:p.reflection||'',strengths:[],targets:[],nextStep:'Choose one useful phrase and try it again.',ratings:{},aiAnalysis:null};
-      var today=new Date().toISOString(),row=[p.id,today,today.slice(0,10),'speaking',sanitize_(p.title||'AI conversation'),'shared',JSON.stringify(body),'Student'];
+      var today=new Date().toISOString();body.submittedAt=today;var row=[p.id,today,today.slice(0,10),'speaking',sanitize_(p.title||'AI conversation'),'shared',JSON.stringify(body),'Student'];
       var lock=LockService.getScriptLock();lock.waitLock(10000);
       try {
         if(learningRows_(code,false).filter(function(r){return learningDate_(r[2])===row[2]&&r[7]==='Student';}).length>=8)throw new Error('Today’s speaking save limit has been reached.');

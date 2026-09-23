@@ -54,7 +54,7 @@ test('guided conversation focus is limited to the correct learner and mode',()=>
   const nextWeek=voiceConfiguration({...body,code:'valentin-q9m2',topic:'unit',homeworkFocus:'valentin-chat-3'},{title:'way2go! 8 · Unit 1'});
   assert.match(nextWeek.session.instructions,/school representative/i);
   const ferdi=voiceConfiguration({...body,code:'ferdi-7h3k',topic:'story',homeworkFocus:'ferdi-chat-1'},{title:'Family life'});
-  assert.match(ferdi.session.instructions,/first, then and finally/i);
+  assert.match(ferdi.session.instructions,/first, then, finally/i);
   for(const changed of [{code:'ferdi-7h3k'},{topic:'story'},{homeworkFocus:'invented-chat'}]){
     const config=voiceConfiguration({...body,code:'valentin-q9m2',topic:'unit',homeworkFocus:'valentin-chat-2',...changed});
     assert.doesNotMatch(config.session.instructions,/two general healthy habits/i);

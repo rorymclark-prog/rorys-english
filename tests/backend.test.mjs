@@ -4,6 +4,8 @@ import fs from "node:fs";
 import vm from "node:vm";
 import {createHash,randomUUID} from "node:crypto";
 function fixture() {
+  let time;
+  class Clock extends Date {constructor(...args){super(...(args.length?args:[Clock.now()]));}static now(){return time??Date.now();}}
   const props=new Map([["TEACHER_PASSWORD","synthetic-teacher"],["sheet_student-a","sheet-a"]]);
   const cache=new Map(), sheets=new Map();
   const identity={status:200,user:{localId:'managed-user',emailVerified:true,customAttributes:JSON.stringify({studentCode:'student-a',role:'student'})},calls:0};
@@ -21,7 +23,7 @@ function fixture() {
   sheet("Writing").appendRow(["Date","Title","CEFR","Grammar","Vocab","Coherence","Errors","Feedback","Link"]);
   const roster={code:"student-a",parentCode:"parent-a",name:"Demo learner"};
   const ctx={
-    console,Date,JSON,Object,Array,String,Number,isFinite,SECRET:"server-internal-v2",TEACHER_PASSWORD_PROP:"TEACHER_PASSWORD",AI_DAILY_CAP:40,
+    console,Date:Clock,JSON,Object,Array,String,Number,isFinite,SECRET:"server-internal-v2",TEACHER_PASSWORD_PROP:"TEACHER_PASSWORD",AI_DAILY_CAP:40,
     PropertiesService:{getScriptProperties:()=>property},
     CacheService:{getScriptCache:()=>({get:k=>cache.get(k)||null,put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},
     LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
@@ -40,7 +42,7 @@ function fixture() {
   const post=p=>ctx.doPost({postData:{contents:JSON.stringify(p)}});
   const teacher=()=>ctx.issueSession_("__teacher__","teacher").token;
   const student=()=>ctx.issueSession_("student-a","student").token;
-  return {ctx,post,teacher,student,sheets,props,cache,identity};
+  return {ctx,post,teacher,student,sheets,props,cache,identity,setTime:t=>{time=t;}};
 }
 test("GET is version-only; route codes and legacy secret do not authenticate",()=>{
   const f=fixture();assert.equal(f.ctx.doGet({parameter:{action:"progress"}}).version,2);
@@ -127,9 +129,43 @@ test("review and revision states are teacher-only and preserve original",()=>{
   const f=fixture(), id=randomUUID();f.post({action:"submit",code:"student-a",session:f.student(),id,task:"hw:1",unit:"unit1",answers:{answer:"Original"}});
   const review={action:"teacherReview",code:"student-a",session:f.teacher(),id,status:"revision-needed",feedback:"Try the article again."};
   assert.equal(f.post(review).ok,true);
-  const row=f.ctx.submissions_({code:"student-a"}).submissions[0];
+  const row=f.ctx.submissions_({code:"student-a"},{role:"teacher"}).submissions[0];
   assert.equal(row.feedback,review.feedback);assert.equal(row.answers.answer,"Original");
   assert.equal(f.post({...review,feedback:"a".repeat(2001)}).ok,false);
+});
+test("teacher approval releases automatically at exactly five hours, never before and never without review",()=>{
+  const f=fixture(),start=Date.parse('2026-09-23T10:00:00Z');f.setTime(start);
+  const id=randomUUID(),event={action:'submit',code:'student-a',session:f.student(),id,task:'hw:1',unit:'unit1',answers:{answer:'Original'},feedbackAvailableAt:'2000-01-01',submitted:'2000-01-01'};
+  assert.equal(f.post(event).ok,true);
+  const deadline=f.ctx.submissions_({code:'student-a'}).submissions[0].feedbackAvailableAt;
+  assert.equal(Date.parse(deadline),start+5*3600000);
+  f.setTime(start+3600000);assert.equal(f.post(event).ok,true);
+  assert.equal(f.ctx.submissions_({code:'student-a'}).submissions[0].feedbackAvailableAt,deadline);
+  const review={action:'teacherReview',code:'student-a',session:f.teacher(),id,status:'revision-needed',feedback:'Private approved feedback'};
+  assert.equal(f.post(review).ok,true);
+  f.setTime(Date.parse(deadline)-1);
+  for(const preview of [false,true]) {
+    const r=f.post({action:'submissions',code:'student-a',session:preview?f.teacher():f.student(),preview,role:'teacher'}).submissions[0];
+    assert.equal(r.feedback,'');assert.equal(r.reviewed,'');assert.equal(r.status,'submitted');assert.equal(r.answers.answer,'Original');
+  }
+  assert.equal(f.ctx.submissions_({code:'student-a'},{role:'teacher'}).submissions[0].feedback,review.feedback);
+  f.setTime(Date.parse(deadline));const released=f.ctx.submissions_({code:'student-a'}).submissions[0];
+  assert.equal(released.feedback,review.feedback);assert.equal(released.status,'revision-needed');
+  const fresh={...event,id:randomUUID(),session:f.student()};f.post(fresh);f.setTime(Date.parse(deadline)+5*3600000);
+  const unreviewed=f.ctx.submissions_({code:'student-a'}).submissions[1];assert.equal(unreviewed.status,'submitted');assert.equal(unreviewed.feedback,'');
+});
+test("legacy feedback stays available and a malformed review deadline fails closed",()=>{
+  const f=fixture();f.post({action:'submit',code:'student-a',session:f.student(),id:randomUUID(),task:'hw:1',unit:'u',answers:{answer:'Old work'}});
+  const row=f.sheets.get('Submissions').data[1];row[6]='Existing feedback';row[5]='reviewed';row[10]='';
+  assert.equal(f.ctx.submissions_({code:'student-a'}).submissions[0].feedback,'Existing feedback');
+  row[10]='invalid';assert.equal(f.ctx.submissions_({code:'student-a'}).submissions[0].feedback,'');
+});
+test("extending an existing sheet backs up its original records once without changing sharing",()=>{
+  const f=fixture(),data=[['Old header'],['Original work']],calls=[];
+  const backup={setName:n=>{calls.push(n);return backup;},hideSheet:()=>calls.push('hidden')};
+  const sh={getDataRange:()=>({getValues:()=>data}),getName:()=> 'Submissions',copyTo:()=>{calls.push('copy');return backup;},getRange:(_r,c)=>({setValue:v=>{data[0][c-1]=v;}})};
+  f.ctx.ensureReviewColumn_('student-a',sh,11,'Feedback available after');f.ctx.ensureReviewColumn_('student-a',sh,11,'Feedback available after');
+  assert.equal(calls.filter(c=>c==='copy').length,1);assert.ok(calls.includes('hidden'));assert.equal(data[1][0],'Original work');
 });
 test("quiz event id is atomic with score; retry cannot duplicate it",()=>{
   const f=fixture(), event={action:"event",code:"student-a",session:f.student(),id:randomUUID(),type:"quiz",score:2,total:3,tool:"demo",section:"first attempt"};

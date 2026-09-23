@@ -1,13 +1,13 @@
 [
   {
     "week": 1,
-    "title": "Week of 23 September · Tell a family-life story",
+    "title": "Week of 23 September · A family day out",
     "due": "",
     "availableFrom": "2026-09-23",
     "estimatedMinutes": 30,
-    "description": "For the week of 23 September: one guided chat and one short written answer. The chat replaces the separate speaking rehearsal. A real or made-up story is fine; no deadline has been set.",
+    "description": "This week, tell a story about a family day out when a small plan changed: first in one guided chat, then in one short written answer. The chat practises Family life words, past verbs and putting events in order before you write. A real or invented family is fine. No exact deadline has been set.",
     "objectives": [
-      "Tell connected past events in a clear order and explain why something happened.",
+      "Use family words to tell connected past events in a clear order and explain why something happened.",
       "Improve two useful past verbs in your own words."
     ],
     "source": "Original Rory’s English practice linked to English in Context 5, Unit 1: Family life (pp. 20–25); not a textbook exercise.",
@@ -15,7 +15,7 @@
       {
         "id": "story-write",
         "type": "written",
-        "prompt": "After Chat 1, write your best version of the story here in 5–7 sentences. A family member or friend can be in it. Use first, then and finally, at least four past events, and a reason with because. Include one question the people could ask next time to avoid the mix-up. Check two past verbs, then press Send answers to Rory. You do not need to copy the conversation transcript.",
+        "prompt": "After Chat 1, write 5–7 sentences about a family day out when a small plan changed. Say who was there, what happened and how it ended. Your family can be completely invented. Use first, then and finally, at least four past events, and a reason with because. Include one question the people could ask next time to avoid the mix-up. Check two past verbs. Type your answer here OR attach clear photos of your handwritten answer below; you do not need to do both. Press Send answers to Rory and check that it was received. No conversation transcript to copy.",
         "lines": 7
       }
     ]
@@ -36,7 +36,7 @@
       {
         "id": "email-draft",
         "type": "written",
-        "prompt": "After Chat 2, write a 120–150-word email to an imaginary friend about family life. Use a greeting and friendly ending. Say what your family or invented group usually does, tell a short story about last weekend in the past tense, and explain one thing you like or would change. Use because and one other linking word. Check one past-tense sentence and one usually sentence in this same box, then press Send answers to Rory. You do not need to copy the conversation transcript.",
+        "prompt": "After Chat 2, write a 120–150-word email to an imaginary friend about family life. Use a greeting and friendly ending. Say what your family or invented group usually does, tell a short story about last weekend in the past tense, and explain one thing you like or would change. Use because and one other linking word. Check one past-tense sentence and one usually sentence. Type your answer here OR attach clear photos of your handwritten answer below; you do not need to do both. Press Send answers to Rory and check that it was received. No conversation transcript to copy.",
         "lines": 9
       }
     ]

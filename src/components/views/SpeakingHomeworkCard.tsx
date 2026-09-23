@@ -4,17 +4,18 @@ import Link from "next/link";
 import FeedbackText from "@/components/FeedbackText";
 import { fetchSubmissions, type Assignment, type Submission } from "@/lib/remote";
 import { getLearning, type LearningRecord } from "@/lib/learning";
+import { guidedSpeakingForHomework } from "@/lib/guided-speaking";
 
 const unitId = "english-in-context5-unit01-2026";
 const weeks = [
   {
     number: 1,
     when: "WEEK OF 23 SEPTEMBER",
-    title: "A short story",
+    title: "A family day out",
     time: "About 30 minutes total",
-    instruction: <>Tell a <mark>holiday</mark> or <mark>climbing day</mark> story where a small plan changed. Then write your best version.</>,
+    instruction: <>Tell a story about a <mark>family day out</mark> when a small plan changed. Then write your best version. A real or invented family is fine.</>,
     examples: [
-      <><mark>First</mark>, we planned to meet at the station.</>,
+      <><mark>First</mark>, my family planned to meet at the station.</>,
       <><mark>Then</mark>, my brother went to the wrong platform.</>,
       <><mark>Finally</mark>, we found him <mark>because</mark> we called.</>,
     ],
@@ -53,6 +54,7 @@ export default function SpeakingHomeworkCard({ code, assignment }: { code: strin
     <div className="hw-heading"><div><p className="hw-kicker">FAMILY LIFE · TWO TEACHING WEEKS</p><h2 id={`speaking-${assignment.id}`}>Speaking and writing, one step at a time</h2><p><strong>One chat and one short written answer each week.</strong> The chat replaces the speaking rehearsal in the linked task.</p></div><span className="hw-time">30–40 min / week</span></div>
     <p className="hw-gentle-note">Choose your own ideas. These are examples to help you start, not sentences to memorise. <strong>Stop at 45 minutes for the week.</strong></p>
     <div className="hw-chat-grid">{weeks.map(week => {
+      const guided = guidedSpeakingForHomework(code, unitId, week.number);
       const saved = records.some(r => r.kind === "speaking" && r.title.startsWith(`Family life · Chat ${week.number}`));
       const sent = submissions.filter(s => s.unit === unitId && s.task === `hw:${week.number}`);
       const latest = sent.at(-1);
@@ -60,6 +62,7 @@ export default function SpeakingHomeworkCard({ code, assignment }: { code: strin
         <p className="hw-kicker">{week.when}</p>
         <div className="hw-chat-top"><span className="hw-number">{week.number}</span><div><h3>{week.title}</h3><small>{week.time}</small></div></div>
         <p className="hw-instruction">{week.instruction}</p>
+        {guided?.purpose && <p className="hw-gentle-note"><strong>Why this chat? </strong>{guided.purpose}</p>}
         <div className="hw-examples"><strong>Ideas to get started</strong><ul>{week.examples.map((sentence, i) => <li key={i}>{sentence}</li>)}</ul></div>
         <p className="hw-starter"><strong>Useful starters</strong><span>{week.starter}</span></p>
         <div className="hw-steps"><span>1 · Speak</span><span>2 · {week.writing}</span></div>
@@ -68,7 +71,7 @@ export default function SpeakingHomeworkCard({ code, assignment }: { code: strin
         {(saved || latest) && <div className="hw-sent"><strong>{saved ? "Speaking saved" : "Speaking not yet saved"}{latest ? " · Writing sent" : ""}</strong>{latest?.feedback && <p><FeedbackText text={latest.feedback}/></p>}</div>}
       </article>;
     })}</div>
-    <p className="hw-how"><strong>Easy finish:</strong> end the voice chat and let the app save it. Write in the linked answer box. <mark>No transcript to copy or paste.</mark></p>
+    <p className="hw-how"><strong>Easy finish:</strong> end the voice chat and check it is saved. Open the writing task, type your answer or attach clear photos of your handwritten work, then press <strong>Send answers to Rory</strong> and check the receipt. <mark>No transcript to copy or paste.</mark></p>
     <p className="hw-footnote">If live voice is unavailable, finish the short writing task and tell Rory at your next lesson. There is no holiday catch-up task or fixed deadline.</p>
   </section>;
 }

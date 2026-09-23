@@ -33,7 +33,7 @@ export interface WritingAssessment {cefr:string;grammar:number;vocab:number;cohe
 export interface AnalyseWritingResult extends ApiResult {assessment?:WritingAssessment}
 export const analyseWriting = (s:string,code:string,title:string,text:string) => teacherPost<AnalyseWritingResult>(s,{action:"teacherAnalyseWriting",code,title,text});
 export const publishAssessment = (s:string,code:string,title:string,assessment:WritingAssessment,id:string) => teacherPost<OkResult>(s,{action:"teacherPublishAssessment",code,title,assessment,id});
-export interface Submission {id:string;task:string;title?:string;prompts?:Record<string,string>;unit:string;submitted:string;answers:Record<string,string>;status:string;feedback:string;reviewed:string}
+export interface Submission {id:string;task:string;title?:string;prompts?:Record<string,string>;unit:string;submitted:string;answers:Record<string,string>;status:string;feedback:string;reviewed:string;feedbackAvailableAt?:string;reviewPending?:boolean}
 export interface Submissions extends ApiResult {submissions?:Submission[]}
 export const fetchSubmissions = (code:string) => authed<Submissions>(code,{action:"submissions"});
 export const reviewSubmission = (code:string,id:string,status:string,feedback:string) => authed<OkResult>(code,{action:"teacherReview",id,status,feedback});

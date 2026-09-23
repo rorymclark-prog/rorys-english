@@ -10,6 +10,7 @@ export type GuidedSpeaking = {
   focus: string;
   cue: string;
   prompt: string;
+  purpose?: string;
   duration: string;
   instructions: string;
 };
@@ -17,16 +18,18 @@ export type GuidedSpeaking = {
 const conversations: GuidedSpeaking[] = [
   {
     id: "ferdi-chat-1", studentCode: "ferdi-7h3k", unitId: "english-in-context5-unit01-2026", week: 1,
-    topic: "story", unitLabel: "FAMILY LIFE", title: "Tell your story.", savedTitle: "Family life · Chat 1: story",
-    focus: "Tell a short story in order.", cue: "First → then → finally",
-    prompt: "Talk about a holiday or climbing day when a small plan changed. Use your own details.", duration: "12–15 minutes",
-    instructions: "Invite a short real or imaginary holiday or climbing-day story. Help the learner use first, then and finally. Ask one simple follow-up at a time. Treat model sentences as starters and encourage the learner's own details.",
+    topic: "story", unitLabel: "FAMILY LIFE", title: "Tell a family day-out story.", savedTitle: "Family life · Chat 1: story",
+    focus: "Tell a family day-out story in order, using past verbs.", cue: "First → then → finally",
+    prompt: "Tell me about a family day out when a small plan changed. Who was there, what happened, and how did it end? A real or invented family is fine.", duration: "12–15 minutes",
+    purpose: "This is Family life practice: use family words, past verbs and first, then, finally. Talking through the story helps you prepare your own 5–7-sentence written answer.",
+    instructions: "Invite a short real or imaginary family day-out story in which a small plan changed. Start by asking who went on the day out. Keep the family connection clear: a holiday or climbing trip is only an example if it involves the family. A completely invented family is welcome; do not press for private family details. Help the learner use past verbs, first, then, finally and because. Ask one simple follow-up at a time. Explain briefly that this is oral rehearsal for their own 5–7-sentence written story. Treat model sentences as short starters, not a script; do not dictate or write the finished homework.",
   },
   {
     id: "ferdi-chat-2", studentCode: "ferdi-7h3k", unitId: "english-in-context5-unit01-2026", week: 2,
     topic: "unit", unitLabel: "FAMILY LIFE", title: "Talk about family life.", savedTitle: "Family life · Chat 2: usually and now",
     focus: "Compare a normal day with today.", cue: "Usually ↔ now",
     prompt: "Compare what your family usually does with what they are doing now.", duration: "12–15 minutes",
+    purpose: "This is Family life practice: use present simple for routines and present continuous for what is happening now. Collect your own ideas before writing your family-life email.",
     instructions: "Ask about what the learner's family or an invented family usually does and what they are doing now. Help them contrast present simple and present continuous in their own examples. Ask simple questions and give one brief model if they get stuck.",
   },
   {

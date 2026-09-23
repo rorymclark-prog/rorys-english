@@ -9,6 +9,8 @@ import WritingAnalysis,{ComparisonFields} from './WritingAnalysis';
 import HandwrittenAnswer from '@/components/HandwrittenAnswer';
 import AnswerWithPhotos from '@/components/AnswerWithPhotos';
 import {handwritingParts,handwritingReference} from '@/lib/handwritten-answer';
+import ReviewTiming from '@/components/ReviewTiming';
+import {useReviewRefresh} from '@/lib/use-review-refresh';
 
 const labels:Record<LearningKind,string>={homework:'Homework review',test:'Test preparation',speaking:'Speaking',lesson:'Lesson notes'};
 const kinds:LearningKind[]=['homework','test','speaking','lesson'];
@@ -34,6 +36,7 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
   const checkpoints=records.filter(r=>r.kind==='speaking'&&r.body.ratings&&Object.values(r.body.ratings).some(v=>v!=null)).sort((a,b)=>a.date.localeCompare(b.date));
   const refresh=useCallback(async()=>{const r=await getLearning(code,mode==='teacher');setLoading(false);if(r.ok){setRecords(r.records||[]);setReplies(r.replies||[]);setError('');}else setError(r.error||'Could not open the learning record.');},[code,mode]);
   useEffect(()=>{void refresh();},[refresh]);
+  useReviewRefresh(()=>void refresh(),[...records.map(r=>r.feedbackAvailableAt),...replies.map(r=>r.feedbackAvailableAt)]);
   async function create(e:React.FormEvent){e.preventDefault();if(mode!=='teacher'||busy)return;setBusy(true);setError('');setMessage('');
     const body:LearningBody={summary:summary.trim(),strengths:split(strengths),targets:split(targets),nextStep:nextStep.trim(),evidenceType:evidenceType.trim(),source:source.trim(),studentNotes:studentNotes.trim(),lessonPoints:lessonPoints.trim(),ratings,tutorPrivate:{worked:worked.trim(),improve:improve.trim(),plan:plan.trim()}};
     if(kind==='homework'||kind==='test')body.writing={original:original.trim(),corrected:corrected.trim(),model:model.trim(),comparisons:comparisons.map(r=>({original:r.original.trim(),corrected:r.corrected.trim(),improved:r.improved.trim(),note:r.note.trim()})).filter(r=>r.original||r.corrected||r.improved||r.note),practice:split(practice)};
@@ -74,7 +77,8 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
       {b.audioDocumentId&&<SpeakingAudioReview code={code} name={name} mode={mode} record={r} onSaved={refresh}/>}
       {(b.studentNotes||b.lessonPoints)&&<div className="mt-4 space-y-2 text-sm">{b.studentNotes&&<p><strong>Student notes:</strong> {b.studentNotes}</p>}{b.lessonPoints&&<p><strong>Lesson points:</strong> {b.lessonPoints}</p>}</div>}
       {mode==='teacher'&&b.tutorPrivate&&(b.tutorPrivate.worked||b.tutorPrivate.improve||b.tutorPrivate.plan)&&<div className="mt-4 rounded-xl border border-amber/50 p-3 text-sm"><strong>Your teaching reflection · private</strong>{b.tutorPrivate.worked&&<p>Worked: {b.tutorPrivate.worked}</p>}{b.tutorPrivate.improve&&<p>Improve: {b.tutorPrivate.improve}</p>}{b.tutorPrivate.plan&&<p>Next lesson: {b.tutorPrivate.plan}</p>}</div>}
-      {rs.length>0&&<div className="mt-4"><h4 className="font-semibold">Answers and revisions</h4>{rs.map(x=><div key={x.id} className="mt-2 rounded-xl bg-black/5 p-3 text-sm dark:bg-white/5"><small>{new Date(x.created).toLocaleDateString()} · {x.author}</small><AnswerWithPhotos answer={x.answer} code={code} teacher={mode==='teacher'}/></div>)}</div>}
+      {r.reviewPending&&mode==='teacher'&&<ReviewTiming availableAt={r.feedbackAvailableAt} teacher/>}
+      {rs.length>0&&<div className="mt-4"><h4 className="font-semibold">Answers and revisions</h4>{rs.map(x=><div key={x.id} className="mt-2 rounded-xl bg-black/5 p-3 text-sm dark:bg-white/5"><small>{new Date(x.created).toLocaleDateString()} · {x.author}</small><AnswerWithPhotos answer={x.answer} code={code} teacher={mode==='teacher'}/>{x.feedbackAvailableAt&&<ReviewTiming availableAt={x.feedbackAvailableAt} teacher={mode==='teacher'}/>}</div>)}</div>}
       {mode==='student'&&r.visibility==='shared'&&(r.kind==='homework'||r.kind==='test'||r.kind==='lesson')&&<div className="mt-4 space-y-3 border-t border-black/10 pt-4 dark:border-white/10">
         <h4 className="font-semibold">Type your answer or photograph your handwriting</h4>
         <textarea className={box} aria-label="Typed answer (optional if you attach handwriting)" rows={5} maxLength={11000} disabled={disabled||busy} value={handwritingParts(answer[r.id]||'').text} onChange={e=>{const text=e.target.value;setAnswer(a=>({...a,[r.id]:[text,...handwritingParts(a[r.id]||'').documentIds.map(handwritingReference)].join('\n')}));}} placeholder="Type here, or attach photos below. You do not need to type the same answer twice."/>

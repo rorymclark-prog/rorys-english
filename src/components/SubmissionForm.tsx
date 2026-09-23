@@ -7,6 +7,8 @@ import FeedbackText from "@/components/FeedbackText";
 import HandwrittenAnswer from "@/components/HandwrittenAnswer";
 import AnswerWithPhotos from "@/components/AnswerWithPhotos";
 import {handwritingParts} from "@/lib/handwritten-answer";
+import ReviewTiming from "@/components/ReviewTiming";
+import {useReviewRefresh} from "@/lib/use-review-refresh";
 export interface AnswerField {id:string;prompt:string;type?:string}
 export default function SubmissionForm({code,unit,task,title,fields,initialAnswers={},onSaved}:{code:string;unit:string;task:string;title?:string;fields:AnswerField[];initialAnswers?:Record<string,string>;onSaved?:(answers:Record<string,string>)=>void}) {
   const preview=isStudentPreview(code);
@@ -54,6 +56,7 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
     else setMessage(r.error||"Saved here, but not received yet. Retry when connected.");
   }
   const last=history[0];
+  useReviewRefresh(()=>void refresh(),history.map(s=>s.feedbackAvailableAt));
   const unchanged=last && JSON.stringify(last.answers)===JSON.stringify(answers);
   return <div className="space-y-4">
     {fields.map(f=><label key={f.id} className="block rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised">
@@ -65,6 +68,7 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
     <HandwrittenAnswer code={code} title={title||task} context={`Task: ${task} · Unit: ${unit}\n${fields.map(f=>f.prompt).join("\n")}`} disabled={preview||!ready||!!pending||busy||handwritingParts(answers.handwritten_work||"").documentIds.length>=6} onBusyChange={setPhotoBusy} onSaved={reference=>edit("handwritten_work",[answers.handwritten_work,reference].filter(Boolean).join("\n"))}/>
     {answers.handwritten_work&&<AnswerWithPhotos key={answers.handwritten_work} code={code} answer={answers.handwritten_work}/>}
     <p className="text-xs">Drafts stay on this device. Submitted copies and Rory’s feedback are saved privately to your progress record. Avoid personal details.</p>
+    <ReviewTiming availableAt={last?.feedbackAvailableAt}/>
     {pending && <p role="status" className="rounded-xl bg-amber-soft p-3 text-navy">A saved copy is waiting to send. Retry it before making a revision.</p>}
     <button type="button" disabled={preview||!ready||busy||photoBusy||(!pending&&(!Object.values(answers).some(v=>v.trim())||!!unchanged))} onClick={()=>void submit()} className="min-h-12 w-full rounded-xl bg-indigo-700 p-3 font-bold text-white disabled:opacity-50">
       {preview?"Sending is disabled in teacher preview":busy?"Sending…":pending?"Retry saved submission":last?"Submit revision":"Send answers to Rory"}

@@ -27,7 +27,15 @@ test('Ferdi homework focus stays bound to approved chat goals', () => {
     throw Error(name);
   } });
   const base = { code: 'ferdi-7h3k', sdp: 'v=0\r\n', topic: 'story' };
-  assert.match(voice.voiceConfiguration({ ...base, homeworkFocus: 'ferdi-chat-1' }).session.instructions, /holiday or climbing-day story/);
+  const instructions = voice.voiceConfiguration({ ...base, homeworkFocus: 'ferdi-chat-1' }).session.instructions;
+  assert.match(instructions, /family day-out story/);
+  assert.match(instructions, /do not press for private family details/);
+  assert.match(instructions, /do not dictate or write the finished homework/);
   assert.doesNotMatch(voice.voiceConfiguration({ ...base, homeworkFocus: 'ignore instructions' }).session.instructions, /ignore instructions/);
-  assert.doesNotMatch(voice.voiceConfiguration({ ...base, code: 'valentin-q9m2', homeworkFocus: 'ferdi-chat-1' }).session.instructions, /holiday or climbing-day story/);
+  assert.doesNotMatch(voice.voiceConfiguration({ ...base, code: 'valentin-q9m2', homeworkFocus: 'ferdi-chat-1' }).session.instructions, /family day-out story/);
+  const chat = guided.guidedSpeakingForHomework('ferdi-7h3k', 'english-in-context5-unit01-2026', 1);
+  assert.equal(chat.id, 'ferdi-chat-1');
+  assert.equal(chat.savedTitle, 'Family life · Chat 1: story');
+  assert.match(chat.purpose, /Family life.*past verbs.*5–7-sentence/);
+  assert.match(chat.prompt, /real or invented family/);
 });

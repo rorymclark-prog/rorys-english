@@ -76,9 +76,12 @@ test('a tutor can review a saved speaking sample without replacing its original'
  assert.equal(f.post({action:'teacherReviewSpeaking',id,reviewId,review},'teacher').ok,true);
  const parent=f.post({action:'learningRecords',code:'parent-a'},'parent').records[0];
  assert.equal(parent.body.audioDocumentId,audio);assert.equal(parent.body.transcript,'You: I gave a reason.');
- assert.equal(parent.body.audioReview.summary,review.summary);assert.equal(parent.body.ratings.organisation,3);
+ assert.equal(parent.body.audioReview,undefined);assert.equal(parent.body.ratings.organisation,undefined);
+ const teacher=f.post({action:'learningRecords'},'teacher').records[0];assert.equal(teacher.body.audioReview.summary,review.summary);assert.equal(teacher.body.ratings.organisation,3);
  assert.equal(f.post({action:'teacherReviewSpeaking',id,reviewId,review},'teacher').ok,true);
  assert.equal(f.books.get('sheet-a').sheets.get('Learning reviews').data.length,4);
+ const rows=f.books.get('sheet-a').sheets.get('Learning reviews').data,last=rows.at(-1),body=JSON.parse(last[6]);body.audioReviewAvailableAt=new Date(Date.now()-1).toISOString();last[6]=JSON.stringify(body);
+ assert.equal(f.post({action:'learningRecords',code:'parent-a'},'parent').records[0].body.audioReview.summary,review.summary);
 });
 test('upload stores original bytes privately, receipts are idempotent, revisions keep both originals',()=>{
  const f=fixture(),id=randomUUID(),first=f.upload({id},'teacher');assert.equal(first.received,true);assert.equal(first.document.uploadedBy,'Rory');
@@ -114,5 +117,32 @@ test('active processing leases prevent concurrent AI charges and expired leases 
 test('teacher review and chat persist without replacing AI advice or original, chat retries are idempotent',()=>{
  const f=fixture(),id=f.upload().document.id;f.post({action:'documentAnalyse',id});const messageId=randomUUID();assert.equal(f.post({action:'documentChat',id,messageId,question:'Explain this change.'}).ok,true);assert.equal(f.post({action:'documentChat',id,messageId,question:'Explain this change.'}).ok,true);assert.equal(f.calls,2);
  assert.equal(f.post({action:'teacherDocumentReview',id,feedback:'Use went for yesterday.'},'teacher').ok,true);
- const read=f.post({action:'document',id});assert.equal(read.messages.length,1);assert.equal(read.document.feedback,'Use went for yesterday.');assert.equal(read.document.analysis.transcription,f.analysis.transcription);assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
+ const read=f.post({action:'document',id},'teacher');assert.equal(read.messages.length,1);assert.equal(read.document.feedback,'Use went for yesterday.');assert.equal(read.document.analysis.transcription,f.analysis.transcription);assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
+});
+test('new uploads and attached handwriting keep teacher feedback private for five hours but preserve access to originals',()=>{
+ const f=fixture(),id=f.upload().document.id;
+ const response=f.post({action:'teacherDocumentReview',id,feedback:'Approved private feedback'},'teacher');assert.equal(response.document.reviewPending,true);
+ for(const [role,extra] of [['student',{}],['parent',{code:'parent-a'}],['teacher',{preview:true}]]) {
+  assert.equal(f.post({action:'document',id,...extra},role).document.feedback,'');
+  assert.equal(f.post({action:'documents',...extra},role).documents[0].feedback,'');
+  assert.equal(f.post({action:'documentFile',id,index:0,...extra},role).file.data,sample.data);
+ }
+ const row=f.books.get('sheet-a').sheets.get('Documents').data.find(r=>r[0]===id);
+ row[14]=new Date(Date.now()-1).toISOString();assert.equal(f.post({action:'document',id}).document.feedback,'Approved private feedback');
+ const event={action:'submit',id:randomUUID(),unit:'u',task:'hw:1',answers:{handwritten_work:`[Handwritten answer: ${id}]`}};
+ assert.equal(f.post(event).ok,true);assert.equal(f.post({action:'document',id}).document.feedback,'');
+ const deadline=row[14];assert.equal(f.post(event).ok,true);assert.equal(row[14],deadline);
+ assert.equal(f.post({action:'document',id},'teacher').document.feedback,'Approved private feedback');
+});
+test('learning reply updates wait for the server deadline while earlier shared reviews and the submitted answer remain readable',()=>{
+ const f=fixture(),id=randomUUID(),base={action:'teacherSaveLearningRecord',id,date:'2026-09-23',kind:'homework',title:'Synthetic task',body:{summary:'Earlier review'}};
+ assert.equal(f.post(base,'teacher').ok,true);
+ const reply={action:'learningReply',reviewId:id,id:randomUUID(),answer:'An independent new answer'};assert.equal(f.post(reply).received,true);
+ assert.equal(f.post({...base,body:{summary:'New approved review',tutorPrivate:{plan:'Private'}}},'teacher').record.reviewPending,true);
+ for(const [role,extra] of [['student',{}],['parent',{code:'parent-a'}],['teacher',{preview:true}]]) {
+  const r=f.post({action:'learningRecords',...extra},role);assert.equal(r.records[0].body.summary,'Earlier review');assert.equal(r.replies[0].answer,reply.answer);
+ }
+ assert.equal(f.post({action:'learningRecords'},'teacher').records[0].body.summary,'New approved review');
+ const rows=f.books.get('sheet-a').sheets.get('Learning reviews').data;rows[rows.length-1][8]=new Date(Date.now()-1).toISOString();
+ const released=f.post({action:'learningRecords'}).records[0];assert.equal(released.body.summary,'New approved review');assert.equal(released.body.tutorPrivate,undefined);
 });

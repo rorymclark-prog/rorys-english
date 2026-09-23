@@ -26,6 +26,12 @@ Each invited learner has a pre-created Firebase account with matching server cla
 
 ## Future releases
 
+### Five-hour teacher-review window — 23 September 2026
+
+New homework answers, student documents/recordings and learning replies are received immediately. The server withholds approved teacher feedback until five hours after submission; it never invents a teacher review when the window expires. Teacher reads retain access. Student/parent reads and teacher preview cannot access held feedback. AI practice hints remain separately labelled and immediate. Submitted handwriting references reset their attached document's review window when the answer is actually sent. Retries retain the original deadline. Older records with no release deadline keep their existing visibility.
+
+Approval before the deadline requires no second publish operation: later authenticated reads return it automatically. Open feedback pages refresh at the deadline and when focused. This is request-time publication, not a scheduled AI review or promise of feedback exactly five hours later. Updated learning reviews wait after replies while the prior shared review remains readable. Existing private sheets are copied to a hidden backup in the same workbook before adding a deadline column; originals, permissions and file bytes are preserved.
+
 1. Inspect the maintained checkout and latest remote source before editing. Back up remote Apps Script content and deployment versions before backend changes; back up affected sheets before structural changes.
 2. For ordinary homework content, update the existing student/unit schema and keep archived permanent links. A teacher dashboard assignment is immediate and needs no build. Routine content changes need no new backend deployment.
 3. Run `npm test`, `npm run lint`, `npm audit` and `npm run build` with production configuration and no demo mode. The prebuild script generates manifests and a deployment-specific service-worker cache.
