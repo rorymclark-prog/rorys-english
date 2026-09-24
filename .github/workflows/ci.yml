@@ -1,0 +1,40 @@
+name: CI
+
+# Every push and every pull request. The suite is fast enough that there is no
+# reason to run a narrower one.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # `npm run lint` is tsc --noEmit — there is no ESLint in this project.
+      - name: Types
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      # The build is part of the check: a page that fails to pre-render is a
+      # page a student cannot open, and nothing else here would catch it.
+      - name: Build
+        run: npm run build

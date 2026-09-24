@@ -367,7 +367,7 @@ function getAi_(p) {
             "that Rory flagged it: " + note
           : "";
         if (p.kind === "writing") {
-          out = callClaude_("claude-sonnet-4-6", WRITING_SYSTEM + focusSuffix, q, 800);
+          out = callClaude_("claude-sonnet-5", WRITING_SYSTEM + focusSuffix, q, 800);
         } else if (p.kind === "tutor") {
           out = callClaude_("claude-haiku-4-5", TUTOR_SYSTEM + focusSuffix, q, 500);
         } else {
@@ -756,7 +756,7 @@ function analyseWritingWithClaude_(text, studentName) {
     muteHttpExceptions: true,
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
     payload: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: "claude-sonnet-5",
       max_tokens: 1024,
       system: WRITING_ASSESS_SYSTEM,
       tools: [WRITING_ASSESS_TOOL],
