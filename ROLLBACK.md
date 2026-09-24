@@ -65,7 +65,7 @@ them.
 
 ### `speaking-budget` (weekly speaking allowance)
 
-`npm run ui:rollback speaking-budget` takes the 15-minute weekly allowance off
+`npm run ui:rollback speaking-budget` takes the 35-minute weekly allowance off
 the speaking screen: conversations go back to a flat 15-minute cap per call
 with nothing counted between them. It is the first rollback feature with no
 stylesheet of its own — it changes behaviour and wording, not layout — so it

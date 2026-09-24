@@ -12,11 +12,31 @@ import { isStudentPreview } from "./student-preview";
 // fair-use guide, not a security boundary — clearing the browser clears it. The
 // hard ceiling is the monthly spend cap set in the OpenAI dashboard, which no
 // amount of clicking here can exceed.
+//
+// Where 35 comes from: live voice costs about €0.055 a minute all in (OpenAI's
+// $0.05 a minute for gpt-live-1, converted, plus the gpt-6-sol text delegation
+// in api/voice). 35 minutes a week is ~152 minutes a month, or about €8.35 per
+// student — the bottom of Rory's €8–11 per student band, which leaves roughly
+// €2.50 each of headroom for the extra minutes he grants on request.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Minutes of live conversation per student per week. */
-export const WEEKLY_MINUTES = 15;
+export const WEEKLY_MINUTES = 35;
 const WEEKLY_SECONDS = WEEKLY_MINUTES * 60;
+
+/**
+ * One conversation still ends at 15 minutes, as it always has. The weekly
+ * allowance is spent across several conversations, not in one sitting.
+ */
+export const CALL_MINUTES = 15;
+export const CALL_SECONDS = CALL_MINUTES * 60;
+
+/**
+ * Below this, the week counts as spent. Connecting a microphone for a
+ * conversation that dies after twenty seconds wastes everyone's time and still
+ * costs a session, so the last scrap of allowance is not offered at all.
+ */
+export const MIN_CALL_SECONDS = 60;
 const KEY = "re_speaking_week_v1_";
 
 /**
