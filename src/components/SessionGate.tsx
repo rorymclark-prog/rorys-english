@@ -68,17 +68,17 @@ export default function SessionGate({ code, children }: { code: string; children
     <h1 className="display text-3xl">Your English lessons</h1>
     <p className="signin-lede">{legacy ? "Use the private access code Rory gave you." : "Sign in with the email address you use with Rory."}</p>
     <form onSubmit={e => { e.preventDefault(); void run(async () => {
-      if (legacy) { await signOutAccount(); const r = await login(code, credential.trim()); if (!r.ok) setMessage(r.error || "Sign-in failed"); else setCredential(""); }
+      if (legacy) { await signOutAccount(); const r = await login(code, credential.trim(), remember); if (!r.ok) setMessage(r.error || "Sign-in failed"); else setCredential(""); }
       else { await signInAccount(email, credential, remember); await finishAccount(); }
     }); }}>
       {!legacy && <><label className="signin-field" htmlFor="email">Email address</label><input id="email" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={e=>setEmail(e.target.value)} className="signin-input" /></>}
       <label className="signin-field" htmlFor="access">{legacy ? "Access code" : "Password"}</label>
       <input id="access" name="password" type="password" autoComplete="current-password" required value={credential} onChange={e=>setCredential(e.target.value)} className="signin-input" />
-      {!legacy && <label className="signin-remember"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} />Keep me signed in on this device</label>}
+      <label className="signin-remember"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} />Keep me signed in on this device</label>
       <button disabled={busy} className="signin-submit">{busy ? "Opening…" : "Sign in"}</button>
     </form>
+    <p className="signin-note">Use “Keep me signed in” on your own device. Leave it unticked on a shared computer.</p>
     {!legacy && <>
-      <p className="signin-note">Use “Keep me signed in” on your own device. Leave it unticked on a shared computer.</p>
       {googleEnabled && <button disabled={busy} type="button" className="signin-alt" onClick={()=>void run(async()=>{await signInGoogle(remember);await finishAccount();})}>Continue with Google</button>}
       <button disabled={busy} type="button" className="signin-link mt-5 block" onClick={()=>void run(async()=>{
         if (!email.trim() || !email.includes("@")) { setMessage("Enter your email address above first."); return; }
@@ -91,6 +91,6 @@ export default function SessionGate({ code, children }: { code: string; children
     </>}
     <p role="status" aria-live="polite" className="signin-message">{message}</p>
     {accountsEnabled && !code.includes("-fam-") && <button type="button" className="signin-switch" onClick={()=>{setLegacy(!legacy);setMessage("");setCredential("");}}>{legacy ? "Use email and password" : "Use my existing access code"}</button>}
-    {legacy && <p className="signin-note mt-4">Your code stays valid until Rory replaces it. This sign-in lasts up to six hours.</p>}
+    {legacy && <p className="signin-note mt-4">Your code stays valid until Rory replaces it. {remember ? "This device stays signed in until you sign out." : "This sign-in ends when you close the app."}</p>}
   </main>;
 }

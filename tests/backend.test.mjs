@@ -69,14 +69,17 @@ test("remembered teacher sessions are invalidated by expiry or password rotation
     assert.equal(f.post({action:"teacherDashboard",session:s.token}).authRequired,true);
   }
 });
-test("shared-device sessions keep the six-hour limit; only an authenticated teacher can remember",()=>{
+test("an unticked box keeps the six-hour limit, and no sign-in can mint a teacher device",()=>{
   const f=fixture(),s=f.post({action:"login",code:"__teacher__",credential:"synthetic-teacher",remember:false});
   assert.ok(s.expires-Date.now()<=21600000);f.cache.clear();
   assert.equal(f.post({action:"teacherDashboard",session:s.token}).authRequired,true);
   assert.equal(f.post({action:"login",code:"__teacher__",credential:"wrong",remember:true}).ok,false);
   const access=f.post({action:"teacherAccess",code:"student-a",session:f.teacher()});
-  const student=f.post({action:"login",code:"student-a",credential:access.access,remember:true});
-  assert.equal(student.role,"student");assert.ok(student.expires-Date.now()<=21600000);
+  const plain=f.post({action:"login",code:"student-a",credential:access.access});
+  assert.equal(plain.role,"student");assert.ok(plain.expires-Date.now()<=21600000);
+  // A student ticking the box gets a student device, never a teacher one.
+  const remembered=f.post({action:"login",code:"student-a",credential:access.access,remember:true});
+  assert.equal(remembered.role,"student");
   assert.equal([...f.props.keys()].some(k=>k.startsWith("remembered_teacher_")),false);
 });
 test("remembered session storage is bounded and prunes invalid records without deleting other properties",()=>{
@@ -219,4 +222,51 @@ test('expired and wrong-project identity tokens cannot create sessions',()=>{
   for(const claims of [{exp:1},{aud:'different-project'},{iss:'https://attacker.example'},{sub:''},{iat:Date.now()/1000+3600}]) {
     const f=fixture();assert.equal(f.post({action:'firebaseLogin',code:'student-a',idToken:identityToken(claims)}).ok,false);assert.equal(f.identity.calls,0);
   }
+});
+test("a remembered student sign-in survives the six-hour cache, and only as a student",()=>{
+  const f=fixture();
+  const granted=f.ctx.setAccess_({code:"student-a"});
+  const remembered=f.ctx.login_({code:"student-a",credential:granted.access,remember:true});
+  assert.equal(remembered.ok,true);
+  assert.ok(remembered.token.startsWith("rs_"),"a remembered student token is durable, not a cache key");
+  assert.ok(remembered.expires-Date.now()>29*24*60*60*1000,"remembered means days, not hours");
+  // The whole point: CacheService can be evicted, and closing the app used to
+  // lose the session anyway. A durable record has to outlive both.
+  f.cache.clear();
+  assert.equal(f.ctx.session_(remembered.token).code,"student-a");
+  // Unticked still behaves exactly as before.
+  const plain=f.ctx.login_({code:"student-a",credential:granted.access});
+  assert.ok(!plain.token.startsWith("rs_"));
+  assert.ok(plain.expires-Date.now()<=21600*1000);
+  f.cache.clear();
+  assert.equal(f.ctx.session_(plain.token),null);
+  // A remembered student token must never resolve to teacher rights, whatever
+  // the stored record claims.
+  const key=Object.keys(Object.fromEntries(f.props)).find(k=>k.startsWith("remembered_student_"));
+  f.props.set(key,JSON.stringify({code:"__teacher__",role:"teacher",expires:Date.now()+1e9,version:f.ctx.version_("__teacher__")}));
+  assert.equal(f.ctx.session_(remembered.token),null);
+});
+test("signing out, and replacing the access code, both revoke a remembered device",()=>{
+  for (const revoke of ["logout","rotate"]) {
+    const f=fixture();
+    const granted=f.ctx.setAccess_({code:"student-a"});
+    const session=f.ctx.login_({code:"student-a",credential:granted.access,remember:true});
+    assert.equal(f.ctx.session_(session.token).role,"student");
+    if (revoke==="logout") f.post({action:"logout",session:session.token});
+    else f.ctx.setAccess_({code:"student-a"});
+    f.cache.clear();
+    assert.equal(f.ctx.session_(session.token),null,`${revoke} must end a remembered device`);
+  }
+});
+test("one student's devices are capped without evicting another student's",()=>{
+  const f=fixture();
+  const granted=f.ctx.setAccess_({code:"student-a"});
+  const parent=f.ctx.setAccess_({code:"student-a",parent:true});
+  const parentSession=f.ctx.login_({code:"parent-a",credential:parent.access,remember:true});
+  const tokens=[];
+  for (let i=0;i<7;i++) tokens.push(f.ctx.login_({code:"student-a",credential:granted.access,remember:true}).token);
+  const live=tokens.filter(t=>f.ctx.session_(t));
+  assert.equal(live.length,5,"at most five remembered devices per code");
+  assert.deepEqual(live,tokens.slice(-5),"the oldest devices are the ones dropped");
+  assert.equal(f.ctx.session_(parentSession.token).role,"parent","pruning one code must not touch another");
 });

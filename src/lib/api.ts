@@ -13,9 +13,18 @@ export function savedSession(code: string): Session | null {
   return readSession<Session>(code);
 }
 export function forgetSession(code: string) {
+  // Both areas, always. Signing out has to mean signed out, whichever one the
+  // sign-in happened to land in.
   try { sessionStorage.removeItem(key(code)); } catch { /* nothing persisted */ }
-  if(code === "__teacher__")try {localStorage.removeItem(key(code));}catch{/* nothing persisted */}
+  try { localStorage.removeItem(key(code)); } catch { /* nothing persisted */ }
   window.dispatchEvent(new CustomEvent("re-auth-change"));
+}
+// One place decides where a sign-in lives: remembered goes to localStorage and
+// survives the app closing, otherwise sessionStorage and it ends with the tab.
+function storeSession(code: string, value: unknown, remember: boolean) {
+  const raw = JSON.stringify(value);
+  if (remember) { localStorage.setItem(key(code), raw); try { sessionStorage.removeItem(key(code)); } catch { /* nothing persisted */ } }
+  else { sessionStorage.setItem(key(code), raw); try { localStorage.removeItem(key(code)); } catch { /* nothing persisted */ } }
 }
 export async function request<T extends ApiResult>(body: Record<string, unknown>): Promise<T> {
   if (isStudentPreview() && !PREVIEW_READS.has(String(body.action))) return {ok:false,error:PREVIEW_NOTICE} as T;
@@ -54,13 +63,17 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
     : "Could not reach Rory’s app. Your saved draft is still on this device. Try again when connected." } as T;
 }
 export async function login(code: string, credential: string, remember = false): Promise<Session> {
-  const result = await request<Session>({ action: "login", code, credential, remember: code === "__teacher__" && remember });
+  const result = await request<Session>({ action: "login", code, credential, remember });
   if (result.ok && result.token) {
-    try {sessionStorage.setItem(key(code), JSON.stringify(result));if(code === "__teacher__"){if(remember)localStorage.setItem(key(code),JSON.stringify(result));else localStorage.removeItem(key(code));}}
+    try { storeSession(code, result, remember); }
     catch {return {...result,ok:false,error:"This browser cannot store a sign-in. Enable session storage or use a private device."};}
     window.dispatchEvent(new CustomEvent("re-auth-change"));
   }
   return result;
+}
+async function accountRemembered(): Promise<boolean> {
+  try { const { accountIsRemembered } = await import("./account-auth"); return accountIsRemembered(); }
+  catch { return false; }
 }
 export async function loginWithAccount(code: string): Promise<Session> {
   const { currentAccount } = await import("./account-auth");
@@ -73,7 +86,9 @@ export async function loginWithAccount(code: string): Promise<Session> {
     return {ok:false,error:"Your account changed. Please sign in again.",token:"",expires:0,role:"student"};
   }
   if (result.ok && result.authProvider === "firebase" && result.accountUid === user.uid) {
-    try { sessionStorage.setItem(key(code), JSON.stringify(result)); }
+    // Match where Firebase itself persisted: a remembered account keeps its
+    // session across an app close instead of waiting on a fresh renew().
+    try { storeSession(code, result, await accountRemembered()); }
     catch { return {...result,ok:false,error:"This browser cannot store a sign-in. Please use a browser with storage enabled."}; }
     window.dispatchEvent(new CustomEvent("re-auth-change"));
   } else if (!result.ok) forgetSession(code);
@@ -104,9 +119,11 @@ export async function logout(code: string) {
   if (code !== "__teacher__" && accountsEnabled) {
     const { signOutAccount } = await import("./account-auth");
     await signOutAccount();
-    for (const storedKey of Object.keys(sessionStorage)) {
-      if (!storedKey.startsWith("re_session_v2_")) continue;
-      try { if (JSON.parse(sessionStorage.getItem(storedKey) || "null")?.authProvider === "firebase") sessionStorage.removeItem(storedKey); } catch { /* invalid entry */ }
+    for (const area of [sessionStorage, localStorage]) {
+      for (const storedKey of Object.keys(area)) {
+        if (!storedKey.startsWith("re_session_v2_")) continue;
+        try { if (JSON.parse(area.getItem(storedKey) || "null")?.authProvider === "firebase") area.removeItem(storedKey); } catch { /* invalid entry */ }
+      }
     }
     window.dispatchEvent(new CustomEvent("re-auth-change"));
   }

@@ -34,6 +34,14 @@ export async function signInGoogle(remember: boolean) {
   provider.setCustomParameters({ prompt: "select_account" });
   return signInWithPopup(a, provider);
 }
+// Firebase writes browserLocalPersistence to IndexedDB and session persistence
+// to sessionStorage, so "did this account ask to be remembered?" is answerable
+// without storing a second copy of the answer ourselves.
+export function accountIsRemembered(): boolean {
+  if (!accountsEnabled) return false;
+  try { return !Object.keys(sessionStorage).some(k => k.startsWith("firebase:authUser:")); }
+  catch { return false; }
+}
 export async function signOutAccount() { if (accountsEnabled) await signOut(auth()); }
 export async function resetAccountPassword(email: string) { await sendPasswordResetEmail(auth(), email.trim()); }
 export async function verifyAccountEmail() {

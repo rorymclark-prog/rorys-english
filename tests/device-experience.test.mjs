@@ -47,8 +47,12 @@ test("malformed, expired or wrong-role tab data cannot shadow a valid remembered
     f.sessionStorage.setItem("re_session_v2___teacher__", stale);
     assert.equal(api.savedSession("__teacher__").token, teacher.token);
   }
+  // A student may now keep a sign-in on their own device, so localStorage is
+  // read for them too. The role check is what keeps the routes apart.
   f.localStorage.setItem("re_session_v2_learner", JSON.stringify({ ...teacher, role: "student" }));
-  assert.equal(api.savedSession("learner"), null);
+  assert.equal(api.savedSession("learner").token, teacher.token);
+  f.localStorage.setItem("re_session_v2_learner", JSON.stringify(teacher));
+  assert.equal(api.savedSession("learner"), null, "a teacher-role record under a student key must stay shut");
 });
 test("shared-device login removes remembered sign-in and does not survive closing the tab", async () => {
   const f = browser();

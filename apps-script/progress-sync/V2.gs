@@ -1,7 +1,10 @@
 // Public API: POST only, authenticated sessions, no browser-shipped secret.
 var SESSION_TTL_ = 21600;
-var REMEMBERED_TEACHER_TTL_ = 30 * 24 * 60 * 60;
+var REMEMBERED_TTL_ = 30 * 24 * 60 * 60;
 var REMEMBERED_TEACHER_PREFIX_ = 'remembered_teacher_';
+var REMEMBERED_STUDENT_PREFIX_ = 'remembered_student_';
+// A student has a phone, maybe a tablet. Far lower than the teacher's 20.
+var REMEMBERED_STUDENT_DEVICES_ = 5;
 var SUBMISSION_HEADERS_ = ['Id','Task','Unit','Submitted','Answers JSON','Status','Feedback','Reviewed','Title','Prompts JSON','Feedback available after'];
 var TEACHER_REVIEW_WINDOW_MS_ = 5 * 60 * 60 * 1000;
 function reviewAvailableAfter_() {return new Date(Date.now()+TEACHER_REVIEW_WINDOW_MS_).toISOString();}
@@ -22,16 +25,21 @@ function version_(code) {
 }
 function session_(token) {
   if (!token || typeof token !== 'string' || token.length>200) return null;
-  var remembered=token.indexOf('rt_')===0;
-  var key=(remembered?REMEMBERED_TEACHER_PREFIX_:'session_')+digest_(token);
-  // CacheService is best-effort and capped at six hours. Remembered teacher
-  // sessions use durable properties and are rechecked on EVERY request so
-  // logout/password rotation cannot leave a valid cached copy behind.
+  var teacherToken=token.indexOf('rt_')===0, studentToken=token.indexOf('rs_')===0;
+  var remembered=teacherToken||studentToken;
+  var key=(teacherToken?REMEMBERED_TEACHER_PREFIX_:studentToken?REMEMBERED_STUDENT_PREFIX_:'session_')+digest_(token);
+  // CacheService is best-effort and capped at six hours, which is why closing
+  // the app used to mean signing in again. Remembered devices (teacher and
+  // student) use durable properties and are rechecked on EVERY request, so
+  // logout, a password change or a replaced access code cannot leave a valid
+  // copy behind.
   var raw=remembered?authProps_().getProperty(key):CacheService.getScriptCache().get(key);
   if (!raw) return null;
   try {
     var s=JSON.parse(raw);
-    if (remembered && (s.code!=='__teacher__'||s.role!=='teacher')) return null;
+    if (teacherToken && (s.code!=='__teacher__'||s.role!=='teacher')) return null;
+    // A remembered student token must never widen into a teacher session.
+    if (studentToken && (s.code==='__teacher__'||['student','parent'].indexOf(s.role)<0)) return null;
     if (s.expires > Date.now() && s.version === version_(s.code)) return s;
   } catch(e) { /* Invalid records fail closed. */ }
   if(remembered)authProps_().deleteProperty(key);
@@ -47,9 +55,30 @@ function issueRememberedTeacher_() {
   // Bound storage if a client repeatedly signs in; retain the newest devices.
   valid.sort(function(a,b){return a.expires-b.expires;});
   while(valid.length>=20)props.deleteProperty(valid.shift().key);
-  var token='rt_'+token_(), expires=Date.now()+REMEMBERED_TEACHER_TTL_*1000;
+  var token='rt_'+token_(), expires=Date.now()+REMEMBERED_TTL_*1000;
   props.setProperty(REMEMBERED_TEACHER_PREFIX_+digest_(token),JSON.stringify({code:'__teacher__',role:'teacher',expires:expires,version:currentVersion}));
   return {ok:true,token:token,expires:expires,role:'teacher'};
+}
+// Same shape as the teacher's remembered device, per student code: only the
+// token's hash is stored, every request rechecks expiry and the code version,
+// so replacing a student's access code still revokes every remembered device.
+function issueRemembered_(code,role) {
+  var props=authProps_(), all=props.getProperties(), currentVersion=version_(code), valid=[];
+  Object.keys(all).forEach(function(key){
+    if(key.indexOf(REMEMBERED_STUDENT_PREFIX_)!==0)return;
+    try {
+      var s=JSON.parse(all[key]);
+      // Only prune this student's own devices; other students keep theirs.
+      if(s.code!==code)return;
+      if(s.expires>Date.now()&&s.version===currentVersion){valid.push({key:key,expires:s.expires});return;}
+    } catch(e){}
+    props.deleteProperty(key);
+  });
+  valid.sort(function(a,b){return a.expires-b.expires;});
+  while(valid.length>=REMEMBERED_STUDENT_DEVICES_)props.deleteProperty(valid.shift().key);
+  var token='rs_'+token_(), expires=Date.now()+REMEMBERED_TTL_*1000;
+  props.setProperty(REMEMBERED_STUDENT_PREFIX_+digest_(token),JSON.stringify({code:code,role:role,expires:expires,version:currentVersion}));
+  return {ok:true,token:token,expires:expires,role:role};
 }
 function issueSession_(code,role,ttl) {
   ttl=Math.max(1,Math.min(SESSION_TTL_,Number(ttl)||SESSION_TTL_));
@@ -78,7 +107,8 @@ function login_(p) {
     }
     if(!valid) return {ok:false,error:'Sign-in failed. Check your access code with Rory.'};
     cache.remove(key);
-    return role==='teacher' && p.remember===true ? issueRememberedTeacher_() : issueSession_(code,role);
+    if(p.remember!==true) return issueSession_(code,role);
+    return role==='teacher' ? issueRememberedTeacher_() : issueRemembered_(code,role);
   } finally {lock.releaseLock();}
 }
 function setAccess_(p) {
@@ -102,7 +132,7 @@ function doPost(e) {
     if(p.action==='firebaseLogin') return json_(firebaseLogin_(p));
     var s=session_(p.session);
     if(!s) return json_({ok:false,error:'Sign in again to continue.',authRequired:true});
-    if(p.action==='logout') {CacheService.getScriptCache().remove('session_'+digest_(p.session));authProps_().deleteProperty(REMEMBERED_TEACHER_PREFIX_+digest_(p.session));return json_({ok:true});}
+    if(p.action==='logout') {CacheService.getScriptCache().remove('session_'+digest_(p.session));authProps_().deleteProperty(REMEMBERED_TEACHER_PREFIX_+digest_(p.session));authProps_().deleteProperty(REMEMBERED_STUDENT_PREFIX_+digest_(p.session));return json_({ok:true});}
     var teacher=s.role==='teacher', student=studentByAnyCode_(s.code);
     if(!teacher && (!student || p.code!==s.code)) return json_({ok:false,error:'Access denied'});
     var reads=['progress','resources','assignments','note','submissions','documents','document','documentFile','learningRecords'];
