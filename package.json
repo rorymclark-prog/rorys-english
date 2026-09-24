@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "node scripts/gen-pwa.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/gen-pwa.mjs",
+    "prebuild": "node scripts/check-roster.mjs && node scripts/gen-pwa.mjs",
     "build": "next build",
     "start": "next start",
     "deploy": "vercel --prod",

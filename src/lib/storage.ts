@@ -120,7 +120,11 @@ export function getStreakDays(studentId: string): string[] {
   const raw = read(streakKey(studentId));
   if (!raw) return [];
   try {
-    return JSON.parse(raw) as string[];
+    // Device storage, so anything could be in here. Every entry has to be a day
+    // string: touchStreak calls .includes on this, and bestStreak sorts it.
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((d): d is string => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d));
   } catch {
     return [];
   }
