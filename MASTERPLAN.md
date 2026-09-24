@@ -180,16 +180,23 @@ rorys-english/
 
 ## 7. Current status — what EXISTS and what's been TESTED
 
-**Legend:** ✅ done & verified · 🟡 partial · 🔭 planned
+**Legend:** ✅ done & verified · 🟡 partial · 🔭 planned · ❌ removed
+
+> **Checked against the code on 24 September 2026.** Four rows below claimed
+> features that no longer had a single call site: `3d9386b` ("Launch private
+> homework submissions") replaced the tick-and-confetti model with private
+> submissions and deleted the callers, but this table was never updated.
+> A row saying ✅ "browser-verified" is worth nothing if nobody re-checks it
+> after the screen is rewritten — so re-verify these rows when you touch them.
 
 ### 7.1 The app
 | Feature | Status | Tested how |
 |---|---|---|
-| Today screen (greeting, "due now" card, 7-day activity strip + current/best streak) | ✅ | browser-verified on mobile viewport |
+| Today screen (greeting, "due now" card, 7-day activity strip + current/best streak) | ✅ | strip was disconnected by `3d9386b` and rebuilt in `f5aad52` as `MomentumStrip`; 11 unit tests in `tests/momentum.test.mjs` + browser-verified at 390×844 |
 | Study screen (cards link out to external HTML tools, open in new tab) | ✅ | verified link target `_blank`, correct URL |
-| Homework: week list with per-week "ticked" count + completion ticks | ✅ | verified live |
-| Homework week: checkbox / lined-textarea (debounced autosave) / voice-prompt tasks | ✅ | **persistence verified across reload** |
-| "Mark complete" → green state + confetti + haptics | ✅ | verified click → flag + confetti DOM |
+| Homework: week list with per-week "ticked" count + completion ticks | ❌ | **gone.** The list now shows Rory's assignments with a status *he* sets ("Marked complete"). There is no student-side tick and no per-week count; `getTaskChecked`/`setTaskChecked` in `storage.ts` have no callers |
+| Homework week: checkbox / lined-textarea (debounced autosave) / voice-prompt tasks | 🟡 | every task type now renders as a textarea inside `SubmissionForm`; `checkbox` and `voice` survive only as the wording above the box. Debounced draft autosave and persistence across reload are real |
+| "Mark complete" → green state + confetti + haptics | ❌ | **gone, and deliberately not restored.** No caller for `setWeekComplete`, `confettiBurst` or `haptic`. `design/MODERN-2026-SPEC.md` §6 forbids confetti ("no confetti, no hype copy") and requires zero guilt mechanics, so the spec — not this row — is the intent. Sending work is the completion signal now |
 | Add homework due date to calendar (.ics download, RFC-5545 UTC stamp) | ✅ | button renders; ICS builder unit-correct |
 | Settings: text size, light/dark/auto theme, reset (with confirm) | ✅ | verified |
 | Settings: "Send my progress to Rory" (native share → WhatsApp, clipboard fallback) | ✅ | verified summary content |
