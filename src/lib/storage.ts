@@ -189,7 +189,9 @@ export interface Settings {
   textScale: TextScale;
   theme: Theme;
 }
-export const DEFAULT_SETTINGS: Settings = { textScale: "normal", theme: "light" };
+// "system" follows the phone. Dark is the flagship look for these students,
+// and most of their phones are already in it.
+export const DEFAULT_SETTINGS: Settings = { textScale: "normal", theme: "system" };
 
 function settingsKey(studentId: string): string {
   return `${studentId}_settings`;
@@ -200,7 +202,11 @@ export function getSettings(studentId: string): Settings {
   if (!raw) return { ...DEFAULT_SETTINGS };
   try {
     const s = { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<Settings>) };
-    if (!["light", "dark", "system"].includes(s.theme)) s.theme = "light";
+    // Every field is validated: this is device storage a student could have
+    // half-written offline, and an unknown value must not reach the document.
+    if (!["light", "dark", "system"].includes(s.theme)) s.theme = "system";
+    if (!["normal", "large", "xl"].includes(s.textScale)) s.textScale = "normal";
+    if (s.palette !== undefined && !["blue", "indigo", "clay"].includes(s.palette)) delete s.palette;
     return s;
   } catch {
     return { ...DEFAULT_SETTINGS };

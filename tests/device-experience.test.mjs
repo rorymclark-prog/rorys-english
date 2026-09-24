@@ -59,12 +59,12 @@ test("shared-device login removes remembered sign-in and does not survive closin
   assert.equal(f.localStorage.getItem("re_session_v2___teacher__"), null);
   f.sessionStorage.clear(); assert.equal(api.savedSession("__teacher__"), null);
 });
-test("light is the initial and stored-settings default; dark only follows an explicit choice", () => {
+test("the device's setting is the default; only an explicit Light or Dark overrides it", () => {
   const appearance = load("src/lib/appearance.ts"), f = browser();
   const settings = load("src/lib/storage.ts", f);
-  assert.equal(settings.getSettings("learner").theme, "light");
+  assert.equal(settings.getSettings("learner").theme, "system");
   for (const theme of [undefined, "invalid", "light", "dark", "system"]) for (const systemDark of [false, true]) {
-    const expected = theme === "dark" || (theme === "system" && systemDark);
+    const expected = theme === "dark" || (theme !== "light" && systemDark);
     assert.equal(appearance.usesDarkTheme(theme, systemDark), expected);
     let actual;
     const meta = { content: "" };
@@ -108,4 +108,13 @@ test("handwritten answers retain typed wording and private IDs, never arbitrary 
   assert.throws(() => h.handwritingReference("https://evil.example"));
   assert.equal(h.handwritingParts("[Handwritten answer: https://evil.example]").documentIds.length, 0);
   assert.equal(h.handwritingParts(h.handwritingReference(id) + h.handwritingReference(id)).documentIds.length, 1);
+});
+
+test("unreadable appearance settings are normalised instead of reaching the document", () => {
+  const f = browser(), settings = load("src/lib/storage.ts", f);
+  f.localStorage.setItem("learner_settings", JSON.stringify({ theme: "neon", textScale: "huge", palette: "chartreuse" }));
+  const s = settings.getSettings("learner");
+  assert.equal(s.theme, "system");
+  assert.equal(s.textScale, "normal");
+  assert.equal(s.palette, undefined);
 });
