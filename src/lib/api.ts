@@ -3,7 +3,9 @@ import { isStudentPreview, previewTeacherSession, PREVIEW_READS, PREVIEW_NOTICE 
 import { readSession, sessionKey as key } from "./session-storage";
 
 const endpoint = process.env.NEXT_PUBLIC_SYNC_URL || "";
-export interface ApiResult { ok: boolean; error?: string; authRequired?: boolean }
+// `offline` marks replies we synthesised because the service never replied.
+// The outbox reads it to wait, rather than blame the submission.
+export interface ApiResult { ok: boolean; error?: string; authRequired?: boolean; offline?: boolean }
 export interface Session extends ApiResult { token: string; expires: number; role: string; authProvider?: "firebase"; accountUid?: string; verificationRequired?: boolean }
 const accountsEnabled = !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 let accountEpoch = 0;
@@ -22,13 +24,15 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
   // sign-in and reads is safe; writes and AI calls retain their explicit flow.
   const retryable = new Set(["login", "accountLogin", "progress", "resources", "assignments", "note", "submissions", "teacherDashboard", "documents", "document", "documentFile", "learningRecords"]);
   const attempts = retryable.has(String(body.action)) ? 2 : 1;
+  // Did the service reply at all, even to refuse? Then this is not an outage.
+  let answered = false;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 45000);
     try {
       const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body), signal: controller.signal });
       if (!res.ok) {
-        if (![404, 429, 500, 502, 503, 504].includes(res.status)) break;
+        if (![404, 429, 500, 502, 503, 504].includes(res.status)) { answered = true; break; }
         throw new Error("temporarily unavailable");
       }
       const value = await res.json() as T & {service?: string; token?: string; expires?: number; role?: string};
@@ -43,7 +47,7 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
       if (attempt + 1 < attempts) await new Promise(resolve => setTimeout(resolve, 500));
     } finally { clearTimeout(timeout); }
   }
-  return { ok: false, error: ["login", "accountLogin"].includes(String(body.action))
+  return { ok: false, offline: !answered, error: ["login", "accountLogin"].includes(String(body.action))
     ? "Could not confirm sign-in because the service is taking too long. Please try again; you do not need to change your password."
     : body.action === "documentUpload" ? "Could not confirm the upload. Keep this page open and retry; the same upload will be checked."
     : ["documentAnalyse","documentChat"].includes(String(body.action)) ? "Could not confirm the AI result yet. Your original is saved. Check for updates before retrying."
