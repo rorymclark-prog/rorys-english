@@ -52,6 +52,24 @@ The commits, oldest first:
 | `9433992` | Roster drift check, generated files ignored, streak guard | Yes |
 | `8c514cc` | The last two rows of this table | Yes — documentation only |
 | `77dec06` | Stay signed in across closing the app | Yes — students go back to signing in every time |
+| `48676eb` | The two rows above | Yes — documentation only |
+| `f5aad52` | Seven-day strip and streak back on Today | Prefer `ui:rollback momentum` for the strip alone |
+
+### Two patches need re-recording
+
+`npm run ui:rollbacks` reports `signin` and `homework` as **changed since
+release**, and both were already in that state before this pass — their files
+moved under them in earlier commits and nobody regenerated the patch. They are
+not usable as switches until they are rebuilt the way `today.patch` was:
+
+```bash
+npm run ui:rollbacks
+```
+
+`today.patch` was regenerated in `f5aad52`, because the strip added a line to
+`TodayView.tsx`. Note that rolling back `today` takes the strip with it — the
+pre-refresh Today screen predates it — so restore `today` before touching
+`momentum`.
 
 ## 3. Undo the whole pass
 
