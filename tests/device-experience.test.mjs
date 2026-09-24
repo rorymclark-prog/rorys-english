@@ -118,3 +118,12 @@ test("unreadable appearance settings are normalised instead of reaching the docu
   assert.equal(s.textScale, "normal");
   assert.equal(s.palette, undefined);
 });
+
+test("the theme is on the document before the sign-in screen paints, not after the gate", () => {
+  const shell = fs.readFileSync(new URL("../src/components/AppShell.tsx", import.meta.url), "utf8");
+  const script = shell.indexOf("themeScript("), gate = shell.indexOf("<SessionGate");
+  assert.ok(script > -1, "AppShell must render the pre-paint theme script itself");
+  assert.ok(script < gate, "the theme script must come before <SessionGate>, or students sign in on a light screen whatever they chose");
+  const provider = fs.readFileSync(new URL("../src/components/SettingsContext.tsx", import.meta.url), "utf8");
+  assert.ok(!provider.includes("themeScript("), "the provider's own copy would sit inside the gate again");
+});

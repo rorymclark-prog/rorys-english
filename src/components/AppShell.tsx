@@ -12,13 +12,19 @@ import StudentNavigation from "./StudentNavigation";
 import QuickAppearance from "./QuickAppearance";
 import ProfileAvatar from "./ProfileAvatar";
 import { isStudentPreview, endStudentPreview } from "@/lib/student-preview";
+import { themeScript } from "@/lib/appearance";
 
 /** Wraps every student screen: providers + scrollable content + bottom tabs. */
 export default function AppShell({ ctx, children }: { ctx: StudentCtx; children: React.ReactNode }) {
   const preview=isStudentPreview(ctx.code);
+  const settingsId = preview ? "__teacher__" : ctx.studentId;
   return (
+    <>
+    {/* Above the gate on purpose. The student's theme has to be on the document
+        before the sign-in screen paints, not only once they are inside. */}
+    <script dangerouslySetInnerHTML={{ __html: themeScript(settingsId) }} />
     <SessionGate code={ctx.code}><StudentProvider value={ctx}>
-      <SettingsProvider studentId={preview?"__teacher__":ctx.studentId}>
+      <SettingsProvider studentId={settingsId}>
         <OfflineBanner />
         {!preview&&<OutboxStatus code={ctx.code}/> }
         <a href="#student-content" className="re-skip-link">Skip to content</a>
@@ -29,5 +35,6 @@ export default function AppShell({ ctx, children }: { ctx: StudentCtx; children:
         <TabBar />
       </SettingsProvider>
     </StudentProvider></SessionGate>
+    </>
   );
 }

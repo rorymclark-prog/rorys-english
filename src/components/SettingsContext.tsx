@@ -7,7 +7,7 @@ import {
   saveSettings,
   type Settings,
 } from "@/lib/storage";
-import { themeScript, usesDarkTheme } from "@/lib/appearance";
+import { usesDarkTheme } from "@/lib/appearance";
 
 interface SettingsCtx {
   settings: Settings;
@@ -56,7 +56,6 @@ export function SettingsProvider({ studentId, children }: { studentId: string; c
 
   return (
     <Ctx.Provider value={{ settings, ready, update }}>
-      <script dangerouslySetInnerHTML={{ __html: themeScript(studentId) }} />
       {children}
     </Ctx.Provider>
   );
