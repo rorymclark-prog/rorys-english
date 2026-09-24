@@ -50,6 +50,8 @@ The commits, oldest first:
 | `433a082` | The `signin` rollback feature itself | Only together with `5764da1` |
 | `8b7ce6e` | ROLLBACK.md, the plan correction, PRIVACY.md | Yes — documentation only |
 | `9433992` | Roster drift check, generated files ignored, streak guard | Yes |
+| `8c514cc` | The last two rows of this table | Yes — documentation only |
+| `77dec06` | Stay signed in across closing the app | Yes — students go back to signing in every time |
 
 ## 3. Undo the whole pass
 
@@ -72,5 +74,13 @@ git worktree remove ../rorys-english-audit && git branch -D audit/hardening-and-
 blocks nothing — there is nothing to roll back until someone renames the header
 in `next.config.mjs`. Do that only after a week of real use reports nothing.
 
-**Apps Script.** The Sonnet 5 bump changes the checked-in copy only. It reaches
-the live script when someone runs `clasp push`, which nobody has.
+**Apps Script.** The Sonnet 5 bump and the remembered student session change
+the checked-in copy only. They reach the live script when someone runs
+`clasp push`, which nobody has.
+
+**Half of `77dec06` is already useful without that push.** The client stops
+throwing away a session when the app closes, which turns "sign in every time"
+into "sign in at most once every six hours" the moment it deploys. The push is
+what turns six hours into thirty days. Reverting the commit reverts both
+halves; to keep the client half and drop the server half, revert only
+`apps-script/progress-sync/V2.gs` and its README.
