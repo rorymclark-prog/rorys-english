@@ -1,0 +1,64 @@
+diff --git a/src/components/SessionGate.tsx b/src/components/SessionGate.tsx
+index 2fbbfc2..7cd01cb 100644
+--- a/src/components/SessionGate.tsx
++++ b/src/components/SessionGate.tsx
+@@ -57,40 +57,37 @@ export default function SessionGate({ code, children }: { code: string; children
+     try { await action(); } catch (error) { setMessage(accountError(error)); }
+     finally { setBusy(false); }
+   }
+-  if (!ready) return <main className="signin-skeleton" aria-busy="true" aria-label="Opening your lessons">
+-    <span /><span /><span /><span /><span />
+-  </main>;
++  if (!ready) return <p className="p-6">Opening your lessons…</p>;
+   if (signedIn) return <>{children}</>;
+-  if (isStudentPreview(code)) return <main className="signin mx-auto max-w-md p-8"><h1 className="display text-2xl">Teacher sign-in needed</h1><p className="signin-lede">Your preview session has ended. Sign in to your teacher workspace to continue.</p><button className="signin-submit" onClick={()=>{endStudentPreview();window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH||""}/teacher/`);}}>Back to teacher sign-in</button></main>;
+-  return <main className="signin mx-auto max-w-md px-6 py-12">
+-    <div aria-hidden className="signin-glow" />
+-    <p className="work-eyebrow">RORY’S ENGLISH</p>
++  if (isStudentPreview(code)) return <main className="mx-auto max-w-md p-8"><h1 className="text-2xl font-bold">Teacher sign-in needed</h1><p className="my-4">Your preview session has ended. Sign in to your teacher workspace to continue.</p><button className="min-h-11 rounded-xl bg-indigo-700 p-3 text-white" onClick={()=>{endStudentPreview();window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH||""}/teacher/`);}}>Back to teacher sign-in</button></main>;
++  return <main className="mx-auto max-w-md px-6 py-12">
++    <p className="mb-3 text-sm font-bold uppercase tracking-wide text-indigo-700">Rory’s English</p>
+     <h1 className="display text-3xl">Your English lessons</h1>
+-    <p className="signin-lede">{legacy ? "Use the private access code Rory gave you." : "Sign in with the email address you use with Rory."}</p>
++    <p className="my-4">{legacy ? "Use the private access code Rory gave you." : "Sign in with the email address you use with Rory."}</p>
+     <form onSubmit={e => { e.preventDefault(); void run(async () => {
+       if (legacy) { await signOutAccount(); const r = await login(code, credential.trim()); if (!r.ok) setMessage(r.error || "Sign-in failed"); else setCredential(""); }
+       else { await signInAccount(email, credential, remember); await finishAccount(); }
+     }); }}>
+-      {!legacy && <><label className="signin-field" htmlFor="email">Email address</label><input id="email" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={e=>setEmail(e.target.value)} className="signin-input" /></>}
+-      <label className="signin-field" htmlFor="access">{legacy ? "Access code" : "Password"}</label>
+-      <input id="access" name="password" type="password" autoComplete="current-password" required value={credential} onChange={e=>setCredential(e.target.value)} className="signin-input" />
+-      {!legacy && <label className="signin-remember"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} />Keep me signed in on this device</label>}
+-      <button disabled={busy} className="signin-submit">{busy ? "Opening…" : "Sign in"}</button>
++      {!legacy && <><label className="block" htmlFor="email">Email address</label><input id="email" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={e=>setEmail(e.target.value)} className="my-3 w-full rounded-xl border p-3 text-navy" /></>}
++      <label className="block" htmlFor="access">{legacy ? "Access code" : "Password"}</label>
++      <input id="access" name="password" type="password" autoComplete="current-password" required value={credential} onChange={e=>setCredential(e.target.value)} className="my-3 w-full rounded-xl border p-3 text-navy" />
++      {!legacy && <label className="mb-4 flex min-h-11 items-center gap-3"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} className="h-5 w-5" />Keep me signed in on this device</label>}
++      <button disabled={busy} className="min-h-12 w-full rounded-xl bg-indigo-700 p-3 font-bold text-white disabled:opacity-50">{busy ? "Opening…" : "Sign in"}</button>
+     </form>
+     {!legacy && <>
+-      <p className="signin-note">Use “Keep me signed in” on your own device. Leave it unticked on a shared computer.</p>
+-      {googleEnabled && <button disabled={busy} type="button" className="signin-alt" onClick={()=>void run(async()=>{await signInGoogle(remember);await finishAccount();})}>Continue with Google</button>}
+-      <button disabled={busy} type="button" className="signin-link mt-5 block" onClick={()=>void run(async()=>{
++      <p className="mt-3 text-sm">Use “Keep me signed in” on your own device. Leave it unticked on a shared computer.</p>
++      {googleEnabled && <button disabled={busy} type="button" className="mt-5 min-h-12 w-full rounded-xl border p-3 font-bold" onClick={()=>void run(async()=>{await signInGoogle(remember);await finishAccount();})}>Continue with Google</button>}
++      <button disabled={busy} type="button" className="mt-4 min-h-11 underline" onClick={()=>void run(async()=>{
+         if (!email.trim() || !email.includes("@")) { setMessage("Enter your email address above first."); return; }
+         await resetAccountPassword(email);
+         setMessage("If this email has an account, a password-setting link is on its way. Check your inbox and spam folder.");
+       })}>Set or reset password</button>
+-      <p className="signin-note">First visit? Enter your email and choose “Set or reset password” to choose your own password.</p>
+-      {needsVerification && <div className="signin-verify"><p>Verify your email before opening your work.</p><button disabled={busy} type="button" className="signin-link" onClick={()=>void run(async()=>{await verifyAccountEmail();setMessage("Check your inbox for the verification link.");})}>Send verification email</button><button disabled={busy} type="button" className="signin-link ml-4" onClick={()=>void run(async()=>{await reloadAccount();await finishAccount();})}>I’ve verified my email</button></div>}
+-      {hasAccount && <button type="button" className="signin-link mt-4 block" onClick={()=>void logout(code)}>Use another account</button>}
++      <p className="text-sm">First visit? Enter your email and choose “Set or reset password” to choose your own password.</p>
++      {needsVerification && <div className="mt-4 space-y-2 rounded-xl border p-3"><p>Verify your email before opening your work.</p><button disabled={busy} type="button" className="min-h-11 underline" onClick={()=>void run(async()=>{await verifyAccountEmail();setMessage("Check your inbox for the verification link.");})}>Send verification email</button><button disabled={busy} type="button" className="ml-3 min-h-11 underline" onClick={()=>void run(async()=>{await reloadAccount();await finishAccount();})}>I’ve verified my email</button></div>}
++      {hasAccount && <button type="button" className="mt-3 block min-h-11 underline" onClick={()=>void logout(code)}>Use another account</button>}
+     </>}
+-    <p role="status" aria-live="polite" className="signin-message">{message}</p>
+-    {accountsEnabled && !code.includes("-fam-") && <button type="button" className="signin-switch" onClick={()=>{setLegacy(!legacy);setMessage("");setCredential("");}}>{legacy ? "Use email and password" : "Use my existing access code"}</button>}
+-    {legacy && <p className="signin-note mt-4">Your code stays valid until Rory replaces it. This sign-in lasts up to six hours.</p>}
++    <p role="status" aria-live="polite" className="mt-4">{message}</p>
++    {accountsEnabled && !code.includes("-fam-") && <button type="button" className="mt-6 min-h-11 text-sm underline" onClick={()=>{setLegacy(!legacy);setMessage("");setCredential("");}}>{legacy ? "Use email and password" : "Use my existing access code"}</button>}
++    {legacy && <p className="mt-4 text-sm">Your code stays valid until Rory replaces it. This sign-in lasts up to six hours.</p>}
+   </main>;
+ }

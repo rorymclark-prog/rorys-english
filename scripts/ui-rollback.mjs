@@ -7,6 +7,7 @@ const patchDir=join(root,"ops","ui-rollbacks");
 const styleManifest=join(root,"src","app","visual-refresh.css");
 const descriptions={
   entry:"Private app entry page",
+  signin:"Student sign-in screen",
   navigation:"Sidebar, phone tabs and menu",
   today:"Student Today dashboard",
   homework:"Homework list and task detail",

@@ -1,5 +1,6 @@
 /* Each page area can be rolled back independently. */
 @import "./visual-refresh/entry.css";
+@import "./visual-refresh/signin.css";
 @import "./visual-refresh/header.css";
 @import "./visual-refresh/navigation.css";
 @import "./visual-refresh/homework.css";
