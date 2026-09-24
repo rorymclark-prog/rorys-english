@@ -48,6 +48,8 @@ The commits, oldest first:
 | `3ab9651` | Security headers, error screens, visibility-gated polling | Yes |
 | `a84e24f` | CI, Dependabot, Sonnet 5 | Yes |
 | `433a082` | The `signin` rollback feature itself | Only together with `5764da1` |
+| `8b7ce6e` | ROLLBACK.md, the plan correction, PRIVACY.md | Yes — documentation only |
+| `9433992` | Roster drift check, generated files ignored, streak guard | Yes |
 
 ## 3. Undo the whole pass
 
