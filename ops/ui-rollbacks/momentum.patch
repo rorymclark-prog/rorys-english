@@ -1,0 +1,20 @@
+diff --git a/src/components/views/TodayView.tsx b/src/components/views/TodayView.tsx
+index b1d925f..2a55919 100644
+--- a/src/components/views/TodayView.tsx
++++ b/src/components/views/TodayView.tsx
+@@ -8,7 +8,6 @@ import {fetchNote,fetchAssignments,rowToAssignment,isCurrentAssignment,type Assi
+ import {BookIcon,CheckSquareIcon,ChevronRightIcon,FileIcon,MessageIcon,PencilIcon,TargetIcon} from "@/components/Icons";
+ import {MicrophoneIcon,RepeatIcon} from "@/components/LearningVisuals";
+ import FeedbackText from "@/components/FeedbackText";
+-import MomentumStrip from "@/components/MomentumStrip";
+ 
+ function WeekLink({h,unit,base}:{h:HomeworkWeek;unit:Unit;base:string}){
+   const speaking=h.tasks.some(t=>t.type==="voice"),Icon=speaking?MicrophoneIcon:PencilIcon;
+@@ -24,7 +23,6 @@ export default function TodayView({unit}:{unit:Unit|null}){
+   const ready=(unit?.homework||[]).filter(h=>!h.availableFrom||h.availableFrom<=today);
+   return <main className="re-home today-page">
+     <header className="re-page-heading"><p className="re-eyebrow">YOUR LEARNING SPACE</p><h1>Hi, {displayName}. Here’s your next step.</h1><p>Pick one task, practise it, and come back for feedback.</p></header>
+-    <MomentumStrip studentId={studentId}/>
+     <div className="today-layout"><div className="today-primary">
+       <section className="today-next-section" aria-labelledby="today-work-title"><div className="today-section-heading"><div><p className="work-eyebrow">START HERE</p><h2 id="today-work-title">Ready for you</h2></div><Link href={`${base}/homework/`}>All homework <ChevronRightIcon/></Link></div>
+         {!loaded&&<div className="work-loading" role="status">Checking for updates from Rory…</div>}

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useStudent } from "@/components/StudentContext";
+import { markEffort } from "@/lib/momentum";
 import { isStudentPreview } from "@/lib/student-preview";
 import { savedSession } from "@/lib/api";
 import { currentAccount } from "@/lib/account-auth";
@@ -39,10 +40,10 @@ const grammarTargets = [
 type State = "idle" | "connecting" | "live" | "closing" | "ended";
 type Fragment = { speaker: "You" | "AI partner"; delta: string; start_ms: number; end_ms: number };
 export default function SpeakView({ lines, unitTitle }: { lines: string[]; unitTitle?: string }) {
-  const { code } = useStudent();
-  return <VoiceStudio code={code} lines={lines} unitTitle={unitTitle} />;
+  const { code, studentId } = useStudent();
+  return <VoiceStudio code={code} studentId={studentId} lines={lines} unitTitle={unitTitle} />;
 }
-export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, practiceOptions = [] }: { code: string; lines: string[]; teacherTest?: boolean; unitTitle?: string; practiceOptions?: { code: string; name: string; unit?: string }[] }) {
+export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitTitle, practiceOptions = [] }: { code: string; studentId?: string; lines: string[]; teacherTest?: boolean; unitTitle?: string; practiceOptions?: { code: string; name: string; unit?: string }[] }) {
   const preview = isStudentPreview();
   const [topic, setTopic] = useState(0); const [sessionTopic, setSessionTopic] = useState(0); const [available, setAvailable] = useState<boolean | null>(null);
   const [grammar, setGrammar] = useState("past-simple"); const [practiceStudent, setPracticeStudent] = useState(practiceOptions[0]?.code || "");
@@ -78,7 +79,7 @@ export function VoiceStudio({ code, lines, teacherTest = false, unitTitle, pract
     if (audio.current) audio.current.srcObject = null;
     wakeLock.current?.stop();
   }
-  function finish(message: string) { if(liveRecorder.current?.state==='recording')liveRecorder.current.stop();if(sampleStop.current)clearTimeout(sampleStop.current);dispose(); if (mounted.current) { setState("ended"); setStatus(message); setMuted(false); if(!teacherTest&&fragmentsRef.current.some(f=>f.speaker==='You'))void persistConversation(); } }
+  function finish(message: string) { if(liveRecorder.current?.state==='recording')liveRecorder.current.stop();if(sampleStop.current)clearTimeout(sampleStop.current);dispose(); if (mounted.current) { setState("ended"); setStatus(message); setMuted(false); if(!teacherTest&&fragmentsRef.current.some(f=>f.speaker==='You')){if(studentId)markEffort(studentId,code);void persistConversation();} } }
   async function persistConversation(){
     const id=sessionId.current;if(!id||savedId.current===id)return;savedId.current=id;
     setSaving(true);

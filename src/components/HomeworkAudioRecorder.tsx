@@ -4,8 +4,9 @@ import Link from "next/link";
 import {documentRequest,fileBase64,MAX_DOCUMENT_BYTES} from "@/lib/documents";
 import {isStudentPreview} from "@/lib/student-preview";
 import ReviewTiming from "@/components/ReviewTiming";
+import {markEffort} from "@/lib/momentum";
 
-export default function HomeworkAudioRecorder({code,unitId,week,title,prompt}:{code:string;unitId:string;week:number;title:string;prompt:string}){
+export default function HomeworkAudioRecorder({code,studentId,unitId,week,title,prompt}:{code:string;studentId:string;unitId:string;week:number;title:string;prompt:string}){
   const preview=isStudentPreview(code);
   const [recording,setRecording]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[sent,setSent]=useState(false),[file,setFile]=useState<File|null>(null),[url,setUrl]=useState("");
   const stream=useRef<MediaStream|null>(null),recorder=useRef<MediaRecorder|null>(null),parts=useRef<BlobPart[]>([]),take=useRef(crypto.randomUUID()),urlRef=useRef("");
@@ -35,7 +36,7 @@ export default function HomeworkAudioRecorder({code,unitId,week,title,prompt}:{c
     try{
       const result=await documentRequest(code,false,{action:"documentUpload",id:take.current,title:`${title} · individual talk`.slice(0,150),context:`${marker}\n${prompt}`.slice(0,2000),files:[{name:file.name,type:file.type,data:await fileBase64(file)}]});
       if(!result.ok||!result.received)throw new Error(result.error||"The upload was not confirmed. Keep this page open and try Send again.");
-      setSent(true);setFile(null);setUrl("");if(urlRef.current){URL.revokeObjectURL(urlRef.current);urlRef.current="";}
+      setSent(true);markEffort(studentId,code);setFile(null);setUrl("");if(urlRef.current){URL.revokeObjectURL(urlRef.current);urlRef.current="";}
     }catch(e){setError((e as Error).message||"The upload could not be confirmed. Try again.");}
     finally{setBusy(false);}
   }

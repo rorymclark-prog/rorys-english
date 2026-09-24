@@ -1,0 +1,43 @@
+/* Seven-day strip and streak counter. Ember is the reward channel and is used
+   nowhere else in the app (MODERN-2026-SPEC §1 rule 3), so its tokens live here
+   and leave with the feature. Contrast ratios are the spec's own. */
+:root{--re-ember:#c2410c;--re-emberdeep:#9a3412;--re-embersoft:#fde8d8}
+.dark{--re-ember:#f59d6e;--re-emberdeep:#f59d6e;--re-embersoft:#3a2318}
+
+.momentum-strip{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:15px 19px;margin:0 0 22px;border:1px solid var(--re-line);border-radius:17px;background:var(--re-surface)}
+.momentum-strip.is-placeholder{min-height:74px}
+.momentum-count{display:flex;align-items:baseline;gap:7px;flex-shrink:0}
+.momentum-count strong{font-size:1.85rem;font-weight:800;line-height:1;letter-spacing:-.04em;color:var(--re-ember)}
+.momentum-count span{font-size:.72rem;font-weight:700;color:var(--re-muted)}
+.momentum-count .momentum-quiet{font-size:.95rem;font-weight:800;color:var(--re-ink);letter-spacing:-.02em}
+.momentum-days{display:flex;gap:9px;margin-left:auto;padding-right:4px}
+.momentum-day{display:grid;justify-items:center;gap:5px}
+.momentum-day i{display:block;width:17px;height:17px;border-radius:50%;border:1.5px solid var(--re-line);background:transparent}
+.momentum-day.is-active i{border-color:transparent;background:var(--re-ember)}
+.momentum-day.is-today i{box-shadow:0 0 0 2px var(--re-surface),0 0 0 3.5px var(--re-ember)}
+.momentum-day span{font-size:.58rem;font-weight:750;color:var(--re-muted);letter-spacing:.02em}
+.momentum-day.is-active span{color:var(--re-emberdeep)}
+.momentum-note{flex-basis:100%;font-size:.71rem;line-height:1.6;color:var(--re-muted)}
+.momentum-note .tnum{color:var(--re-emberdeep);font-weight:750}
+
+/* The dots fill left to right the first time the strip is read, so a returning
+   week reads as movement rather than decoration. Motion only — nothing here
+   changes what the strip says. */
+@media(prefers-reduced-motion:no-preference){
+  .momentum-day i{animation:momentum-pop .32s cubic-bezier(.2,.7,.35,1) both}
+  .momentum-day:nth-child(2) i{animation-delay:.04s}
+  .momentum-day:nth-child(3) i{animation-delay:.08s}
+  .momentum-day:nth-child(4) i{animation-delay:.12s}
+  .momentum-day:nth-child(5) i{animation-delay:.16s}
+  .momentum-day:nth-child(6) i{animation-delay:.2s}
+  .momentum-day:nth-child(7) i{animation-delay:.24s}
+  @keyframes momentum-pop{from{transform:scale(.55);opacity:0}to{transform:scale(1);opacity:1}}
+}
+
+@media(max-width:700px){
+  .momentum-strip{gap:13px;padding:13px 15px;margin-bottom:18px}
+  .momentum-count strong{font-size:1.6rem}
+  .momentum-days{gap:7px}
+  .momentum-day i{width:15px;height:15px}
+}
+@media(max-width:360px){.momentum-days{gap:5px}.momentum-day i{width:13px;height:13px}}

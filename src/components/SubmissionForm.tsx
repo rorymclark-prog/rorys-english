@@ -10,7 +10,7 @@ import {handwritingParts} from "@/lib/handwritten-answer";
 import ReviewTiming from "@/components/ReviewTiming";
 import {useReviewRefresh} from "@/lib/use-review-refresh";
 export interface AnswerField {id:string;prompt:string;type?:string}
-export default function SubmissionForm({code,unit,task,title,fields,initialAnswers={},onSaved}:{code:string;unit:string;task:string;title?:string;fields:AnswerField[];initialAnswers?:Record<string,string>;onSaved?:(answers:Record<string,string>)=>void}) {
+export default function SubmissionForm({code,unit,task,title,fields,initialAnswers={},onSaved,onSubmitted}:{code:string;unit:string;task:string;title?:string;fields:AnswerField[];initialAnswers?:Record<string,string>;onSaved?:(answers:Record<string,string>)=>void;onSubmitted?:()=>void}) {
   const preview=isStudentPreview(code);
   const key=`re_draft_v2_${code}_${unit}_${task}`;
   const [answers,setAnswers]=useState<Record<string,string>>({});
@@ -52,6 +52,11 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
     const event=pending||{action:"submit",id:crypto.randomUUID(),code,unit,task,title:title||task,prompts:Object.fromEntries(fields.map(f=>[f.id,f.prompt])),answers:{...answers}};
     const r=await deliver(event);setBusy(false);
     setPending(outbox(code).find(e=>e.id===event.id)||null);
+    // The student pressed send and the work is on its way — delivered now, or
+    // queued for when they are back online. Both are the same effort, so both
+    // count. A failure that parks the submission still counts: the writing was
+    // done, and the streak must never punish a bad connection.
+    onSubmitted?.();
     if(r.ok) {setMessage("Received by Rory — waiting for review.");void refresh();}
     else setMessage(r.error||"Saved here, but not received yet. Retry when connected.");
   }
