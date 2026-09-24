@@ -37,8 +37,14 @@ export default function SessionGate({ code, children }: { code: string; children
       else { if (savedSession(code)?.authProvider === "firebase") forgetSession(code); refresh(); }
     }) : () => {};
     window.addEventListener("re-auth-change", refresh);
-    const timer = setInterval(() => { if (accountPresent && !savedSession(code)) void renew(); else refresh(); }, 30000);
-    return () => { active = false; unwatch(); window.removeEventListener("re-auth-change", refresh); clearInterval(timer); };
+    // Only while the app is actually on screen. A phone left on this tab for an
+    // afternoon was renewing every 30 seconds in the background, on the
+    // student's battery and data, for a screen nobody was looking at.
+    const tick = () => { if (document.visibilityState !== "visible") return; if (accountPresent && !savedSession(code)) void renew(); else refresh(); };
+    const timer = setInterval(tick, 30000);
+    // Coming back to the app should be immediate, not up to 30 seconds late.
+    document.addEventListener("visibilitychange", tick);
+    return () => { active = false; unwatch(); window.removeEventListener("re-auth-change", refresh); document.removeEventListener("visibilitychange", tick); clearInterval(timer); };
   }, [code]);
   async function finishAccount() {
     const r = await loginWithAccount(code);

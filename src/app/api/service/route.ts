@@ -27,8 +27,9 @@ async function backendSession(code: string, idToken: string, refresh = false): P
 }
 export async function POST(request: Request) {
   const headers = { "Cache-Control": "no-store, private" };
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return Response.json({ ok: false, error: "Origin not allowed" }, { status: 403, headers });
+  // Strict, like /api/voice: a browser always sends Origin on a POST, so a
+  // request without one is not a page of this app and must not be trusted.
+  if (request.headers.get("origin") !== new URL(request.url).origin) return Response.json({ ok: false, error: "Origin not allowed" }, { status: 403, headers });
   try {
     const text = await request.text();
     if (text.length > 3500000) return Response.json({ ok: false, error: "Request too large" }, { status: 413, headers });

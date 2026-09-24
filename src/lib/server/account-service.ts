@@ -25,7 +25,9 @@ export async function accountService(body: Record<string, unknown>, deps: Depend
   catch { return { ok: false, authRequired: true, error: "Please sign in again." }; }
   if (!identity.email_verified) return { ok: false, error: "Please verify your email address, then try again.", verificationRequired: true };
   const code = typeof body.code === "string" ? body.code : "";
-  const account = deps.roster[code];
+  // Own properties only — the roster is parsed from an env var, and a code like
+  // "constructor" must not resolve to something off Object.prototype.
+  const account = Object.hasOwn(deps.roster, code) ? deps.roster[code] : undefined;
   if (!account || account.uid !== identity.uid || account.email.toLowerCase() !== identity.email?.toLowerCase()) {
     return { ok: false, error: "This account is not connected to these lessons. Open your own lesson link or ask Rory." };
   }
