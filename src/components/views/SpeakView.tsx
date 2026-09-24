@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useStudent } from "@/components/StudentContext";
 import { markEffort } from "@/lib/momentum";
+import { WEEKLY_MINUTES, secondsLeft, recordSeconds } from "@/lib/speaking-budget";
 import { isStudentPreview } from "@/lib/student-preview";
 import { savedSession } from "@/lib/api";
 import { currentAccount } from "@/lib/account-auth";
@@ -37,6 +38,8 @@ const grammarTargets = [
   { id: "conditionals", title: "Conditionals" },
   { id: "sentence-building", title: "Build longer sentences" },
 ];
+const OUT_OF_MINUTES = `That is your ${WEEKLY_MINUTES} speaking minutes for this week. Ask Rory for more — he can add them, and asking is a good sign. Your allowance starts again on Monday.`;
+const spokenLeft = (seconds: number) => seconds >= 120 ? `${Math.floor(seconds / 60)} minutes` : seconds >= 60 ? "1 minute" : `${seconds} seconds`;
 type State = "idle" | "connecting" | "live" | "closing" | "ended";
 type Fragment = { speaker: "You" | "AI partner"; delta: string; start_ms: number; end_ms: number };
 export default function SpeakView({ lines, unitTitle }: { lines: string[]; unitTitle?: string }) {
@@ -50,6 +53,10 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
   const [voice,setVoice]=useState("vesper");
   const [state, setState] = useState<State>("idle"); const [status, setStatus] = useState("");
   const [muted, setMuted] = useState(false); const [elapsed, setElapsed] = useState(0);
+  // Read on the client only: localStorage does not exist while rendering on the
+  // server, so reading it during render would hydrate to the wrong allowance.
+  const [leftSecs, setLeftSecs] = useState<number | null>(null);
+  const capSeconds = useRef(900); const usedSeconds = useRef(0);
   const [fragments, setFragments] = useState<Fragment[]>([]); const [reflection, setReflection] = useState("");
   const [guided,setGuided]=useState<GuidedSpeaking|null>(null);
   const guidedRef=useRef<GuidedSpeaking|null>(null);
@@ -79,7 +86,11 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     if (audio.current) audio.current.srcObject = null;
     wakeLock.current?.stop();
   }
-  function finish(message: string) { if(liveRecorder.current?.state==='recording')liveRecorder.current.stop();if(sampleStop.current)clearTimeout(sampleStop.current);dispose(); if (mounted.current) { setState("ended"); setStatus(message); setMuted(false); if(!teacherTest&&fragmentsRef.current.some(f=>f.speaker==='You')){if(studentId)markEffort(studentId,code);void persistConversation();} } }
+  function finish(message: string) { if(liveRecorder.current?.state==='recording')liveRecorder.current.stop();if(sampleStop.current)clearTimeout(sampleStop.current);dispose();
+    // Bank the minutes whether or not the student spoke: a connected session
+    // costs the same either way, so the allowance has to reflect it.
+    if(!teacherTest&&studentId&&usedSeconds.current>0){recordSeconds(studentId,usedSeconds.current);usedSeconds.current=0;}
+    if (mounted.current) { setState("ended"); setStatus(message); setMuted(false); if(!teacherTest&&fragmentsRef.current.some(f=>f.speaker==='You')){if(studentId)markEffort(studentId,code);void persistConversation();} } }
   async function persistConversation(){
     const id=sessionId.current;if(!id||savedId.current===id)return;savedId.current=id;
     setSaving(true);
@@ -138,8 +149,20 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     setGuided(chat);guidedRef.current=chat;
     if(chat)setTopic(topics.findIndex(topic=>topic.id===chat.topic));
   },[code,teacherTest]);
+  useEffect(()=>{
+    if(teacherTest||!studentId)return;
+    const read=()=>setLeftSecs(secondsLeft(studentId));
+    read();
+    window.addEventListener("re-speaking-budget-change",read);
+    return ()=>window.removeEventListener("re-speaking-budget-change",read);
+  },[teacherTest,studentId]);
   async function start() {
     if (preview || !available || busy || saving || recording || recordBusy) return;
+    // The allowance is a fair-use guide, not a punishment: running out is the
+    // cue to ask Rory for more, and the wording says so.
+    const allowance = teacherTest || !studentId ? 900 : secondsLeft(studentId);
+    if (allowance <= 0) { setStatus(OUT_OF_MINUTES); return; }
+    capSeconds.current = Math.min(900, allowance); usedSeconds.current = 0;
     dispose(); setMicInterrupted(false); const run = generation.current;sessionId.current=crypto.randomUUID();savedId.current='';topicRef.current=topic;reflectionRef.current='';fragmentsRef.current=[];sampleReady.current=null;liveRecorder.current=null;if(sampleUrl.current)URL.revokeObjectURL(sampleUrl.current);sampleUrl.current='';setSampleDownload('');setSaveState('');setState("connecting"); setStatus("Connecting your microphone…"); setFragments([]); setElapsed(0); setReflection(""); setSessionTopic(topic);
     const check = () => { if (!mounted.current || run !== generation.current) throw new Error("cancelled"); };
     try {
@@ -172,7 +195,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
         if (event.type === "session.started") {
           if (timeout.current) clearTimeout(timeout.current); setState("live"); setStatus("Connected. Say hello when you’re ready.");
           if(mic.current)startSample(mic.current);
-          const started = Date.now(); timer.current = setInterval(() => { const seconds = Math.floor((Date.now() - started) / 1000); setElapsed(seconds); if (seconds >= 900) { if (timer.current) clearInterval(timer.current); end(); } }, 1000);
+          const started = Date.now(); timer.current = setInterval(() => { const seconds = Math.floor((Date.now() - started) / 1000); setElapsed(seconds); usedSeconds.current = seconds; if (seconds >= capSeconds.current) { if (timer.current) clearInterval(timer.current); end(); } }, 1000);
         } else if (event.type === "session.closed") finish("Conversation ended. Keep one useful phrase and one next step.");
         else if (["session.input_transcript.delta", "session.output_transcript.delta"].includes(event.type) && typeof event.delta === "string") {
           const f: Fragment = { speaker: event.type === "session.input_transcript.delta" ? "You" : "AI partner", delta: event.delta, start_ms: Number(event.start_ms) || 0, end_ms: Number(event.end_ms) || 0 };
@@ -215,6 +238,9 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "my-speaking-practice.txt"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   const transcript = (speaker: Fragment["speaker"]) => fragments.filter(f => f.speaker === speaker).map(f => f.delta).join("");
+  // null until the client effect has read the device's counter.
+  const budgeted = !teacherTest && !!studentId && leftSecs !== null;
+  const outOfMinutes = budgeted && leftSecs! <= 0;
   return <main className={`re-home re-speaking ${guided ? "hw-speaking-studio" : ""}`}><header className="re-page-heading"><p className="re-eyebrow">{teacherTest ? "TEACHER VOICE TEST" : guided ? `${guided.unitLabel} · CHAT ${guided.week}` : "SPEAKING STUDIO"}</p><h1>{teacherTest ? "Try your AI conversation partner." : guided ? guided.title : "Your voice. Your ideas."}</h1><p>{teacherTest ? "Use the same conversation partner your students use. This test uses your API credit and is not saved to a student’s work." : guided ? `Speak for about ${guided.duration}. When you end, the app saves the conversation for Rory. There is nothing to copy or paste.` : "One topic, one useful target, a little more confidence."}</p></header>
     {guided&&<div className="re-card hw-studio-note"><strong>Chat {guided.week} · {guided.cue}</strong><p>{guided.prompt}</p>{guided.purpose&&<p><strong>Why this chat? </strong>{guided.purpose}</p>}<p>If you get stuck, say: “Please ask me a simpler question.”</p><Link className="re-text-link" href={`/s/${code}/lessons/${guided.unitId}/homework/${guided.week}/`}>Back to this week&apos;s task →</Link></div>}
     <div className="re-speaking-grid"><section><div className="re-card">{guided?<><p className="re-eyebrow">YOUR FOCUS</p><p>{guided.focus}</p></>:<><p className="re-eyebrow">1 · CHOOSE A CONVERSATION</p><div className="re-topic-options">{topics.map((t, i) => <button key={t.id} disabled={busy || recording || recordBusy} aria-pressed={topic === i} onClick={() => setTopic(i)}><strong>{t.title}</strong><small>{t.target}</small></button>)}</div></>}
@@ -225,9 +251,9 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
       <p className="re-small-copy">Choose before starting. A voice change starts with your next conversation.</p>
       </div>
       <section className="re-card re-live-panel"><div className={`re-voice-orb is-${muted?"muted":state}`} aria-hidden><MicrophoneIcon /></div><p className="re-eyebrow">{guided?"VOICE CHAT":"LIVE AI CONVERSATION"}</p><h2>{state === "live" ? "Make yourself heard." : state === "connecting" ? "Opening your conversation…" : "A conversation, at your pace."}</h2><p>{guided?guided.cue:topics[topic].target}</p>
-        <p className="re-voice-status" role="status">{status || (preview ? "Teacher preview is read-only. Voice is disabled here." : available === null ? "Checking live voice…" : available ? "Ready for a conversation of up to 15 minutes." : guided ? "Live voice is unavailable right now. Continue with the other steps in your task and tell Rory at your next lesson." : "Live AI voice is awaiting connection. Try a rehearsal below in the meantime.")}</p>
-        {busy && <p className="re-timer">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} <small>/ 15:00</small></p>}
-        <div className="re-voice-actions">{!busy ? <button className="re-button" disabled={!available || preview || saving || recording || recordBusy} onClick={() => void start()}>{saving?'Saving this conversation…':'Start conversation'}</button> : <><button className="re-button re-secondary" disabled={state !== "live"} onClick={() => { const next = !muted; mic.current?.getAudioTracks().forEach(t => { t.enabled = !next; }); setMuted(next); }}>{muted ? "Unmute microphone" : "Mute microphone"}</button><button className="re-button" disabled={state === "closing"} onClick={end}>{state === "closing" ? "Finishing…" : state === "connecting" ? "Cancel" : "End conversation"}</button></>}</div>
+        <p className="re-voice-status" role="status">{status || (preview ? "Teacher preview is read-only. Voice is disabled here." : available === null ? "Checking live voice…" : available ? (outOfMinutes ? OUT_OF_MINUTES : budgeted ? `Ready when you are. You have ${spokenLeft(leftSecs!)} of speaking left this week.` : `Ready for a conversation of up to ${WEEKLY_MINUTES} minutes.`) : guided ? "Live voice is unavailable right now. Continue with the other steps in your task and tell Rory at your next lesson." : "Live AI voice is awaiting connection. Try a rehearsal below in the meantime.")}</p>
+        {busy && <p className="re-timer">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} <small>/ {Math.floor(capSeconds.current / 60)}:{String(capSeconds.current % 60).padStart(2, "0")}</small></p>}
+        <div className="re-voice-actions">{!busy ? <button className="re-button" disabled={!available || preview || saving || recording || recordBusy || outOfMinutes} onClick={() => void start()}>{saving?'Saving this conversation…':outOfMinutes?'No minutes left this week':'Start conversation'}</button> : <><button className="re-button re-secondary" disabled={state !== "live"} onClick={() => { const next = !muted; mic.current?.getAudioTracks().forEach(t => { t.enabled = !next; }); setMuted(next); }}>{muted ? "Unmute microphone" : "Mute microphone"}</button><button className="re-button" disabled={state === "closing"} onClick={end}>{state === "closing" ? "Finishing…" : state === "connecting" ? "Cancel" : "End conversation"}</button></>}</div>
         <audio ref={audio} autoPlay controls className={busy ? "re-live-audio" : "hidden"} aria-label="AI partner audio" />
         {busy&&<p role="status" className="mt-3 text-sm">{awakeState==="held"?"Screen-awake protection is on while this app is visible.":awakeState==="idle"?"Screen-awake protection starts when the microphone connects.":"Screen-awake protection is unavailable or was released by your phone. Keep this screen open."}</p>}
         {busy&&micInterrupted&&<p role="alert" className="mt-3 text-sm">Your phone has paused the microphone. Return to this screen; if it does not recover, end the conversation and start again.</p>}

@@ -63,6 +63,25 @@ card and the Today "Current unit" panel, and switches off
 `units.json` stay put — they are data, not presentation, and nothing else reads
 them.
 
+### `speaking-budget` (weekly speaking allowance)
+
+`npm run ui:rollback speaking-budget` takes the 15-minute weekly allowance off
+the speaking screen: conversations go back to a flat 15-minute cap per call
+with nothing counted between them. It is the first rollback feature with no
+stylesheet of its own — it changes behaviour and wording, not layout — so it
+sits in the `unstyled` set in `scripts/ui-rollback.mjs` beside `settings`.
+
+`src/lib/speaking-budget.ts` and its tests stay in place, unused, the same way
+`storage.ts` survives a `momentum` rollback. Nothing else reads the counter, so
+nothing else breaks. What it does **not** touch is the real ceiling: the monthly
+spend cap in the OpenAI dashboard. Roll this back and students can talk as often
+as they like until that cap stops them.
+
+`speaking.patch` had to be re-recorded in the same commit, because the allowance
+wording sits inside lines that patch already quoted. The two are independent
+after that: rolling back `speaking` keeps the allowance, and rolling back
+`speaking-budget` keeps the speaking visuals.
+
 ### Three patches need re-recording
 
 `npm run ui:rollbacks` reports `signin`, `homework` and now `today` as

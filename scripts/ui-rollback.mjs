@@ -18,6 +18,7 @@ const descriptions={
   resources:"Lesson resources page",
   "writing-help":"Writing and word helper",
   speaking:"Speaking screen visuals",
+  "speaking-budget":"Weekly speaking allowance",
   feedback:"Progress and Rory's reviews",
   "test-prep":"Test preparation page",
   documents:"Documents page navigation",
@@ -26,7 +27,8 @@ const descriptions={
   header:"Shared page heading layout",
 };
 const features=Object.keys(descriptions);
-const styledFeatures=features.filter(name=>name!=="settings");
+const unstyled=new Set(["settings","speaking-budget"]);
+const styledFeatures=features.filter(name=>!unstyled.has(name));
 const [command,...args]=process.argv.slice(2);
 
 function git(params){return execFileSync("git",params,{cwd:root,encoding:"utf8",stdio:["ignore","pipe","pipe"]});}
