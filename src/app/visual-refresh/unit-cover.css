@@ -1,0 +1,29 @@
+/* The slide-deck picture at the top of a unit card. */
+
+.unit-cover{overflow:hidden;background:var(--re-soft)}
+.unit-cover img{
+  display:block;
+  width:100%;
+  object-fit:cover;
+  /* The decks are 16:9 with the subject to the right and clear space on the
+     left for a slide heading. Holding the crop above centre keeps the subject
+     in frame at every width. */
+  object-position:center 38%;
+}
+
+/* Each card bleeds the picture to its own edges: these cards have different
+   padding and corner radii, and a shared value would leave a thin frame on one
+   of them that reads as a mistake rather than a border. */
+.lesson-unit-card .unit-cover{margin:-24px -24px 18px;border-radius:19px 19px 0 0}
+.lesson-unit-card .unit-cover img{height:clamp(96px,26vw,150px)}
+/* The current unit already carries a 5px accent bar across its top edge, so
+   the picture starts square beneath it rather than rounding away from it. */
+.lesson-unit-card.is-current .unit-cover{border-radius:0}
+/* Archive cards step the picture back so the current unit still leads. */
+.lesson-unit-card.is-archive .unit-cover img{opacity:.82}
+.dark .lesson-unit-card.is-archive .unit-cover img{opacity:.7}
+
+/* The Today panel is narrower and sits beside the main column, so it takes a
+   shallower band — a tall picture there pushes the unit title below the fold. */
+.ux-panel.has-unit-cover .unit-cover{margin:-20px -20px 16px;border-radius:17px 17px 0 0}
+.ux-panel.has-unit-cover .unit-cover img{height:clamp(84px,18vw,116px)}

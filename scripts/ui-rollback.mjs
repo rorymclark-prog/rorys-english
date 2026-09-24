@@ -11,6 +11,7 @@ const descriptions={
   navigation:"Sidebar, phone tabs and menu",
   today:"Student Today dashboard",
   momentum:"Seven-day strip and streak",
+  "unit-cover":"Slide-deck picture on unit cards",
   homework:"Homework list and task detail",
   lessons:"Current lessons and archive",
   practice:"Study tools page",

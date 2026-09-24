@@ -1,5 +1,6 @@
 import Link from "next/link";
 import StudyToolLink from "@/components/StudyToolLink";
+import UnitCover from "@/components/UnitCover";
 import {getBundle} from "@/lib/content";
 import type {Unit} from "@/lib/types";
 import Screen from "@/components/Screen";
@@ -9,6 +10,7 @@ import {MicrophoneIcon,RepeatIcon} from "@/components/LearningVisuals";
 function UnitCard({unit,code}:{unit:Unit;code:string}){
   const resolve=(url:string)=>url.startsWith("/")?(process.env.NEXT_PUBLIC_BASE_PATH||"")+url:url;
   return <section className={`lesson-unit-card ${unit.active?"is-current":"is-archive"}`}>
+    <UnitCover src={unit.coverImage} title={unit.title}/>
     <div className="lesson-unit-heading"><span className="lesson-unit-icon"><BookIcon/></span><div><p className="work-eyebrow">{unit.active?"CURRENT UNIT":"PREVIOUS YEAR"} · {unit.schoolYear||"Archive"}</p><h2>{unit.title}</h2></div></div>
     {unit.note&&<p className="ux-subtle">{unit.note}</p>}
     {unit.tutoringFocus&&<p className="lesson-focus"><strong>What you’re working on:</strong> {unit.tutoringFocus}</p>}

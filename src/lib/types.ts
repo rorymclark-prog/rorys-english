@@ -49,6 +49,12 @@ export interface UnitMeta {
   note?: string;
   /** Tutoring may still be catching up while school has moved to this unit. */
   tutoringFocus?: string;
+  /**
+   * A picture for this unit's cards, taken from its slide deck by
+   * scripts/deck-cover.mjs. Units without a deck have none, and every screen
+   * that shows it must still read well with nothing there.
+   */
+  coverImage?: string;
 }
 
 /** Full unit definition from <student>/units.json (adds study tools). */

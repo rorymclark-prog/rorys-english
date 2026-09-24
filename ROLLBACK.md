@@ -55,21 +55,38 @@ The commits, oldest first:
 | `48676eb` | The two rows above | Yes — documentation only |
 | `f5aad52` | Seven-day strip and streak back on Today | Prefer `ui:rollback momentum` for the strip alone |
 
-### Two patches need re-recording
+### `unit-cover` (slide-deck picture on unit cards)
 
-`npm run ui:rollbacks` reports `signin` and `homework` as **changed since
-release**, and both were already in that state before this pass — their files
-moved under them in earlier commits and nobody regenerated the patch. They are
-not usable as switches until they are rebuilt the way `today.patch` was:
+`npm run ui:rollback unit-cover` removes the picture from both the Lessons unit
+card and the Today "Current unit" panel, and switches off
+`visual-refresh/unit-cover.css`. The image files and the `coverImage` fields in
+`units.json` stay put — they are data, not presentation, and nothing else reads
+them.
+
+### Three patches need re-recording
+
+`npm run ui:rollbacks` reports `signin`, `homework` and now `today` as
+**changed since release**:
 
 ```bash
 npm run ui:rollbacks
 ```
 
-`today.patch` was regenerated in `f5aad52`, because the strip added a line to
-`TodayView.tsx`. Note that rolling back `today` takes the strip with it — the
-pre-refresh Today screen predates it — so restore `today` before touching
-`momentum`.
+`signin` and `homework` were already in that state before this pass — their
+files moved under them in earlier commits and nobody regenerated the patch.
+
+`today` is different: it was regenerated in `f5aad52` and has gone stale again,
+because the unit picture added a line to `TodayView.tsx`. That is the recurring
+cost of a whole-screen patch sitting under feature-sized ones — **any** change
+to `TodayView.tsx` breaks it, and it has now broken twice in one day. Either
+re-record it each time that file changes, or retire it and keep only the
+feature-sized switches (`momentum`, `unit-cover`), which survive each other's
+edits because each touches its own lines.
+
+`momentum.patch` and `unit-cover.patch` were both recorded against the shipped
+`TodayView.tsx`, so either can be rolled back without the other. Rolling back
+`today` would still take both with it — the pre-refresh Today screen predates
+them — so restore `today` before touching either.
 
 ## 3. Undo the whole pass
 

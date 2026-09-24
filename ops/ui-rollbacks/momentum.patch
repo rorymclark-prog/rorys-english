@@ -1,5 +1,5 @@
 diff --git a/src/components/views/TodayView.tsx b/src/components/views/TodayView.tsx
-index b1d925f..2a55919 100644
+index 7d37b5d..b9d564b 100644
 --- a/src/components/views/TodayView.tsx
 +++ b/src/components/views/TodayView.tsx
 @@ -8,7 +8,6 @@ import {fetchNote,fetchAssignments,rowToAssignment,isCurrentAssignment,type Assi
@@ -7,10 +7,10 @@ index b1d925f..2a55919 100644
  import {MicrophoneIcon,RepeatIcon} from "@/components/LearningVisuals";
  import FeedbackText from "@/components/FeedbackText";
 -import MomentumStrip from "@/components/MomentumStrip";
+ import UnitCover from "@/components/UnitCover";
  
  function WeekLink({h,unit,base}:{h:HomeworkWeek;unit:Unit;base:string}){
-   const speaking=h.tasks.some(t=>t.type==="voice"),Icon=speaking?MicrophoneIcon:PencilIcon;
-@@ -24,7 +23,6 @@ export default function TodayView({unit}:{unit:Unit|null}){
+@@ -25,7 +24,6 @@ export default function TodayView({unit}:{unit:Unit|null}){
    const ready=(unit?.homework||[]).filter(h=>!h.availableFrom||h.availableFrom<=today);
    return <main className="re-home today-page">
      <header className="re-page-heading"><p className="re-eyebrow">YOUR LEARNING SPACE</p><h1>Hi, {displayName}. Here’s your next step.</h1><p>Pick one task, practise it, and come back for feedback.</p></header>

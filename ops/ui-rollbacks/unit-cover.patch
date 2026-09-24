@@ -1,0 +1,39 @@
+diff --git a/src/app/s/[code]/lessons/page.tsx b/src/app/s/[code]/lessons/page.tsx
+index 9f2baab..a19912a 100644
+--- a/src/app/s/[code]/lessons/page.tsx
++++ b/src/app/s/[code]/lessons/page.tsx
+@@ -1,6 +1,5 @@
+ import Link from "next/link";
+ import StudyToolLink from "@/components/StudyToolLink";
+-import UnitCover from "@/components/UnitCover";
+ import {getBundle} from "@/lib/content";
+ import type {Unit} from "@/lib/types";
+ import Screen from "@/components/Screen";
+@@ -10,7 +9,6 @@ import {MicrophoneIcon,RepeatIcon} from "@/components/LearningVisuals";
+ function UnitCard({unit,code}:{unit:Unit;code:string}){
+   const resolve=(url:string)=>url.startsWith("/")?(process.env.NEXT_PUBLIC_BASE_PATH||"")+url:url;
+   return <section className={`lesson-unit-card ${unit.active?"is-current":"is-archive"}`}>
+-    <UnitCover src={unit.coverImage} title={unit.title}/>
+     <div className="lesson-unit-heading"><span className="lesson-unit-icon"><BookIcon/></span><div><p className="work-eyebrow">{unit.active?"CURRENT UNIT":"PREVIOUS YEAR"} · {unit.schoolYear||"Archive"}</p><h2>{unit.title}</h2></div></div>
+     {unit.note&&<p className="ux-subtle">{unit.note}</p>}
+     {unit.tutoringFocus&&<p className="lesson-focus"><strong>What you’re working on:</strong> {unit.tutoringFocus}</p>}
+diff --git a/src/components/views/TodayView.tsx b/src/components/views/TodayView.tsx
+index 7d37b5d..b1d925f 100644
+--- a/src/components/views/TodayView.tsx
++++ b/src/components/views/TodayView.tsx
+@@ -9,7 +9,6 @@ import {BookIcon,CheckSquareIcon,ChevronRightIcon,FileIcon,MessageIcon,PencilIco
+ import {MicrophoneIcon,RepeatIcon} from "@/components/LearningVisuals";
+ import FeedbackText from "@/components/FeedbackText";
+ import MomentumStrip from "@/components/MomentumStrip";
+-import UnitCover from "@/components/UnitCover";
+ 
+ function WeekLink({h,unit,base}:{h:HomeworkWeek;unit:Unit;base:string}){
+   const speaking=h.tasks.some(t=>t.type==="voice"),Icon=speaking?MicrophoneIcon:PencilIcon;
+@@ -35,6 +34,6 @@ export default function TodayView({unit}:{unit:Unit|null}){
+       </section>
+       <section className="today-practice-section" aria-labelledby="today-practice-title"><div className="today-section-heading"><div><p className="work-eyebrow">KEEP GOING</p><h2 id="today-practice-title">Ways to practise</h2></div></div><div className="ux-route-grid"><Link className="ux-route-card" href={`${base}/speak/`}><MicrophoneIcon/><span><strong>Speaking</strong><small>Have a short conversation</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`${base}/lessons/`}><BookIcon/><span><strong>Lessons</strong><small>Current unit and past work</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`${base}/study/`}><RepeatIcon/><span><strong>Practice</strong><small>Try a study tool</small></span><ChevronRightIcon/></Link></div></section>
+       <section className="today-feedback-card"><MessageIcon/><div><p className="work-eyebrow">AFTER YOU TRY</p><h2>Use Rory’s feedback</h2><p>See what worked and what to try next.</p><Link href={`${base}/progress/`}>Open feedback & progress <ChevronRightIcon/></Link></div></section>
+-    </div><aside className="today-secondary"><section className={`ux-panel ${note?"re-mentor-card":""}`}><div className="ux-panel-heading"><span className="re-avatar">R</span><h2>From Rory</h2></div><p className="ux-subtle today-rory-note">{note?<FeedbackText text={note}/>:!loaded?"Checking your latest note…":"Your next note will appear here when Rory adds it."}</p></section><section className="ux-panel has-unit-cover"><UnitCover src={unit?.coverImage} title={unit?.title||"this unit"}/><div className="ux-panel-heading"><BookIcon/><h2>Current unit</h2></div><p className="ux-chip">{unit?.schoolYear||"2026–27"}</p><h3 className="mt-3 font-bold">{unit?.title||"Ready for the next lesson"}</h3><p className="ux-subtle mt-2">{unit?.note||"Rory will confirm your current materials."}</p><Link className="ux-link-row" href={`${base}/resources/`}><FileIcon/>Open lesson resources<ChevronRightIcon/></Link></section><Link className="ux-route-card" href={`${base}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Practise with Rory’s reviews</small></span><ChevronRightIcon/></Link><p className="re-schedule-note">{studentId==="valentin"?"Lessons every second Saturday":"Weekly lessons"}, during term time. Rory confirms dates and deadlines.</p></aside></div>
++    </div><aside className="today-secondary"><section className={`ux-panel ${note?"re-mentor-card":""}`}><div className="ux-panel-heading"><span className="re-avatar">R</span><h2>From Rory</h2></div><p className="ux-subtle today-rory-note">{note?<FeedbackText text={note}/>:!loaded?"Checking your latest note…":"Your next note will appear here when Rory adds it."}</p></section><section className="ux-panel"><div className="ux-panel-heading"><BookIcon/><h2>Current unit</h2></div><p className="ux-chip">{unit?.schoolYear||"2026–27"}</p><h3 className="mt-3 font-bold">{unit?.title||"Ready for the next lesson"}</h3><p className="ux-subtle mt-2">{unit?.note||"Rory will confirm your current materials."}</p><Link className="ux-link-row" href={`${base}/resources/`}><FileIcon/>Open lesson resources<ChevronRightIcon/></Link></section><Link className="ux-route-card" href={`${base}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Practise with Rory’s reviews</small></span><ChevronRightIcon/></Link><p className="re-schedule-note">{studentId==="valentin"?"Lessons every second Saturday":"Weekly lessons"}, during term time. Rory confirms dates and deadlines.</p></aside></div>
+   </main>;
+ }

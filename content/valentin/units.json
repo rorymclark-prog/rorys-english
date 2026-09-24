@@ -8,7 +8,14 @@
     "status": "current",
     "note": "Your current school book is way2go! 8, Unit 1, “Healthy and happy”. This week, discuss healthy habits and practise a short recorded talk. Next week, discuss a school wellbeing idea before writing a semi-formal email. These are original English practice linked to the published Unit 1 theme.",
     "studyTools": [],
-    "voiceVocabulary": ["balanced diet", "physical exercise", "stress", "mental health", "mindfulness", "healthy lifestyle"]
+    "voiceVocabulary": [
+      "balanced diet",
+      "physical exercise",
+      "stress",
+      "mental health",
+      "mindfulness",
+      "healthy lifestyle"
+    ]
   },
   {
     "id": "way2go7-unit09-2025",
@@ -17,6 +24,7 @@
     "schoolYear": "2025–26",
     "book": "way2go! 7",
     "status": "archive",
+    "coverImage": "/lessons/valentin/2025-26/unit09/cover.jpg",
     "note": "Last year’s unit: journalism, advertising and privacy. These student materials were refreshed in September 2026 for revision. They are optional reference material, not new homework.",
     "studyTools": [],
     "resources": [
