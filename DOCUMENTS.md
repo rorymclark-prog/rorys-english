@@ -1,3 +1,11 @@
+# Photo uploads and homework source — 3 October 2026
+
+Work source is explicitly selectable as School homework, Rory’s homework, Independent practice or Source not specified. The source is saved in the existing private task-context field, displayed beside saved work, preserved for revisions and supplied to the app’s existing AI analysis. Old records stay unspecified rather than having a source inferred. School instructions and the learner’s response can be uploaded together with their roles explained in task context; AI practice feedback remains separate from Rory-approved review.
+
+Both Documents and handwritten homework attachments accept up to six photos, up to 20 MB each. Large JPEG/PNG/WebP selections are prepared on the device as JPEG upload copies, within the unchanged 2.5 MB total private-service limit. HEIC/HEIF can be converted when the browser can decode them; otherwise the app asks for a JPEG or scanner capture. Small supported photos within the total limit keep their exact bytes. Non-image Word/PDF/audio limits remain 2.5 MB.
+
+Copies start at a maximum 2400-pixel long edge and quality 0.9, with bounded retries down to 1600 pixels and quality 0.74. Transparent areas become white. If copies cannot fit at those settings, the app asks for fewer pages instead of silently making illegible thumbnails. Photos are processed sequentially to bound phone memory. Source files on the device are never overwritten. Scan selections use the same preparation path rather than failing during capture when their combined size exceeds the transport limit. Saved work, receipts, task links and private access checks use the existing backend unchanged.
+
 # Documents and feedback — 21 September 2026
 
 Students open **My documents** (or **My work** in phone navigation). Teachers open **Teacher → student → Documents**. Both can scan up to six pages with the camera, rotate/retake pages, or upload one PDF/a set of JPEG, PNG or WebP files. Limit: 2.5 MB per upload. Word documents must be exported as PDF; HEIC must be exported to JPEG or captured through the scanner. Camera scans become JPEGs, up to 2000 pixels on the long edge. Existing uploaded file bytes are retained unchanged.

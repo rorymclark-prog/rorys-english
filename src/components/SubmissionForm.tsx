@@ -70,7 +70,7 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
       {f.type==="checkbox" && <span className="mb-2 block text-sm">Tell Rory what you practised or what you found difficult.</span>}
       <textarea aria-label={f.prompt} disabled={preview||!ready||!!pending||busy||photoBusy} value={answers[f.id]||""} onChange={e=>edit(f.id,e.target.value)} rows={f.type==="written"?5:2} maxLength={6000} className="w-full rounded-lg border border-slate-300 bg-transparent p-3 disabled:opacity-60"/>
     </label>)}
-    <HandwrittenAnswer code={code} title={title||task} context={`Task: ${task} · Unit: ${unit}\n${fields.map(f=>f.prompt).join("\n")}`} disabled={preview||!ready||!!pending||busy||handwritingParts(answers.handwritten_work||"").documentIds.length>=6} onBusyChange={setPhotoBusy} onSaved={reference=>edit("handwritten_work",[answers.handwritten_work,reference].filter(Boolean).join("\n"))}/>
+    <HandwrittenAnswer source="tutor" code={code} title={title||task} context={`Task: ${task} · Unit: ${unit}\n${fields.map(f=>f.prompt).join("\n")}`} disabled={preview||!ready||!!pending||busy||handwritingParts(answers.handwritten_work||"").documentIds.length>=6} onBusyChange={setPhotoBusy} onSaved={reference=>edit("handwritten_work",[answers.handwritten_work,reference].filter(Boolean).join("\n"))}/>
     {answers.handwritten_work&&<AnswerWithPhotos key={answers.handwritten_work} code={code} answer={answers.handwritten_work}/>}
     <p className="text-xs">Drafts stay on this device. Submitted copies and Rory’s feedback are saved privately to your progress record. Avoid personal details.</p>
     <ReviewTiming availableAt={last?.feedbackAvailableAt}/>

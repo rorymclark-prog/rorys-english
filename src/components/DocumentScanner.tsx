@@ -1,6 +1,5 @@
 "use client";
 import {useEffect,useRef,useState} from 'react';
-import {MAX_DOCUMENT_BYTES} from '@/lib/documents';
 export default function DocumentScanner({onUse,onClose}:{onUse:(files:File[])=>void;onClose:()=>void}) {
   const video=useRef<HTMLVideoElement>(null),stream=useRef<MediaStream|null>(null),dialog=useRef<HTMLDialogElement>(null),photoInput=useRef<HTMLInputElement>(null);
   const [pages,setPages]=useState<{file:File;url:string}[]>([]),[error,setError]=useState(''),[ready,setReady]=useState(false),[working,setWorking]=useState(false);
@@ -12,7 +11,6 @@ export default function DocumentScanner({onUse,onClose}:{onUse:(files:File[])=>v
   },[]);
   async function addCanvas(canvas:HTMLCanvasElement){
     const blob=await new Promise<Blob|null>(r=>canvas.toBlob(r,'image/jpeg',.84));if(!blob)throw new Error('Could not capture that page. Try again.');
-    if(pagesRef.current.reduce((n,p)=>n+p.file.size,0)+blob.size>MAX_DOCUMENT_BYTES)throw new Error('This scan is full. Save these pages, then start another document.');
     const file=new File([blob],`scan-page-${pagesRef.current.length+1}.jpg`,{type:'image/jpeg'});setPages(p=>[...p,{file,url:URL.createObjectURL(file)}]);setError('');
   }
   async function capture(){if(!video.current?.videoWidth||pages.length>=6)return;setWorking(true);try{const v=video.current,c=document.createElement('canvas'),scale=Math.min(1,2000/Math.max(v.videoWidth,v.videoHeight));c.width=Math.round(v.videoWidth*scale);c.height=Math.round(v.videoHeight*scale);c.getContext('2d')!.drawImage(v,0,0,c.width,c.height);await addCanvas(c);}catch(e){setError((e as Error).message);}finally{setWorking(false);}}
@@ -25,6 +23,6 @@ export default function DocumentScanner({onUse,onClose}:{onUse:(files:File[])=>v
     <div className="doc-button-row"><button className="doc-primary" disabled={!ready||working||pages.length>=6} onClick={()=>void capture()}>Capture page</button><button className="doc-secondary" disabled={working||pages.length>=6} onClick={()=>photoInput.current?.click()}>Take a photo</button><input ref={photoInput} type="file" accept="image/*" capture="environment" hidden onChange={e=>{void devicePhoto(e.target.files?.[0]);e.target.value='';}}/></div>
     {error&&<p className="doc-error" role="alert">{error}</p>}
     <div className="doc-scan-pages">{pages.map((p,i)=><div key={p.url}><img src={p.url} alt={`Scanned page ${i+1}`}/><span>Page {i+1}</span><button className="doc-link" disabled={working} onClick={()=>void rotate(i)}>Rotate</button><button className="doc-link" disabled={working} onClick={()=>{URL.revokeObjectURL(p.url);setPages(ps=>ps.filter((_,n)=>n!==i));}}>Remove</button></div>)}</div>
-    <footer><p className="doc-muted">Up to 6 pages. Scans are saved as clear JPEG photos; review them before uploading.</p><button className="doc-primary" disabled={!pages.length||working} onClick={()=>onUse(pages.map(p=>p.file))}>Use {pages.length||''} {pages.length===1?'page':'pages'}</button></footer>
+    <footer><p className="doc-muted">Up to 6 pages. Scans are prepared as clear JPEG upload copies; review them before uploading.</p><button className="doc-primary" disabled={!pages.length||working} onClick={()=>onUse(pages.map(p=>p.file))}>Use {pages.length||''} {pages.length===1?'page':'pages'}</button></footer>
   </dialog>;
 }

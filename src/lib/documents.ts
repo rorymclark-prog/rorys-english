@@ -12,7 +12,7 @@ export function validateDocumentFiles(files:File[]):string {
   if(!files.length||files.length>6)return 'Choose one PDF or up to six photos.';
   if(files.some(f=>!['application/pdf','image/jpeg','image/png','image/webp','application/vnd.openxmlformats-officedocument.wordprocessingml.document','audio/webm','audio/mp4','audio/ogg','audio/mpeg'].includes(f.type)))return 'Choose a Word document, PDF, photo or audio recording. For an iPhone photo, use Scan pages or export a JPEG.';
   if(files.some(f=>f.type==='application/pdf'||f.type==='application/vnd.openxmlformats-officedocument.wordprocessingml.document'||f.type.startsWith('audio/'))&&files.length>1)return 'Choose one document or recording at a time, or a set of photos.';
-  if(files.reduce((n,f)=>n+f.size,0)>MAX_DOCUMENT_BYTES)return 'These files are over 2.5 MB. Use Scan pages for smaller photos, or export a smaller PDF.';
+  if(files.reduce((n,f)=>n+f.size,0)>MAX_DOCUMENT_BYTES)return 'This upload is over 2.5 MB. Choose fewer photos, or export a smaller document or recording.';
   if(files.some(f=>!f.size))return 'One of these files is empty. Please choose it again.';
   return '';
 }
