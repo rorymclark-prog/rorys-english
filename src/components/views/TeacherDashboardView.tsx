@@ -19,6 +19,7 @@ import { publishAssessment } from "@/lib/remote";
 import { VoiceStudio } from "./SpeakView";
 import DocumentsView from "./DocumentsView";
 import LearningView from "./LearningView";
+import CalendarView from "./CalendarView";
 import TeachingProgress from "./TeachingProgress";
 import TeacherReviewPanel from "./TeacherReviewPanel";
 import AppMenu from "@/components/AppMenu";
@@ -32,7 +33,8 @@ const STORAGE_KEY = "re_teacher_secret";
 
 type LoadState = "idle" | "loading" | "ok" | "error";
 
-export default function TeacherDashboardView() {
+export default function TeacherDashboardView({initialCalendar=false}:{initialCalendar?:boolean}) {
+  const [showCalendar,setShowCalendar]=useState(initialCalendar);
   const [testingVoice, setTestingVoice] = useState(false);
   const [ready, setReady] = useState(false);
   const [secret, setSecret] = useState<string | null>(null);
@@ -112,6 +114,8 @@ export default function TeacherDashboardView() {
   if (!ready) return null;
   if (!secret) return <PasswordGate input={input} setInput={setInput} authing={authing} authError={authError} remember={rememberTeacher} setRemember={setRememberTeacher} onSubmit={submitGate} />;
 
+  if (showCalendar && loadState === "ok") return <div className="teacher-workspace"><header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(false)}>← Students & teaching</button><div className="flex items-center gap-2"><QuickAppearance/><AppMenu teacher/></div></header><CalendarView code="__teacher__" name="Rory" teacher students={(students||[]).map(s=>({code:s.code,name:s.name}))}/></div>;
+
   if (testingVoice) return <div className="teacher-workspace">
     <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => setTestingVoice(false)}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><QuickAppearance/><AppMenu teacher/></div></header>
     <VoiceStudio code="__teacher__" lines={[]} teacherTest practiceOptions={studentRoster.map(s => ({ code: s.code, name: s.displayName, unit: s.units.find(u => u.active)?.title }))} />
@@ -150,7 +154,7 @@ export default function TeacherDashboardView() {
         <a href="/teacher/" className="teacher-brand"><span aria-hidden>r.</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
         <div className="flex items-center gap-2">
           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
-          <QuickAppearance/><AppMenu teacher/>
+          <button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(true)}>Lesson calendar</button><QuickAppearance/><AppMenu teacher/>
         </div>
       </header>
       <main>

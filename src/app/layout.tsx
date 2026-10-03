@@ -5,6 +5,7 @@ import "./design.css";
 import "./documents.css";
 import "./homework.css";
 import "./visual-refresh.css";
+import "./calendar.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 // Self-hosted at build time (static export downloads them once) — no runtime

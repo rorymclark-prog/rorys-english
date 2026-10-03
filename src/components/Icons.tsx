@@ -122,3 +122,7 @@ export function FlameIcon(p: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function CalendarIcon(p: SVGProps<SVGSVGElement>) {
+  return <svg {...base(p)}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 15h2M14 15h2"/></svg>;
+}

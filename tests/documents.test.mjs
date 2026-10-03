@@ -17,7 +17,7 @@ function fixture(){
  sanitize_:s=>/^[=+\-@]/.test(s)?"'"+s:s,json_:v=>v,aiCount_:c=>Number(props.get('ai_'+c)||0),aiKey_:c=>'ai_'+c,pruneAiCounters_(){},legacyPost_:()=>({ok:true}),
  UrlFetchApp:{fetch:(_url,o)=>{aiCalls++;if(aiHook)aiHook();const payload=JSON.parse(o.payload);return {getResponseCode:()=>aiStatus,getContentText:()=>JSON.stringify(payload.tools?{content:[{type:'tool_use',name:'record_document',input:analysis}]}:{content:[{type:'text',text:'In “I go”, use the past simple: “I went”. Try one more sentence.'}]})};}}
  };
- vm.createContext(ctx);for(const f of ['V2.gs','Documents.gs','Learning.gs'])vm.runInContext(fs.readFileSync('apps-script/progress-sync/'+f,'utf8'),ctx);
+ vm.createContext(ctx);for(const f of ['V2.gs','Calendar.gs','Documents.gs','Learning.gs'])vm.runInContext(fs.readFileSync('apps-script/progress-sync/'+f,'utf8'),ctx);
  const session=role=>ctx.issueSession_(role==='teacher'?'__teacher__':role==='parent'?'parent-a':role==='other'?'student-b':'student-a',role==='other'?'student':role).token;
  const post=(body,role='student')=>ctx.doPost({postData:{contents:JSON.stringify({code:'student-a',session:session(role),...body})}});
  const upload=(extra={},role='student')=>post({action:'documentUpload',id:randomUUID(),title:'Synthetic work',context:'A short paragraph',files:[sample],...extra},role);

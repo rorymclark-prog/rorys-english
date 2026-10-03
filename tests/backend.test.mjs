@@ -27,10 +27,11 @@ function fixture() {
     PropertiesService:{getScriptProperties:()=>property},
     CacheService:{getScriptCache:()=>({get:k=>cache.get(k)||null,put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},
     LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
-    Utilities:{getUuid:randomUUID,DigestAlgorithm:{SHA_256:"sha256"},computeDigest:(_a,t)=>createHash("sha256").update(t).digest(),base64EncodeWebSafe:b=>Buffer.from(b).toString("base64url"),base64DecodeWebSafe:t=>Buffer.from(t,'base64url'),formatDate:()=> "2026-09-17",newBlob:t=>({getBytes:()=>Buffer.from(t),getDataAsString:()=>Buffer.from(t).toString()})},
+    Utilities:{getUuid:randomUUID,DigestAlgorithm:{SHA_256:"sha256"},computeDigest:(_a,t)=>createHash("sha256").update(t).digest(),base64EncodeWebSafe:b=>Buffer.from(b).toString("base64url"),base64DecodeWebSafe:t=>Buffer.from(t,'base64url'),formatDate:(d,z,fmt)=>fmt==="yyyy-MM-dd'T'HH:mm"?new Intl.DateTimeFormat('sv-SE',{timeZone:z,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(d).replace(' ','T'):"2026-09-17",newBlob:t=>({getBytes:()=>Buffer.from(t),getDataAsString:()=>Buffer.from(t).toString()})},
     UrlFetchApp:{fetch:()=>{identity.calls++;return {getResponseCode:()=>identity.status,getContentText:()=>JSON.stringify({users:[identity.user]})};}},
     Session:{getScriptTimeZone:()=>"Europe/Vienna"},SpreadsheetApp:{openById:()=>ss},
     DriveApp:new Proxy({}, {get(){throw Error("Resource read touched Drive");}}),
+    getRoster_:()=>[roster],
     studentByAnyCode_:code=>[roster.code,roster.parentCode].includes(code)?roster:null,
     json_:x=>x,now_:()=>"2026-09-17 12:00",sanitize_:x=>/^[=+\-@]/.test(String(x))?"'"+x:x,
     aiCount_:code=>Number(props.get("ai_"+code)||0),aiKey_:code=>"ai_"+code,
@@ -39,6 +40,7 @@ function fixture() {
   };
   vm.createContext(ctx);vm.runInContext(fs.readFileSync("apps-script/progress-sync/V2.gs","utf8"),ctx);
   vm.runInContext(fs.readFileSync("apps-script/progress-sync/FirebaseAuth.gs","utf8"),ctx);
+  vm.runInContext(fs.readFileSync("apps-script/progress-sync/Calendar.gs","utf8"),ctx);
   const post=p=>ctx.doPost({postData:{contents:JSON.stringify(p)}});
   const teacher=()=>ctx.issueSession_("__teacher__","teacher").token;
   const student=()=>ctx.issueSession_("student-a","student").token;
@@ -269,4 +271,83 @@ test("one student's devices are capped without evicting another student's",()=>{
   assert.equal(live.length,5,"at most five remembered devices per code");
   assert.deepEqual(live,tokens.slice(-5),"the oldest devices are the ones dropped");
   assert.equal(f.ctx.session_(parentSession.token).role,"parent","pruning one code must not touch another");
+});
+
+test('lesson calendar keeps fortnightly Vienna times across DST and skips breaks without shifting the pattern',()=>{
+  const f=fixture(),session=f.teacher();
+  assert.equal(f.post({action:'teacherCalendarBreak',code:'student-a',session,id:randomUUID(),from:'2026-10-24',to:'2026-11-01',label:'Autumn break'}).ok,true);
+  const create={action:'teacherCalendarSave',code:'student-a',session,id:randomUUID(),date:'2026-10-03',time:'15:00',duration:90,repeat:'fortnightly',until:'2026-11-28',title:'English lesson'};
+  const reply=f.post(create);assert.equal(reply.ok,true);assert.equal(reply.created,4);assert.equal(reply.skipped,1);
+  const lessons=f.post({action:'calendarLessons',code:'student-a',session}).lessons;
+  assert.deepEqual(Array.from(lessons,l=>l.date),['2026-10-03','2026-10-17','2026-11-14','2026-11-28']);
+  assert.equal(lessons[0].start,'2026-10-03T13:00:00.000Z');assert.equal(lessons[2].start,'2026-11-14T14:00:00.000Z');
+  assert.equal(f.post(create).duplicate,true);assert.equal(f.sheets.get('Lessons').data.length,5);
+});
+test('lesson edits retain identifiers, increment sequence and refuse conflicts or stale saves',()=>{
+  const f=fixture(),session=f.teacher(),base={action:'teacherCalendarSave',code:'student-a',session,date:'2026-10-03',time:'15:00',duration:90,repeat:'once'};
+  assert.equal(f.post({...base,id:randomUUID()}).ok,true);
+  const l=f.post({action:'calendarLessons',code:'student-a',session}).lessons[0];
+  assert.equal(f.post({...base,id:randomUUID(),time:'16:00'}).ok,false);
+  assert.equal(f.post({...base,id:randomUUID(),time:'16:30'}).ok,true);
+  assert.equal(f.post({...base,id:l.id,expectedSequence:0,time:'13:00'}).ok,true);
+  assert.equal(f.post({...base,id:l.id,expectedSequence:0,time:'12:00'}).ok,false);
+  const edited=f.post({action:'calendarLessons',code:'student-a',session}).lessons.find(x=>x.id===l.id);assert.equal(edited.sequence,1);
+  assert.equal(f.post({action:'teacherCalendarCancel',code:'student-a',session,id:l.id,expectedSequence:1}).ok,true);
+  const cancelled=f.post({action:'calendarLessons',code:'student-a',session}).lessons.find(x=>x.id===l.id);assert.equal(cancelled.sequence,2);assert.equal(cancelled.status,'cancelled');
+});
+test('calendar rejects invalid dates, durations, spring missing times and autumn ambiguous times',()=>{
+  const f=fixture(),session=f.teacher(),base={action:'teacherCalendarSave',code:'student-a',session,date:'2026-10-03',time:'15:00',duration:90,repeat:'once'};
+  for(const invalid of [{date:'2026-02-30'},{time:'25:00'},{duration:0},{duration:NaN},{date:'2026-03-29',time:'02:30'},{date:'2026-10-25',time:'02:30'},{repeat:'daily'},{repeat:'fortnightly',until:'2028-10-03'}])assert.equal(f.post({...base,id:randomUUID(),...invalid}).ok,false,JSON.stringify(invalid));
+  assert.equal(f.sheets.has('Lessons'),false);
+});
+test('students and parents see only their calendar and cannot schedule or modify lessons in preview',()=>{
+  const f=fixture(),teacher=f.teacher(),student=f.student(),parent=f.ctx.issueSession_('parent-a','parent').token;
+  assert.equal(f.post({action:'teacherCalendarSave',code:'student-a',session:teacher,id:randomUUID(),date:'2026-10-03',time:'15:00',duration:90,repeat:'once'}).ok,true);
+  for(const [code,session] of [['student-a',student],['parent-a',parent]]){
+    assert.equal(f.post({action:'calendarLessons',code,session}).lessons.length,1);
+    assert.equal(f.post({action:'teacherCalendarSave',code,session,id:randomUUID(),date:'2026-10-03',time:'15:00',duration:90,repeat:'once'}).ok,false);
+    assert.equal(f.post({action:'calendarLessons',code:'other-student',session}).ok,false);
+  }
+  for(const action of ['calendarLink','calendarRevoke','calendarRequest','teacherCalendarSave'])assert.equal(f.post({action,code:'student-a',session:teacher,preview:true}).ok,false);
+  assert.equal(f.post({action:'calendarLessons',code:'student-a',session:teacher,preview:true}).ok,true);
+  assert.equal(f.post({action:'calendarLessons',code:'student-a'}).authRequired,true);
+});
+test('calendar bearer links are scoped, hashed, revocable and never reveal requests or homework',()=>{
+  const f=fixture(),session=f.teacher();
+  f.post({action:'teacherCalendarSave',code:'student-a',session,id:randomUUID(),date:'2026-10-03',time:'15:00',duration:90,repeat:'once'});
+  const own=f.post({action:'calendarLink',code:'student-a',session:f.student()});assert.equal(own.ok,true);
+  const feed=f.post({action:'calendarFeed',code:'student-a',token:own.calendarToken});assert.equal(feed.ok,true);assert.equal(feed.lessons.length,1);
+  assert.equal(feed.requests,undefined);assert.equal(feed.lessons[0].studentName,undefined);assert.equal(feed.lessons[0].studentCode,undefined);
+  assert.equal([...f.props.values()].join('').includes(own.calendarToken),false);
+  const teacherSelected=f.post({action:'calendarLink',code:'student-a',session});assert.equal(teacherSelected.scope,'__teacher__:student-a');assert.equal(f.post({action:'calendarFeed',code:teacherSelected.scope,token:teacherSelected.calendarToken}).ok,true);assert.equal(f.post({action:'calendarFeed',code:'student-a',token:own.calendarToken}).ok,true);
+  assert.equal(f.post({action:'calendarFeed',code:'parent-a',token:own.calendarToken}).ok,false);
+  const parent=f.post({action:'calendarLink',code:'parent-a',session:f.ctx.issueSession_('parent-a','parent').token});assert.equal(parent.ok,true);
+  const replacement=f.post({action:'calendarLink',code:'student-a',session:f.student()});assert.equal(f.post({action:'calendarFeed',code:'student-a',token:own.calendarToken}).ok,false);
+  assert.equal(f.post({action:'calendarFeed',code:'parent-a',token:parent.calendarToken}).ok,true);
+  assert.equal(f.post({action:'calendarRevoke',code:'student-a',session:f.student()}).ok,true);assert.equal(f.post({action:'calendarFeed',code:'student-a',token:replacement.calendarToken}).ok,false);
+  const teacher=f.post({action:'calendarLink',code:'__teacher__',session});assert.equal(f.post({action:'calendarFeed',code:'__teacher__',token:teacher.calendarToken}).lessons[0].title,'Demo learner · English lesson with Rory');
+  f.props.set('TEACHER_PASSWORD','rotated');assert.equal(f.post({action:'calendarFeed',code:'__teacher__',token:teacher.calendarToken}).ok,false);
+});
+test('rescheduling waits for approval, retries without duplication and declines retain original booking',()=>{
+  const f=fixture();f.setTime(new Date('2026-10-01T12:00:00Z').getTime());const teacher=f.teacher(),student=f.student();
+  f.post({action:'teacherCalendarSave',code:'student-a',session:teacher,id:randomUUID(),date:'2026-10-03',time:'15:00',duration:90,repeat:'once'});
+  const l=f.post({action:'calendarLessons',code:'student-a',session:student}).lessons[0];
+  const req={action:'calendarRequest',code:'student-a',session:student,id:randomUUID(),lessonId:l.id,date:'2026-10-04',time:'16:00',message:'Could we do Sunday?'};
+  assert.equal(f.post(req).ok,true);assert.equal(f.post(req).ok,true);assert.equal(f.sheets.get('Lesson requests').data.length,2);
+  assert.equal(f.post({...req,id:randomUUID()}).ok,false);
+  assert.equal(f.post({action:'calendarLessons',code:'student-a',session:student}).lessons[0].date,'2026-10-03');
+  assert.equal(f.post({action:'teacherCalendarRespond',code:'student-a',session:student,id:req.id,status:'accepted'}).ok,false);
+  assert.equal(f.post({action:'teacherCalendarRespond',code:'student-a',session:teacher,id:req.id,status:'accepted'}).ok,true);
+  assert.equal(f.post({action:'teacherCalendarRespond',code:'student-a',session:teacher,id:req.id,status:'accepted'}).ok,true);
+  const changed=f.post({action:'calendarLessons',code:'student-a',session:student}).lessons[0];assert.equal(changed.id,l.id);assert.equal(changed.date,'2026-10-04');assert.equal(changed.sequence,1);
+  const second={...req,id:randomUUID(),date:'2026-10-05'};assert.equal(f.post(second).ok,true);
+  assert.equal(f.post({action:'teacherCalendarRespond',code:'student-a',session:teacher,id:second.id,status:'declined'}).ok,true);
+  assert.equal(f.post({action:'calendarLessons',code:'student-a',session:student}).lessons[0].date,'2026-10-04');
+});
+test('adding a break cancels existing lessons and removing it does not silently rebook them',()=>{
+  const f=fixture(),session=f.teacher();f.post({action:'teacherCalendarSave',code:'student-a',session,id:randomUUID(),date:'2026-10-03',time:'15:00',duration:90,repeat:'fortnightly',until:'2026-10-31'});
+  const b={action:'teacherCalendarBreak',code:'student-a',session,id:randomUUID(),from:'2026-10-17',to:'2026-10-31',label:'Confirmed break'};
+  assert.equal(f.post(b).cancelled,2);assert.equal(f.post(b).cancelled,0);
+  assert.equal(f.post({action:'teacherCalendarRemoveBreak',code:'student-a',session,id:b.id}).ok,true);
+  const result=f.post({action:'calendarLessons',code:'student-a',session});assert.equal(result.breaks.length,0);assert.equal(result.lessons.filter(l=>l.status==='cancelled').length,2);
 });

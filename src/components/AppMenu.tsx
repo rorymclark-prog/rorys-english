@@ -23,7 +23,7 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
   const close=()=>dialog.current?.close();
   const viewNews=()=>{setPanel("news");setUnread(false);try{localStorage.setItem(seenKey,LATEST_RELEASE);}catch{/* optional badge */}};
   const menuGroups=code?[
-    {label:"YOUR DAY",links:[["Today",`/s/${code}/`]]},
+    {label:"YOUR DAY",links:[["Today",`/s/${code}/`],["Lesson calendar",`/s/${code}/calendar/`]]},
     {label:"YOUR WORK",links:[["Homework",`/s/${code}/homework/`],["Test prep",`/s/${code}/test-prep/`],["Documents",`/s/${code}/documents/`],["Feedback & progress",`/s/${code}/progress/`]]},
     {label:"PRACTISE & FIND",links:[["Speaking",`/s/${code}/speak/`],["Lessons",`/s/${code}/lessons/`],["Practice",`/s/${code}/study/`],["Resources",`/s/${code}/resources/`],["Writing help",`/s/${code}/coach/`]]},
   ]:[];
@@ -32,7 +32,7 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
     <dialog ref={dialog} aria-labelledby={titleId} className="app-menu-dialog" onClose={()=>{setOpen(false);trigger.current?.focus();}} onClick={e=>{if(e.target===dialog.current){const rect=dialog.current.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)close();}}}>
       <header className="mb-6 flex items-center justify-between gap-3"><div>{panel!=="menu"&&<button type="button" className="mb-2 min-h-11 text-sm underline" onClick={()=>setPanel("menu")}>← Menu</button>}<p className="text-xs font-bold uppercase tracking-widest text-navy-soft dark:text-navy-mist">Rory’s English</p><h2 id={titleId} className="mt-1 text-2xl font-extrabold">{panel==="menu"?"Your space":panel==="news"?"What’s new":panel==="preview"?"View as student":"Settings"}</h2></div><button type="button" className="app-menu-close" aria-label="Close menu" onClick={close}>×</button></header>
       {panel==="menu"&&<div className="space-y-2">
-        {teacher?<><Link className="app-menu-link" href="/teacher/" onClick={close}>Students & teaching<span aria-hidden>→</span></Link><button type="button" className="app-menu-link w-full" onClick={()=>setPanel("preview")}>View as student<span aria-hidden>↗</span></button></>:menuGroups.map(group=><section key={group.label} className="app-menu-group"><p>{group.label}</p>{group.links.map(([label,href])=><Link key={href} href={href} onClick={close} className="app-menu-link">{label}<span aria-hidden>→</span></Link>)}</section>)}
+        {teacher?<><Link className="app-menu-link" href="/teacher/" onClick={close}>Students & teaching<span aria-hidden>→</span></Link><Link className="app-menu-link" href="/teacher/calendar/" onClick={close}>Lesson calendar<span aria-hidden>→</span></Link><button type="button" className="app-menu-link w-full" onClick={()=>setPanel("preview")}>View as student<span aria-hidden>↗</span></button></>:menuGroups.map(group=><section key={group.label} className="app-menu-group"><p>{group.label}</p>{group.links.map(([label,href])=><Link key={href} href={href} onClick={close} className="app-menu-link">{label}<span aria-hidden>→</span></Link>)}</section>)}
         <div className="my-3 border-t border-black/10 dark:border-white/10"/>
         <button type="button" className="app-menu-link w-full" onClick={()=>setPanel("settings")}>Settings<span className="text-xs font-normal">Appearance & text size</span></button>
         <button type="button" className="app-menu-link w-full" onClick={viewNews}>What’s new{unread?<span className="app-new-pill">New</span>:<span aria-hidden>→</span>}</button>

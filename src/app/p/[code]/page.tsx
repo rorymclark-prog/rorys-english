@@ -8,5 +8,5 @@ export default async function ParentProgressPage({
 }) {
   const { code } = await params;
   const student = getStudentByParentCode(code)!; // layout 404s unknown codes
-  return <ProgressView fetchCode={code} displayName={student.displayName} mode="parent" />;
+  return <><a className="ux-link-row p-5" href={`/p/${code}/calendar/`}>Open lesson calendar →</a><ProgressView fetchCode={code} displayName={student.displayName} mode="parent" /></>;
 }
