@@ -19,6 +19,7 @@ import { publishAssessment } from "@/lib/remote";
 import { VoiceStudio } from "./SpeakView";
 import DocumentsView from "./DocumentsView";
 import LearningView from "./LearningView";
+import TeachingFilesView from "./TeachingFilesView";
 import CalendarView from "./CalendarView";
 import TeachingProgress from "./TeachingProgress";
 import TeacherReviewPanel from "./TeacherReviewPanel";
@@ -272,7 +273,7 @@ function TeacherStudentPanel({
   onViewProgress: () => void;
   onPatch: (patch: Partial<TeacherStudent>) => void;
 }) {
-  const [section, setSection] = useState<"review" | "assign" | "assess" | "documents" | "learning">("review");
+  const [section, setSection] = useState<"review" | "assign" | "assess" | "documents" | "learning" | "teaching">("review");
   const [note, setNote] = useState(student.focusNote);
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
@@ -337,12 +338,14 @@ function TeacherStudentPanel({
         </section>
         <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>
         <nav className="teacher-section-nav" aria-label="Student workspace sections">
+          <button type="button" aria-pressed={section === "teaching"} onClick={()=>setSection("teaching")}><BookIcon/><span>Teaching files<small>PowerPoints & teacher notes</small></span></button>
           <button type="button" aria-pressed={section === "learning"} onClick={()=>setSection("learning")}><MessageIcon/><span>Reviews<small>Writing, speaking & lessons</small></span></button>
           <button type="button" aria-pressed={section === "documents"} onClick={()=>setSection("documents")}><FileIcon/><span>Documents<small>Scan, upload & discuss</small></span></button>
           <button type="button" aria-pressed={section === "review"} onClick={()=>setSection("review")}><CheckSquareIcon/><span>Work & feedback<small>Read, respond, encourage</small></span></button>
           <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><PencilIcon/><span>Plan homework<small>Set the next step</small></span></button>
           <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><TargetIcon/><span>Assessments<small>Record & reflect</small></span></button>
         </nav>
+        {section === "teaching" && <TeachingFilesView key={student.code} code={student.code} name={student.name}/>}
         {section === "documents" && <DocumentsView key={student.code} code={student.code} name={student.name} teacher/>}
         {section === "learning" && <LearningView key={student.code} code={student.code} name={student.name} mode="teacher"/>}
         <div hidden={section !== "review"}><TeacherReviewPanel code={student.code}/></div>
