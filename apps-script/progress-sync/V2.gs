@@ -122,7 +122,7 @@ function setAccess_(p) {
   authProps_().setProperty('access_version_'+code,token_());
   return {ok:true,code:code,access:access};
 }
-function doGet() {return json_({ok:true,service:'rorys-english',version:2,documents:true,teacherConfigured:!!authProps_().getProperty(TEACHER_PASSWORD_PROP)});}
+function doGet() {return json_({ok:true,service:'rorys-english',version:2,documents:true,sentenceReviews:true,groupedDocuments:true,documentModel:'claude-sonnet-5',teacherConfigured:!!authProps_().getProperty(TEACHER_PASSWORD_PROP)});}
 function doPost(e) {
   try {
     if(!e || !e.postData || e.postData.contents.length>3500000) return json_({ok:false,error:'Request too large'});
@@ -139,7 +139,7 @@ function doPost(e) {
     var permitted=s.role==='parent'?['progress','resources','note','documents','document','documentFile','learningRecords']:reads.concat(['ai','submit','event','documentUpload','documentAnalyse','documentChat','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio']);
     if(!teacher && permitted.indexOf(p.action)<0) return json_({ok:false,error:'Access denied'});
     if(p.preview && reads.indexOf(p.action)<0)return json_({ok:false,error:'Student preview is read-only.'});
-    if(['documents','document','documentFile','documentUpload','documentAnalyse','documentChat','teacherDocumentReview'].indexOf(p.action)>=0)return json_(documentService_(p,s));
+    if(['documents','document','documentFile','documentUpload','documentAnalyse','documentChat','teacherDocumentReview','teacherDocumentLink'].indexOf(p.action)>=0)return json_(documentService_(p,s));
     if(['learningRecords','teacherSaveLearningRecord','teacherReviewSpeaking','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio'].indexOf(p.action)>=0)return json_(learningService_(p,s));
     // Discard legacy client credentials. Only inject after validating session.
     p.secret=SECRET;

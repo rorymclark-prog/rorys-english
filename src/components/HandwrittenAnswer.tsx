@@ -44,7 +44,9 @@ export default function HandwrittenAnswer({ code, title, context, source = "unsp
       if (!r.ok || !r.received || !r.document) throw new Error(r.error || "Upload not confirmed. Keep this page open and retry; the same upload will be checked.");
       onSaved(handwritingReference(r.document.id)); setFiles([]);
       uploadId.current = crypto.randomUUID();
-      setMessage("Photo saved privately and attached to your draft. Now send or save your answer below so Rory sees it with this task.");
+      setMessage("Photo saved and attached. Preparing your sentence-by-sentence review…");
+      const analysis=await documentRequest(code,false,{action:'documentAnalyse',id:r.document.id});
+      setMessage(analysis.ok?'Photos attached and sentence review prepared. Send or save your answer below so Rory sees it with this task.': 'Photos attached. Your original is safe; the sentence review needs another check in Documents. Send or save your answer below.');
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not confirm the upload. Keep the photos here and retry."); }
     finally { setBusy(false); onBusyChange?.(false); }
   }
@@ -59,7 +61,7 @@ export default function HandwrittenAnswer({ code, title, context, source = "unsp
     {files.length > 0 && <div className="mt-3">
       <div className="flex flex-wrap gap-3">{files.map((file, index) => <figure key={index} className="w-28"><img src={previews[index]} alt={`Handwritten page ${index + 1} preview`} className="h-32 w-28 rounded-lg border object-contain" /><figcaption className="mt-1 text-xs">Page {index + 1}</figcaption></figure>)}</div>
       <WorkSourceSelect value={workSource} onChange={setWorkSource} disabled={blocked||busy}/>
-      <p className="my-2 text-xs">Check the page order. Upload copies are kept privately for you, your parents and Rory. Your originals stay on your device. No AI reading runs when you attach a photo.</p>
+      <p className="my-2 text-xs">Check the page order. Upload copies are kept privately for you, your parents and Rory. Your originals stay on your device. The app prepares a sentence-by-sentence practice review after saving your photos.</p>
       <button type="button" className="min-h-11 rounded-xl bg-indigo-700 px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={blocked || busy} onClick={() => void save()}>{busy ? "Saving photos…" : "Attach these photos to my answer"}</button>
       <button type="button" className="ml-3 min-h-11 underline" disabled={busy} onClick={() => setFiles([])}>Cancel</button>
     </div>}

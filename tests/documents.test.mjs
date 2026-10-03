@@ -7,7 +7,7 @@ const sample={name:'work.pdf',type:'application/pdf',data:Buffer.from('%PDF-1.4\
 function fixture(){
  const props=new Map([['TEACHER_PASSWORD','synthetic-only'],['sheet_student-a','sheet-a'],['sheet_student-b','sheet-b'],['ANTHROPIC_API_KEY','mock-key']]),cache=new Map(),books=new Map(),files=new Map(),folders=new Map();
  let aiCalls=0,aiStatus=200,aiHook=null;
- const analysis={transcription:'Page 1\nI go to the park yesterday.',coverage:'complete',uncertainties:[],summary:'A short account of a visit.',strengths:['The main idea is clear.'],corrections:[{original:'I go',suggestion:'I went',explanation:'Use the past simple for yesterday.'}],retry:'Write one more sentence about yesterday.'};
+ const analysis={transcription:'Page 1\nI go to the park yesterday.',coverage:'complete',uncertainties:[],summary:'A short account of a visit.',strengths:['The main idea is clear.'],corrections:[{original:'I go',suggestion:'I went',explanation:'Use the past simple for yesterday.'}],retry:'Write one more sentence about yesterday.',writing:{original:'I go to the park yesterday.',comparisons:[{original:'I go to the park yesterday.',corrected:'I went to the park yesterday.',improved:'',note:'Use the past simple for yesterday.'}]}};
  const blob=(bytes,type,name)=>({getBytes:()=>Array.from(typeof bytes==='string'?Buffer.from(bytes):bytes),getDataAsString:()=>Buffer.from(bytes).toString(),type,name});
  function spreadsheet(id){if(books.has(id))return books.get(id);const sheets=new Map(),book={sheets,getSheetByName:n=>sheets.get(n)||null,insertSheet:n=>{const data=[],sh={data,getDataRange:()=>({getValues:()=>data.map(r=>r.slice())}),appendRow:r=>data.push(r.slice()),getRange:(row,col)=>({setValues:vs=>vs.forEach((r,i)=>r.forEach((v,j)=>{data[row-1+i]||=[];data[row-1+i][col-1+j]=v;})),setValue:v=>{data[row-1]||=[];data[row-1][col-1]=v;}})};sheets.set(n,sh);return sh;}};books.set(id,book);return book;}
  function folder(){const id=randomUUID(),f={getId:()=>id,access:'PRIVATE',getSharingAccess:()=>f.access,getEditors:()=>[],getViewers:()=>[],createFolder:folder,createFile:b=>{const fid=randomUUID(),file={getId:()=>fid,getBlob:()=>b,setTrashed:t=>{file.trashed=t;}};files.set(fid,file);return file;}};folders.set(id,f);return f;}
@@ -145,4 +145,50 @@ test('learning reply updates wait for the server deadline while earlier shared r
  assert.equal(f.post({action:'learningRecords'},'teacher').records[0].body.summary,'New approved review');
  const rows=f.books.get('sheet-a').sheets.get('Learning reviews').data;rows[rows.length-1][8]=new Date(Date.now()-1).toISOString();
  const released=f.post({action:'learningRecords'}).records[0];assert.equal(released.body.summary,'New approved review');assert.equal(released.body.tutorPrivate,undefined);
+});
+
+test('automatic complete sentence analysis rejects omissions, extracts and uncertain guesses',()=>{
+ const f=fixture(),base=f.analysis;
+ const full={...base,transcription:'I swim. I went home.',corrections:[],writing:{original:'I swim. I went home.',comparisons:[{original:'I swim.',corrected:'I swim.',improved:'',note:'Already correct.'},{original:'I went home.',corrected:'I went home.',improved:'',note:'A clear past-tense sentence.'}]}};
+ assert.equal(f.ctx.documentAnalysisValid_(full),true);
+ assert.equal(f.ctx.documentAnalysisValid_({...full,writing:{...full.writing,comparisons:full.writing.comparisons.slice(1)}}),false);
+ assert.equal(f.ctx.documentAnalysisValid_({...full,writing:{...full.writing,comparisons:[{...full.writing.comparisons[0],original:'swim'}]}}),false);
+ const unclear={...base,transcription:'I [unclear] home.',corrections:[],writing:{original:'I [unclear] home.',comparisons:[{original:'I [unclear] home.',corrected:'I went home.',improved:'',note:'Guess'}]}};
+ assert.equal(f.ctx.documentAnalysisValid_(unclear),false);unclear.writing.comparisons[0].corrected='';assert.equal(f.ctx.documentAnalysisValid_(unclear),true);
+});
+test('explicit document links preserve originals and reject cross-profile cycles and learner writes',()=>{
+ const f=fixture(),first=f.upload().document.id,second=f.upload().document.id;
+ assert.equal(f.post({action:'teacherDocumentLink',id:second,parentId:first,context:'[Document role: review]'},'teacher').ok,true);
+ assert.equal(f.post({action:'document',id:second}).document.parentId,first);
+ assert.equal(f.post({action:'teacherDocumentLink',id:first,parentId:second,context:''},'teacher').ok,false);
+ assert.equal(f.post({action:'teacherDocumentLink',id:second,parentId:first,context:''}).ok,false);
+ assert.equal(f.post({action:'teacherDocumentLink',id:second,parentId:first,context:'',preview:true},'teacher').ok,false);
+ const other=f.post({action:'documentUpload',code:'student-b',id:randomUUID(),title:'Other work',files:[sample]},'other').document.id;
+ assert.equal(f.post({action:'teacherDocumentLink',id:second,parentId:other,context:''},'teacher').ok,false);
+ assert.equal(f.post({action:'documentFile',id:first,index:0}).file.data,sample.data);
+});
+test('linked writing reviews follow visibility and the five-hour review window',()=>{
+ const f=fixture(),id=f.upload().document.id,reviewId=randomUUID();
+ const record={action:'teacherSaveLearningRecord',id:reviewId,date:'2026-10-03',kind:'homework',title:'Private writing notes',visibility:'teacher',body:{writing:{original:'I go.',corrected:'I went.'},tutorPrivate:{plan:'Private'}}};
+ f.post(record,'teacher');f.post({action:'teacherDocumentLink',id,parentId:'',context:`[Learning review: ${reviewId}]`},'teacher');
+ assert.equal(f.post({action:'document',id}).review,null);
+ assert.equal(f.post({action:'document',id,preview:true},'teacher').review,null);
+ f.post({...record,visibility:'shared'},'teacher');
+ assert.equal(f.post({action:'document',id}).review.body.tutorPrivate,undefined);
+ assert.equal(f.post({action:'document',id},'teacher').review.body.tutorPrivate.plan,'Private');
+ const sh=f.books.get('sheet-a').sheets.get('Learning reviews');sh.data.at(-1)[8]=new Date(Date.now()+3600000).toISOString();
+ assert.equal(f.post({action:'document',id}).review,null);
+});
+
+test('uploaded Word answers are read automatically as text and prior AI output is backed up on upgrade',()=>{
+ const f=fixture(),word={name:'answer.docx',type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',data:Buffer.from([80,75,3,4,1,2,3,4,5,6,7,8]).toString('base64')};
+ const node=(name,content='',children=[])=>({getName:()=>name,getText:()=>content,getChildren:()=>children});
+ f.ctx.Utilities.unzip=()=>[{getName:()=> 'word/document.xml',getDataAsString:()=> '<document/>'}];
+ f.ctx.XmlService={parse:()=>({getRootElement:()=>node('document','',[node('p','',[node('r','',[node('t','I go to the park yesterday.')]),node('del','',[node('t','Abandoned wording')])])])})};
+ const id=f.upload({files:[word]}).document.id;
+ assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,1);
+ assert.equal(f.post({action:'document',id}).document.analysis.writing.comparisons[0].original,'I go to the park yesterday.');
+ const sh=f.books.get('sheet-a').sheets.get('Documents'),old={...f.analysis};delete old.writing;sh.data[1][6]=JSON.stringify(old);
+ const before=f.files.size;assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,2);assert.equal(f.files.size,before+1);
+ assert.equal(f.post({action:'documentFile',id,index:0}).file.data,word.data);
 });

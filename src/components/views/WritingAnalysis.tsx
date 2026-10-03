@@ -10,7 +10,7 @@ const colors={
   note:{panel:'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40',label:'text-slate-700 dark:text-slate-200',mark:'text-slate-600 italic dark:text-slate-300'},
 };
 const tokens=(s:string)=>s.match(/\s+|[^\s]+/g)||[];
-function changed(before:string,after:string){
+export function changed(before:string,after:string){
   const a=tokens(before),b=tokens(after);
   // Keep a sentence comparison bounded even if someone pastes a whole essay into a row.
   if(a.length*b.length>40000)return {old:a.map(t=>!/^\s+$/.test(t)),new:b.map(t=>!/^\s+$/.test(t))};
@@ -21,7 +21,7 @@ function changed(before:string,after:string){
   while(i<a.length&&j<b.length){if(a[i]===b[j]){old[i]=false;fresh[j]=false;i++;j++;}else if(d[i+1][j]>=d[i][j+1])i++;else j++;}
   return {old,new:fresh};
 }
-function Highlight({text,mask,mark}:{text:string;mask:boolean[];mark:string}){return <span className="whitespace-pre-wrap">{tokens(text).map((t,i)=>mask[i]?<span key={i} className={mark}>{t}</span>:<span key={i}>{t}</span>)}</span>}
+export function Highlight({text,mask,mark}:{text:string;mask:boolean[];mark:string}){return <span className="whitespace-pre-wrap">{tokens(text).map((t,i)=>mask[i]?<span key={i} className={mark}>{t}</span>:<span key={i}>{t}</span>)}</span>}
 const empty=():WritingComparison=>({original:'',corrected:'',improved:'',note:''});
 
 export function ComparisonFields({rows,onChange}:{rows:WritingComparison[];onChange:(rows:WritingComparison[])=>void}){

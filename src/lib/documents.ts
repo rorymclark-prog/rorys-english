@@ -1,8 +1,9 @@
 import {authed, request, savedSession, type ApiResult} from './api';
-export type DocumentAnalysis={transcription:string;coverage:'complete'|'partial'|'unreadable';uncertainties:string[];summary:string;strengths:string[];corrections:{original:string;suggestion:string;explanation:string}[];retry:string};
+import type {LearningRecord,WritingComparison} from './learning';
+export type DocumentAnalysis={transcription:string;coverage:'complete'|'partial'|'unreadable';uncertainties:string[];summary:string;strengths:string[];corrections:{original:string;suggestion:string;explanation:string}[];retry:string;model?:string;writing?:{original:string;comparisons:WritingComparison[]}};
 export type LearnerDocument={id:string;title:string;created:string;uploadedBy:string;files:{index:number;name:string;type:string;size:number}[];status:'saved'|'analysing'|'ready'|'error';feedback:string;reviewed:string;parentId:string;context:string;error:string;processing:boolean;analysis?:DocumentAnalysis|null;feedbackAvailableAt?:string;reviewPending?:boolean};
 export type DocumentMessage={id:string;created?:string;question:string;answer:string;askedBy:string};
-export type DocumentReply=ApiResult&{documents?:LearnerDocument[];document?:LearnerDocument;messages?:DocumentMessage[];message?:DocumentMessage;received?:boolean;pending?:boolean;file?:{name:string;type:string;data:string}};
+export type DocumentReply=ApiResult&{documents?:LearnerDocument[];document?:LearnerDocument;review?:LearningRecord|null;messages?:DocumentMessage[];message?:DocumentMessage;received?:boolean;pending?:boolean;file?:{name:string;type:string;data:string}};
 export const MAX_DOCUMENT_BYTES=2500000;
 export function documentRequest(code:string,teacher:boolean,body:Record<string,unknown>):Promise<DocumentReply> {
   return teacher?request({...body,code,session:savedSession('__teacher__')?.token||''}):authed(code,body);
