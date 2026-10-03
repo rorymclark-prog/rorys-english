@@ -1,4 +1,5 @@
 "use client";
+import {isTeachingPack} from '@/lib/teaching-files';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {getLearning,replyLearning,saveLearning,type LearningBody,type LearningKind,type LearningRecord,type LearningReply,type WritingComparison} from '@/lib/learning';
@@ -34,7 +35,7 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
   const ids=useRef<Record<string,string>>({});
   const disabled=mode==='parent'||isStudentPreview(code);
   const checkpoints=records.filter(r=>r.kind==='speaking'&&r.body.ratings&&Object.values(r.body.ratings).some(v=>v!=null)).sort((a,b)=>a.date.localeCompare(b.date));
-  const refresh=useCallback(async()=>{const r=await getLearning(code,mode==='teacher');setLoading(false);if(r.ok){setRecords(r.records||[]);setReplies(r.replies||[]);setError('');}else setError(r.error||'Could not open the learning record.');},[code,mode]);
+  const refresh=useCallback(async()=>{const r=await getLearning(code,mode==='teacher');setLoading(false);if(r.ok){setRecords((r.records||[]).filter(record=>!isTeachingPack(record)));setReplies(r.replies||[]);setError('');}else setError(r.error||'Could not open the learning record.');},[code,mode]);
   useEffect(()=>{void refresh();},[refresh]);
   useReviewRefresh(()=>void refresh(),[...records.map(r=>r.feedbackAvailableAt),...replies.map(r=>r.feedbackAvailableAt)]);
   async function create(e:React.FormEvent){e.preventDefault();if(mode!=='teacher'||busy)return;setBusy(true);setError('');setMessage('');

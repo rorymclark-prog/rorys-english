@@ -6,4 +6,6 @@ The existing authenticated learning-record service enforces the teacher role and
 
 Valentin's 3 October teaching pack was saved through the signed-in teacher app as Lesson notes / Only Rory, without learner ratings. Student slides for way2go! 8 Unit 1 are updated at the existing resource path. Original companion practice is labelled separately from publisher book pages.
 
-Validation: 170 tests, TypeScript checking and production build passed. Live verification is recorded in the originating project handoff.
+Preparation packs are excluded from Reviews and teaching-reflection counts; they do not establish that a lesson was delivered.
+
+Validation: 171 tests, TypeScript checking and production build passed. Live verification is recorded in the originating project handoff.

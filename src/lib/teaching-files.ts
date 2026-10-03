@@ -1,8 +1,11 @@
 import type {LearningRecord} from './learning';
 export type TeachingFile={label:string;url:string};
+export function isTeachingPack(record:LearningRecord):boolean{
+ return record.visibility==='teacher'&&record.kind==='lesson'&&!!record.body.tutorPrivate?.plan?.startsWith('Teaching files:');
+}
 /** Only owner-restricted Drive files from a private lesson preparation record. */
 export function teachingFiles(record:LearningRecord):TeachingFile[]{
- if(record.visibility!=='teacher'||record.kind!=='lesson')return [];
+ if(!isTeachingPack(record))return [];
  const plan=record.body.tutorPrivate?.plan||'';
  if(!plan.startsWith('Teaching files:'))return [];
  return plan.split('\n').slice(1).flatMap(line=>{
