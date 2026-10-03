@@ -156,7 +156,7 @@ export default function TeacherDashboardView({initialCalendar=false}:{initialCal
         <a href="/teacher/" className="teacher-brand"><span aria-hidden>r.</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
         <div className="flex items-center gap-2">
           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
-          <button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(true)}>Lesson calendar</button><QuickAppearance/><AppMenu teacher/>
+          <button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(true)}>Calendar</button><QuickAppearance/><AppMenu teacher/>
         </div>
       </header>
       <main>

@@ -76,3 +76,41 @@ No tokens, event contents or private bearer-link URLs are logged by app code.
 local app with an empty Firebase public API key, demo mode, and its public
 sync URL pointed to the in-memory server. Never deploy the demo configuration.
 `CALENDAR_QA_OUT` selects a private screenshot/results directory.
+
+## School test dates and scope — 3 October 2026
+
+Calendar now includes **School tests → Add test**. Rory selects the learner;
+learners can add and edit tests in their own calendar. Save a full date, title
+and either a written scope (up to 4,000 characters) or photos, or both. Up to
+six JPEG/PNG/WebP photos are kept per test, with a 2.5 MB combined stored limit;
+large device photos are prepared using the existing photo workflow. The camera
+control requests the rear camera where the device/browser supports it. HEIC
+conversion still depends on browser decoding. Parents and teacher student
+preview can read the scope and photos but cannot change them.
+
+Tests are all-day school dates: no time is invented, no tutoring overlap check
+is applied, and school breaks do not cancel them. Calendar day markers and
+student filters include tests. Edit, cancel and restore preserve the test ID;
+changes reject stale sequences and retries of the same mutation are deduplicated.
+Cancellation retains scope/photos. Removing a photo from the current scope
+keeps the private file in storage; it stops appearing in the test.
+
+The new `School test calendar` tab stores ID + JSON in the existing private
+student workbook. It is created only on a save, without modifying existing
+tabs. Photos use the existing owner-only document folder, but do not create
+writing submissions, document analyses, reviews, scores or messages. Photo
+reads require the exact authenticated student/profile, test ID, current
+sequence and page index; Drive IDs are never sent to the browser. Scope text
+is rendered literally. Temporary browser photo URLs are revoked on changes
+or unmount.
+
+Existing private calendar subscriptions also include all-day test titles and
+dates, retaining cancellations and update sequences. Scopes and photos never
+appear in the subscription feed. No external calendar is connected automatically.
+
+Tests: `npm test`, `npm run lint`, `npm run build`. The in-memory browser
+service also supports scope-photo storage; `scripts/qa-school-tests.mjs`
+checks teacher/student creation, edit, cancellation/restoration, month markers,
+photo-only scopes, parent/preview read-only access, and phone/tablet/desktop
+light/dark layout. It creates synthetic records only in the local fixture.
+Physical camera capture and installed-phone operation require a device check.

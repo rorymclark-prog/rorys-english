@@ -122,7 +122,7 @@ function setAccess_(p) {
   authProps_().setProperty('access_version_'+code,token_());
   return {ok:true,code:code,access:access};
 }
-function doGet() {return json_({ok:true,service:'rorys-english',version:2,documents:true,sentenceReviews:true,groupedDocuments:true,lessonCalendar:true,documentModel:'claude-sonnet-5',teacherConfigured:!!authProps_().getProperty(TEACHER_PASSWORD_PROP)});}
+function doGet() {return json_({ok:true,service:'rorys-english',version:2,documents:true,sentenceReviews:true,groupedDocuments:true,lessonCalendar:true,schoolTestCalendar:true,documentModel:'claude-sonnet-5',teacherConfigured:!!authProps_().getProperty(TEACHER_PASSWORD_PROP)});}
 function doPost(e) {
   try {
     if(!e || !e.postData || e.postData.contents.length>3500000) return json_({ok:false,error:'Request too large'});
@@ -136,8 +136,8 @@ function doPost(e) {
     if(p.action==='logout') {CacheService.getScriptCache().remove('session_'+digest_(p.session));authProps_().deleteProperty(REMEMBERED_TEACHER_PREFIX_+digest_(p.session));authProps_().deleteProperty(REMEMBERED_STUDENT_PREFIX_+digest_(p.session));return json_({ok:true});}
     var teacher=s.role==='teacher', student=studentByAnyCode_(s.code);
     if(!teacher && (!student || p.code!==s.code)) return json_({ok:false,error:'Access denied'});
-    var reads=['progress','resources','assignments','note','submissions','documents','document','documentFile','learningRecords','calendarLessons'];
-    var permitted=s.role==='parent'?['progress','resources','note','documents','document','documentFile','learningRecords','calendarLessons','calendarLink','calendarRevoke','calendarRequest']:reads.concat(['ai','submit','event','documentUpload','documentAnalyse','documentChat','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio','calendarLink','calendarRevoke','calendarRequest']);
+    var reads=['progress','resources','assignments','note','submissions','documents','document','documentFile','learningRecords','calendarLessons','calendarTestFile'];
+    var permitted=s.role==='parent'?['progress','resources','note','documents','document','documentFile','learningRecords','calendarLessons','calendarTestFile','calendarLink','calendarRevoke','calendarRequest']:reads.concat(['ai','submit','event','documentUpload','documentAnalyse','documentChat','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio','calendarTestSave','calendarTestCancel','calendarLink','calendarRevoke','calendarRequest']);
     if(!teacher && permitted.indexOf(p.action)<0) return json_({ok:false,error:'Access denied'});
     if(p.preview && reads.indexOf(p.action)<0)return json_({ok:false,error:'Student preview is read-only.'});
     if(CALENDAR_ACTIONS_.indexOf(p.action)>=0)return json_(calendarService_(p,s));

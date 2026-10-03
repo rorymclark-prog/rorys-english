@@ -356,3 +356,51 @@ test('teacher calendar reads and links are rejected for students and parents',()
  const f=fixture();for(const role of ['student','parent']){const code=role==='student'?'student-a':'parent-a',session=f.ctx.issueSession_(code,role).token;for(const action of ['teacherCalendarLessons','teacherCalendarLink','teacherCalendarRevoke'])assert.equal(f.post({action,code,session}).ok,false);}
  const teacher=f.teacher();assert.equal(f.post({action:'teacherCalendarLessons',code:'__teacher__',session:teacher}).ok,true);assert.equal(f.post({action:'teacherCalendarLink',code:'student-a',session:teacher}).scope,'__teacher__:student-a');
 });
+
+function testCalendarFixture(){
+ const f=fixture(),files=new Map();vm.runInContext(fs.readFileSync('apps-script/progress-sync/Documents.gs','utf8'),f.ctx);
+ f.ctx.Utilities.base64Decode=s=>Array.from(Buffer.from(s,'base64'));f.ctx.Utilities.base64Encode=b=>Buffer.from(b).toString('base64');
+ f.ctx.Utilities.newBlob=(bytes,type,name)=>({getBytes:()=>bytes,type,name});
+ f.ctx.documentFolder_=()=>({createFile:blob=>{const id=randomUUID();files.set(id,{blob,trashed:false});return {getId:()=>id};}});
+ f.ctx.DriveApp={getFileById:id=>({getBlob:()=>files.get(id).blob,setTrashed:v=>{files.get(id).trashed=v;}})};
+ return {...f,files};
+}
+const scopePhoto={name:'scope.png',type:'image/png',data:Buffer.from([137,80,78,71,13,10,26,10,1,2,3,4]).toString('base64')};
+function testDraft(f,extra={}){return {action:'calendarTestSave',code:'student-a',session:f.student(),id:randomUUID(),mutationId:randomUUID(),date:'2026-10-31',title:'English test',scope:'Unit 1\nPast simple and a letter',...extra};}
+test('school tests save written scopes literally, survive school breaks and retry without duplicating',()=>{
+ const f=testCalendarFixture(),p=testDraft(f,{scope:'=Unit 1\n<script>literal scope</script>'});
+ assert.equal(f.post(p).ok,true);assert.equal(f.post(p).duplicate,true);
+ f.post({action:'teacherCalendarBreak',code:'student-a',session:f.teacher(),id:randomUUID(),from:'2026-10-24',to:'2026-11-01'});
+ const t=f.post({action:'calendarLessons',code:'student-a',session:p.session}).tests[0];assert.equal(t.scope,p.scope);assert.equal(t.date,p.date);assert.equal(t.status,'scheduled');assert.equal(f.sheets.get('School test calendar').data.length,2);
+ assert.equal(f.sheets.has('Documents'),false);assert.equal(f.files.size,0);
+});
+test('photo-only scope is private, byte-preserving and independent from writing submissions or AI',()=>{
+ const f=testCalendarFixture(),p=testDraft(f,{scope:'',files:[scopePhoto]});assert.equal(f.post(p).ok,true);assert.equal(f.post(p).duplicate,true);assert.equal(f.files.size,1);
+ const t=f.post({action:'calendarLessons',code:'student-a',session:p.session}).tests[0];assert.equal(t.files[0].id,undefined);assert.equal(t.files[0].index,0);
+ const file=f.post({action:'calendarTestFile',code:'student-a',session:p.session,id:t.id,index:0,expectedSequence:0});assert.equal(file.file.data,scopePhoto.data);
+ assert.equal(f.sheets.has('Documents'),false);assert.equal(f.sheets.has('Submissions'),false);
+ const link=f.post({action:'calendarLink',code:'student-a',session:p.session}),feed=f.post({action:'calendarFeed',code:'student-a',token:link.calendarToken});assert.equal(feed.lessons[0].date,p.date);assert.equal(feed.lessons[0].scope,undefined);assert.equal(feed.lessons[0].files,undefined);assert.equal(JSON.stringify(feed).includes(scopePhoto.name),false);
+});
+test('test editing preserves photos, detects stale updates and permits cancellation and restoration',()=>{
+ const f=testCalendarFixture(),p=testDraft(f,{files:[scopePhoto]});f.post(p);
+ const edit={...p,files:[],mutationId:randomUUID(),expectedSequence:0,date:'2026-11-02',scope:'Updated scope'};assert.equal(f.post(edit).ok,true);assert.equal(f.post(edit).duplicate,true);assert.equal(f.files.size,1);
+ assert.equal(f.post({...edit,mutationId:randomUUID()}).ok,false);
+ assert.equal(f.post({action:'calendarTestFile',code:p.code,session:p.session,id:p.id,index:0,expectedSequence:0}).ok,false);
+ const cancel={action:'calendarTestCancel',code:p.code,session:p.session,id:p.id,mutationId:randomUUID(),expectedSequence:1};assert.equal(f.post(cancel).ok,true);assert.equal(f.post(cancel).ok,true);
+ const t=f.post({action:'calendarLessons',code:p.code,session:p.session}).tests[0];assert.equal(t.sequence,2);assert.equal(t.status,'cancelled');assert.equal(t.files.length,1);
+ assert.equal(f.post({...edit,mutationId:randomUUID(),expectedSequence:2,removeFiles:[0]}).ok,true);
+ assert.equal(f.post({action:'calendarLessons',code:p.code,session:p.session}).tests[0].files.length,0);
+});
+test('scope validation refuses impossible dates, empty scope, wrong file types and excess photos',()=>{
+ const f=testCalendarFixture();for(const extra of [{date:'2026-02-30'},{scope:''},{scope:'a'.repeat(4001)},{scope:'',files:[{...scopePhoto,type:'image/jpeg'}]},{files:Array(7).fill(scopePhoto)},{removeFiles:[0]}])assert.equal(f.post(testDraft(f,extra)).ok,false);
+ assert.equal(f.files.size,0);assert.equal(f.sheets.has('School test calendar'),false);
+});
+test('test scopes and photos respect student, parent and read-only-preview boundaries',()=>{
+ const f=testCalendarFixture(),p=testDraft(f,{files:[scopePhoto]});f.post(p);const parent=f.ctx.issueSession_('parent-a','parent').token,teacher=f.teacher();
+ assert.equal(f.post({...p,code:'other-student'}).ok,false);
+ assert.equal(f.post({...p,code:'parent-a',session:parent}).ok,false);
+ assert.equal(f.post({...p,session:teacher,preview:true}).ok,false);
+ assert.equal(f.post({...p,action:'teacherCalendarTestSave'}).ok,false);
+ for(const [code,session,preview] of [['parent-a',parent,false],['student-a',teacher,true]]){assert.equal(f.post({action:'calendarLessons',code,session,preview}).tests.length,1);assert.equal(f.post({action:'calendarTestFile',code,session,preview,id:p.id,index:0,expectedSequence:0}).file.data,scopePhoto.data);}
+ assert.equal(f.post({action:'calendarTestFile',code:'student-a',id:p.id,index:0,expectedSequence:0}).authRequired,true);
+});

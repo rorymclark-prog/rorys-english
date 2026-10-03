@@ -1,7 +1,7 @@
 // Private lesson scheduling. Calendar links grant read-only access to lesson
 // times only; they never expose homework, submissions, feedback or requests.
 var CALENDAR_ZONE_ = 'Europe/Vienna';
-var CALENDAR_ACTIONS_ = ['teacherCalendarLessons','teacherCalendarLink','teacherCalendarRevoke','calendarLessons','calendarLink','calendarRevoke','calendarRequest','teacherCalendarSave','teacherCalendarCancel','teacherCalendarRespond','teacherCalendarBreak','teacherCalendarRemoveBreak'];
+var CALENDAR_ACTIONS_ = ['teacherCalendarLessons','teacherCalendarLink','teacherCalendarRevoke','calendarLessons','calendarLink','calendarRevoke','calendarRequest','teacherCalendarSave','teacherCalendarCancel','teacherCalendarRespond','teacherCalendarBreak','teacherCalendarRemoveBreak','calendarTestSave','teacherCalendarTestSave','calendarTestCancel','teacherCalendarTestCancel','calendarTestFile','teacherCalendarTestFile'];
 function calendarSheet_(code,name,create) {
   var ss=studentSheet_(code),sh=ss.getSheetByName(name);
   if(!sh&&create){sh=ss.insertSheet(name);sh.getRange(1,1,1,2).setValues([['Id','Record JSON']]);}
@@ -24,7 +24,7 @@ function calendarId_(id){if(typeof id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{15
 function calendarText_(value,max,fallback){if(value===undefined)return fallback||'';if(typeof value!=='string'||value.length>max)throw Error('The lesson text is too long.');return value.trim();}
 function calendarBlocked_(date,breaks){return breaks.some(function(b){return !b.removed&&date>=b.from&&date<=b.to;});}
 function calendarRoster_(p,s){if(s.role==='teacher'&&!p.preview&&p.code==='__teacher__')return getRoster_();var st=studentByAnyCode_(p.code);if(!st)throw Error('Unknown student.');return [st];}
-function calendarRead_(p,s){var roster=calendarRoster_(p,s),lessons=[],requests=[],breaks=[];roster.forEach(function(st){calendarRows_(st.code,'Lessons').forEach(function(l){lessons.push(Object.assign({},l,{studentCode:st.code,studentName:st.name}));});calendarRows_(st.code,'Lesson requests').forEach(function(r){requests.push(Object.assign({},r,{studentCode:st.code,studentName:st.name}));});calendarRows_(st.code,'Lesson breaks').forEach(function(b){if(!b.removed)breaks.push(Object.assign({},b,{studentCode:st.code,studentName:st.name}));});});return {ok:true,lessons:lessons,requests:requests,breaks:breaks,timezone:CALENDAR_ZONE_};}
+function calendarRead_(p,s){var roster=calendarRoster_(p,s),lessons=[],requests=[],breaks=[],tests=[];roster.forEach(function(st){calendarRows_(st.code,'School test calendar').forEach(function(t){tests.push(calendarTestPublic_(t,st));});calendarRows_(st.code,'Lessons').forEach(function(l){lessons.push(Object.assign({},l,{studentCode:st.code,studentName:st.name}));});calendarRows_(st.code,'Lesson requests').forEach(function(r){requests.push(Object.assign({},r,{studentCode:st.code,studentName:st.name}));});calendarRows_(st.code,'Lesson breaks').forEach(function(b){if(!b.removed)breaks.push(Object.assign({},b,{studentCode:st.code,studentName:st.name}));});});return {ok:true,lessons:lessons,requests:requests,breaks:breaks,tests:tests,timezone:CALENDAR_ZONE_};}
 function calendarConflict_(candidates,ignoreIds){var existing=[];getRoster_().forEach(function(st){existing=existing.concat(calendarRows_(st.code,'Lessons'));});var all=existing.filter(function(l){return l.status==='scheduled'&&ignoreIds.indexOf(l.id)<0;});for(var i=0;i<candidates.length;i++){var l=candidates[i];for(var j=0;j<all.length;j++)if(l.start<all[j].end&&l.end>all[j].start)throw Error('This time overlaps another lesson. Choose a different time.');all.push(l);}}
 function calendarRecord_(p,id,seriesId,sequence){var start=calendarStart_(p.date,p.time),duration=calendarDuration_(p.duration);return {id:id,seriesId:seriesId,date:p.date,time:p.time,duration:duration,start:start.toISOString(),end:new Date(start.getTime()+duration*60000).toISOString(),timezone:CALENDAR_ZONE_,title:calendarText_(p.title,120,'English lesson with Rory')||'English lesson with Rory',location:calendarText_(p.location,200,''),status:'scheduled',sequence:sequence,updatedAt:new Date().toISOString()};}
 function calendarSave_(p,st){
@@ -50,10 +50,11 @@ function calendarLink_(p,s){if(s.role==='teacher'&&p.code!=='__teacher__'&&!stud
 function calendarFeed_(p){
   if(typeof p.token!=='string'||!/^[a-f0-9]{64}$/.test(p.token)||typeof p.code!=='string'||p.code.length>100)return {ok:false,error:'Calendar link unavailable.'};
   var raw=authProps_().getProperty(calendarLinkKey_(p.code));if(!raw)return {ok:false,error:'Calendar link unavailable.'};var link=JSON.parse(raw);if(link.hash!==digest_(p.token)||link.version!==calendarLinkVersion_(p.code))return {ok:false,error:'Calendar link unavailable.'};
-  var teacher=p.code.indexOf('__teacher__')===0,studentCode=p.code.indexOf('__teacher__:')===0?p.code.slice(12):p.code;var roster=p.code==='__teacher__'?getRoster_():[studentByAnyCode_(studentCode)];if(!roster[0])return {ok:false,error:'Calendar link unavailable.'};var lessons=[];roster.forEach(function(st){calendarRows_(st.code,'Lessons').forEach(function(l){lessons.push({id:l.id,start:l.start,end:l.end,title:teacher?st.name+' · '+l.title:l.title,location:l.location,status:l.status,sequence:l.sequence,updatedAt:l.updatedAt});});});return {ok:true,lessons:lessons};
+  var teacher=p.code.indexOf('__teacher__')===0,studentCode=p.code.indexOf('__teacher__:')===0?p.code.slice(12):p.code;var roster=p.code==='__teacher__'?getRoster_():[studentByAnyCode_(studentCode)];if(!roster[0])return {ok:false,error:'Calendar link unavailable.'};var lessons=[];roster.forEach(function(st){calendarRows_(st.code,'Lessons').forEach(function(l){lessons.push({id:l.id,start:l.start,end:l.end,title:teacher?st.name+' · '+l.title:l.title,location:l.location,status:l.status,sequence:l.sequence,updatedAt:l.updatedAt});});calendarRows_(st.code,'School test calendar').forEach(function(t){lessons.push({id:'test_'+t.id,date:t.date,title:(teacher?st.name+' · ':'')+t.title,location:'',status:t.status,sequence:t.sequence,updatedAt:t.updatedAt});});});return {ok:true,lessons:lessons};
 }
 function calendarService_(p,s){
   try{
+    if(p.action==='calendarTestFile'||p.action==='teacherCalendarTestFile'){if(p.action.indexOf('teacher')===0&&s.role!=='teacher')return {ok:false,error:'Access denied'};return calendarTestFile_(p);}
     if(p.action==='calendarLessons')return calendarRead_(p,s);
     if(p.action==='teacherCalendarLessons'){if(s.role!=='teacher')return {ok:false,error:'Access denied'};return calendarRead_(p,s);}
     if(p.preview)return {ok:false,error:'Student preview is read-only.'};
@@ -62,6 +63,9 @@ function calendarService_(p,s){
       if(p.action==='teacherCalendarLink'||p.action==='teacherCalendarRevoke')return calendarLink_(Object.assign({},p,{action:p.action==='teacherCalendarLink'?'calendarLink':'calendarRevoke'}),s);
       if(p.action==='calendarLink'||p.action==='calendarRevoke')return calendarLink_(p,s);
       var st=studentByAnyCode_(p.code);if(!st||s.role==='teacher'&&p.code!==st.code)return {ok:false,error:'Unknown student.'};
+      if(s.role==='parent'&&p.action.indexOf('calendarTest')===0)return {ok:false,error:'Access denied'};
+      if(p.action==='calendarTestSave'||p.action==='teacherCalendarTestSave')return calendarTestSave_(p,st);
+      if(p.action==='calendarTestCancel'||p.action==='teacherCalendarTestCancel')return calendarTestCancel_(p,st);
       if(p.action==='calendarRequest')return calendarRequest_(p,st,s);
       if(p.action==='teacherCalendarSave')return calendarSave_(p,st);
       if(p.action==='teacherCalendarCancel')return calendarCancel_(p,st);
@@ -71,4 +75,38 @@ function calendarService_(p,s){
       return {ok:false,error:'Unknown calendar action.'};
     }finally{lock.releaseLock();}
   }catch(err){return {ok:false,error:err.message||'Could not update the calendar.'};}
+}
+
+// Scope photos live in the existing owner-only folder, separate from submitted
+// work and AI review. Reads expose indices, never Drive IDs or public links.
+function calendarTestPublic_(t,st){return {id:t.id,date:t.date,title:t.title,scope:t.scope,status:t.status,sequence:t.sequence,updatedAt:t.updatedAt,studentCode:st.code,studentName:st.name,files:t.files.map(function(f,i){return {index:i,name:f.name,type:f.type,size:f.size};})};}
+function calendarTestSave_(p,st){
+  calendarId_(p.id);calendarId_(p.mutationId);
+  var rows=calendarRows_(st.code,'School test calendar'),old=rows.find(function(t){return t.id===p.id;});
+  if(old&&old.mutationId===p.mutationId)return {ok:true,id:old.id,duplicate:true};
+  if(old?p.expectedSequence!==old.sequence:p.expectedSequence!==undefined)throw Error('This test has changed. Refresh before saving.');
+  calendarDate_(p.date);var title=calendarText_(p.title,120,''),scope=calendarText_(p.scope,4000,'');if(!title)throw Error('Add a test title.');
+  if(!old&&rows.length>=500)throw Error('The school test calendar is full.');
+  var remove=p.removeFiles||[];if(!Array.isArray(remove)||remove.some(function(i){return !Number.isInteger(i)||!old||i<0||i>=old.files.length;}))throw Error('Invalid photo selection.');
+  var kept=old?old.files.filter(function(f,i){return remove.indexOf(i)<0;}):[];
+  var incoming=p.files&&p.files.length?documentValidateFiles_(p.files):[];
+  if(incoming.some(function(f){return f.type.indexOf('image/')!==0;}))throw Error('Choose photos of the test scope.');
+  if(kept.length+incoming.length>6||kept.concat(incoming).reduce(function(n,f){return n+f.size;},0)>2500000)throw Error('Keep up to six photos, up to 2.5 MB in total.');
+  if(!scope&&!kept.length&&!incoming.length)throw Error('Write the test scope or add a photo of it.');
+  var stored=[],folder=incoming.length?documentFolder_(st.code):null;
+  try{
+    incoming.forEach(function(f,i){var file=folder.createFile(Utilities.newBlob(f.bytes,f.type,'test-'+p.id+'-'+p.mutationId+'-'+i+'-'+f.name));stored.push({id:file.getId(),name:f.name,type:f.type,size:f.size});});
+    var t={id:p.id,mutationId:p.mutationId,date:p.date,title:title,scope:scope,files:kept.concat(stored),status:'scheduled',sequence:old?old.sequence+1:0,updatedAt:new Date().toISOString()};
+    calendarPut_(st.code,'School test calendar',t);return {ok:true,id:t.id};
+  }catch(err){stored.forEach(function(f){try{DriveApp.getFileById(f.id).setTrashed(true);}catch(ignored){}});throw err;}
+}
+function calendarTestCancel_(p,st){
+  calendarId_(p.mutationId);var t=calendarRows_(st.code,'School test calendar').find(function(x){return x.id===p.id;});if(!t)throw Error('Test not found.');
+  if(t.mutationId===p.mutationId)return {ok:true};if(p.expectedSequence!==t.sequence)throw Error('This test has changed. Refresh before cancelling.');
+  t.status='cancelled';t.sequence++;t.mutationId=p.mutationId;t.updatedAt=new Date().toISOString();calendarPut_(st.code,'School test calendar',t);return {ok:true};
+}
+function calendarTestFile_(p){
+  var st=studentByAnyCode_(p.code);if(!st)throw Error('Unknown student.');var t=calendarRows_(st.code,'School test calendar').find(function(x){return x.id===p.id;});
+  if(!t||p.expectedSequence!==t.sequence||!Number.isInteger(p.index)||p.index<0||p.index>=t.files.length)throw Error('This photo has changed. Refresh the calendar.');
+  var f=t.files[p.index];return {ok:true,file:{name:f.name,type:f.type,data:Utilities.base64Encode(DriveApp.getFileById(f.id).getBlob().getBytes())}};
 }

@@ -30,3 +30,17 @@ test('revoked links return 404, while transport failures return 503 instead of a
 test('teacher calendar client uses teacher session actions when a student also has a browser session',async()=>{
  const ex={},calls=[];vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/calendar-client.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:ex,require:()=>({authed:async(code,body)=>{calls.push({code,...body});return {ok:true};}})});await ex.fetchCalendar('__teacher__',true);await ex.fetchCalendar('learner');assert.equal(calls[0].action,'teacherCalendarLessons');assert.equal(calls[1].action,'calendarLessons');
 });
+
+test('school test subscriptions export all-day dates and cancellations without inventing a time',()=>{
+ const ics=exports.buildLessonsIcs([{...l,id:'test_example-id',date:'2026-12-31',title:'English test'},{...l,id:'test_cancelled-id',date:'2027-01-01',status:'cancelled'}]);
+ assert.ok(ics.includes('DTSTART;VALUE=DATE:20261231\r\n'));assert.ok(ics.includes('DTEND;VALUE=DATE:20270101\r\n'));assert.ok(ics.includes('STATUS:CANCELLED'));assert.ok(!ics.includes('BEGIN:VALARM'));assert.ok(!ics.includes('DTSTART:'));
+});
+
+test('service upload gate accepts scope photos over 60 KB while retaining the global size limit',async()=>{
+ const ex={},source=ts.transpileModule(fs.readFileSync('src/app/api/service/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;let called=0;
+ vm.runInNewContext(source,{exports:ex,require:name=>name==='firebase-admin/app'?{}:name==='firebase-admin/auth'?{}:name.includes('account-service')?{accountService:async()=>{called++;return {ok:true};}}:name.includes('progress-transport')?{ProgressTransportError:class extends Error{}}:{},Request,Response,URL,Map,JSON,process:{env:{}},console:{error:()=>{}}});
+ for(const action of ['calendarTestSave','teacherCalendarTestSave']){const r=await ex.POST(new Request('https://app.test/api/service/',{method:'POST',headers:{origin:'https://app.test'},body:JSON.stringify({action,files:[{data:'a'.repeat(100000)}]})}));assert.equal(r.status,200);}
+ assert.equal(called,2);
+ const tooLarge=await ex.POST(new Request('https://app.test/api/service/',{method:'POST',headers:{origin:'https://app.test'},body:JSON.stringify({action:'calendarTestSave',files:[{data:'a'.repeat(3500000)}]})}));assert.equal(tooLarge.status,413);assert.equal(called,2);
+ const ordinary=await ex.POST(new Request('https://app.test/api/service/',{method:'POST',headers:{origin:'https://app.test'},body:JSON.stringify({action:'calendarRequest',message:'a'.repeat(100000)})}));assert.equal(ordinary.status,413);
+});

@@ -7,7 +7,7 @@ import {useStudent} from "./StudentContext";
 import {HomeIcon,CalendarIcon,BookIcon,CheckSquareIcon,ChartIcon,GearIcon,FolderIcon,TargetIcon,FileIcon,MessageIcon} from "./Icons";
 import {MicrophoneIcon,RepeatIcon} from "./LearningVisuals";
 const groups = [
-  {label:"YOUR DAY", items:[["","Today",HomeIcon],["calendar/","Lesson calendar",CalendarIcon]]},
+  {label:"YOUR DAY", items:[["","Today",HomeIcon],["calendar/","Calendar",CalendarIcon]]},
   {label:"YOUR WORK", items:[["homework/","Homework",CheckSquareIcon],["test-prep/","Test prep",TargetIcon],["documents/","Documents",FileIcon],["progress/","Feedback & progress",ChartIcon]]},
   {label:"PRACTISE & FIND", items:[["speak/","Speaking",MicrophoneIcon],["lessons/","Lessons",BookIcon],["study/","Practice",RepeatIcon],["resources/","Resources",FolderIcon],["coach/","Writing help",MessageIcon]]},
 ] as const;
