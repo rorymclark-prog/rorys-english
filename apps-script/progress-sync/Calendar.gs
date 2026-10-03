@@ -1,7 +1,7 @@
 // Private lesson scheduling. Calendar links grant read-only access to lesson
 // times only; they never expose homework, submissions, feedback or requests.
 var CALENDAR_ZONE_ = 'Europe/Vienna';
-var CALENDAR_ACTIONS_ = ['calendarLessons','calendarLink','calendarRevoke','calendarRequest','teacherCalendarSave','teacherCalendarCancel','teacherCalendarRespond','teacherCalendarBreak','teacherCalendarRemoveBreak'];
+var CALENDAR_ACTIONS_ = ['teacherCalendarLessons','teacherCalendarLink','teacherCalendarRevoke','calendarLessons','calendarLink','calendarRevoke','calendarRequest','teacherCalendarSave','teacherCalendarCancel','teacherCalendarRespond','teacherCalendarBreak','teacherCalendarRemoveBreak'];
 function calendarSheet_(code,name,create) {
   var ss=studentSheet_(code),sh=ss.getSheetByName(name);
   if(!sh&&create){sh=ss.insertSheet(name);sh.getRange(1,1,1,2).setValues([['Id','Record JSON']]);}
@@ -55,9 +55,11 @@ function calendarFeed_(p){
 function calendarService_(p,s){
   try{
     if(p.action==='calendarLessons')return calendarRead_(p,s);
+    if(p.action==='teacherCalendarLessons'){if(s.role!=='teacher')return {ok:false,error:'Access denied'};return calendarRead_(p,s);}
     if(p.preview)return {ok:false,error:'Student preview is read-only.'};
     if(p.action.indexOf('teacher')===0&&s.role!=='teacher')return {ok:false,error:'Access denied'};
     var lock=LockService.getScriptLock();lock.waitLock(10000);try{
+      if(p.action==='teacherCalendarLink'||p.action==='teacherCalendarRevoke')return calendarLink_(Object.assign({},p,{action:p.action==='teacherCalendarLink'?'calendarLink':'calendarRevoke'}),s);
       if(p.action==='calendarLink'||p.action==='calendarRevoke')return calendarLink_(p,s);
       var st=studentByAnyCode_(p.code);if(!st||s.role==='teacher'&&p.code!==st.code)return {ok:false,error:'Unknown student.'};
       if(p.action==='calendarRequest')return calendarRequest_(p,st,s);

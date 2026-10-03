@@ -39,7 +39,7 @@ test('invalid Firebase tokens and other learner routes cannot reach the progress
   assert.equal((await accountService({ ...request, code: 'other-learner' }, other.deps)).ok, false); assert.equal(other.calls.length, 0);
 });
 test('managed students cannot invoke teacher actions even with a forged teacher secret', async () => {
-  for (const action of ['teacherAccess','teacherDashboard','teacherReview','teacherAddStudent','teacherAssignHomework']) {
+  for (const action of ['teacherAccess','teacherDashboard','teacherReview','teacherAddStudent','teacherAssignHomework','teacherCalendarLessons','teacherCalendarLink','teacherCalendarRevoke','teacherCalendarSave','teacherCalendarCancel','teacherCalendarRespond','teacherCalendarBreak']) {
     const f = setup();
     assert.equal((await accountService({ ...request, action, teacherSecret: 'forged' }, f.deps)).ok, false); assert.equal(f.calls.length, 0);
   }

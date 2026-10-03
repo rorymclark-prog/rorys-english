@@ -31,7 +31,7 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
   if (!endpoint) return { ok: false, error: "The secure connection is not configured yet." } as T;
   // Google can briefly fail while redirecting to its JSON response. Retrying
   // sign-in and reads is safe; writes and AI calls retain their explicit flow.
-  const retryable = new Set(["login", "accountLogin", "progress", "resources", "assignments", "note", "submissions", "teacherDashboard", "documents", "document", "documentFile", "learningRecords", "calendarLessons"]);
+  const retryable = new Set(["login", "accountLogin", "progress", "resources", "assignments", "note", "submissions", "teacherDashboard", "documents", "document", "documentFile", "learningRecords", "calendarLessons", "teacherCalendarLessons"]);
   const attempts = retryable.has(String(body.action)) ? 2 : 1;
   // Did the service reply at all, even to refuse? Then this is not an outage.
   let answered = false;

@@ -351,3 +351,8 @@ test('adding a break cancels existing lessons and removing it does not silently 
   assert.equal(f.post({action:'teacherCalendarRemoveBreak',code:'student-a',session,id:b.id}).ok,true);
   const result=f.post({action:'calendarLessons',code:'student-a',session});assert.equal(result.breaks.length,0);assert.equal(result.lessons.filter(l=>l.status==='cancelled').length,2);
 });
+
+test('teacher calendar reads and links are rejected for students and parents',()=>{
+ const f=fixture();for(const role of ['student','parent']){const code=role==='student'?'student-a':'parent-a',session=f.ctx.issueSession_(code,role).token;for(const action of ['teacherCalendarLessons','teacherCalendarLink','teacherCalendarRevoke'])assert.equal(f.post({action,code,session}).ok,false);}
+ const teacher=f.teacher();assert.equal(f.post({action:'teacherCalendarLessons',code:'__teacher__',session:teacher}).ok,true);assert.equal(f.post({action:'teacherCalendarLink',code:'student-a',session:teacher}).scope,'__teacher__:student-a');
+});

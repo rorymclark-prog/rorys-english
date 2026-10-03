@@ -26,3 +26,7 @@ test('calendar feed rejects missing links without contacting the private service
 test('revoked links return 404, while transport failures return 503 instead of an empty successful calendar',async()=>{
  const url='https://app.test/api/calendar/?code=learner&token='+'a'.repeat(64);assert.equal((await feedRoute({ok:false}).GET(new Request(url))).status,404);const failure=await feedRoute(null,true).GET(new Request(url));assert.equal(failure.status,503);assert.equal(failure.headers.get('retry-after'),'60');assert.ok(!(await failure.text()).includes('BEGIN:VCALENDAR'));
 });
+
+test('teacher calendar client uses teacher session actions when a student also has a browser session',async()=>{
+ const ex={},calls=[];vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/calendar-client.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:ex,require:()=>({authed:async(code,body)=>{calls.push({code,...body});return {ok:true};}})});await ex.fetchCalendar('__teacher__',true);await ex.fetchCalendar('learner');assert.equal(calls[0].action,'teacherCalendarLessons');assert.equal(calls[1].action,'calendarLessons');
+});
