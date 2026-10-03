@@ -5,6 +5,12 @@ export type LearnerDocument={id:string;title:string;created:string;uploadedBy:st
 export type DocumentMessage={id:string;created?:string;question:string;answer:string;askedBy:string};
 export type DocumentReply=ApiResult&{documents?:LearnerDocument[];document?:LearnerDocument;review?:LearningRecord|null;messages?:DocumentMessage[];message?:DocumentMessage;received?:boolean;pending?:boolean;file?:{name:string;type:string;data:string}};
 export const MAX_DOCUMENT_BYTES=2500000;
+export function analysisReadState(document:LearnerDocument,seenProcessing:boolean,previousError:string):'ready'|'error'|'waiting' {
+  if(document.processing)return 'waiting';
+  if(document.analysis?.writing)return 'ready';
+  if(document.error&&(seenProcessing||document.error!==previousError))return 'error';
+  return 'waiting';
+}
 export function documentRequest(code:string,teacher:boolean,body:Record<string,unknown>):Promise<DocumentReply> {
   return teacher?request({...body,code,session:savedSession('__teacher__')?.token||''}):authed(code,body);
 }

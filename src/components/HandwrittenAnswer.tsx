@@ -46,7 +46,7 @@ export default function HandwrittenAnswer({ code, title, context, source = "unsp
       uploadId.current = crypto.randomUUID();
       setMessage("Photo saved and attached. Preparing your sentence-by-sentence review…");
       const analysis=await documentRequest(code,false,{action:'documentAnalyse',id:r.document.id});
-      setMessage(analysis.ok?'Photos attached and sentence review prepared. Send or save your answer below so Rory sees it with this task.': 'Photos attached. Your original is safe; the sentence review needs another check in Documents. Send or save your answer below.');
+      setMessage(analysis.ok&&!analysis.pending?'Photos attached and sentence review prepared. Send or save your answer below so Rory sees it with this task.':analysis.pending||analysis.offline?'Photos attached. The sentence review is still processing; open Documents to read it when ready. Send or save your answer below.':'Photos attached. Your original is safe; the sentence review needs another check in Documents. Send or save your answer below.');
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not confirm the upload. Keep the photos here and retry."); }
     finally { setBusy(false); onBusyChange?.(false); }
   }
