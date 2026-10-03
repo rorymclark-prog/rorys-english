@@ -17,6 +17,7 @@ import ProgressView from "./ProgressView";
 import { login, savedSession, forgetSession } from "@/lib/api";
 import { publishAssessment } from "@/lib/remote";
 import { VoiceStudio } from "./SpeakView";
+import SavedWriting from "@/components/SavedWriting";
 import DocumentsView from "./DocumentsView";
 import LearningView from "./LearningView";
 import TeachingFilesView from "./TeachingFilesView";
@@ -348,7 +349,7 @@ function TeacherStudentPanel({
         {section === "teaching" && <TeachingFilesView key={student.code} code={student.code} name={student.name}/>}
         {section === "documents" && <DocumentsView key={student.code} code={student.code} name={student.name} teacher/>}
         {section === "learning" && <LearningView key={student.code} code={student.code} name={student.name} mode="teacher"/>}
-        <div hidden={section !== "review"}><TeacherReviewPanel code={student.code}/></div>
+        <div hidden={section !== "review"}>{section==="review"&&<SavedWriting code={student.code} name={student.name} teacher/>}<TeacherReviewPanel code={student.code}/></div>
         <div hidden={section !== "assign"}>
         <div className="teacher-form-grid">
         {/* Focus note — surfaces on the student's Today screen AND is woven

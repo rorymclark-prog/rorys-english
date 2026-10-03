@@ -3,11 +3,12 @@ export type DocumentRole='answer'|'review'|'task';
 export function documentMeta(context:string){
   const role=context.match(/^\[Document role: (answer|review|task)\]$/m)?.[1] as DocumentRole|undefined;
   const reviewId=context.match(/^\[Learning review: ([A-Za-z0-9_-]{16,100})\]$/m)?.[1]||'';
-  return {role:role||'answer',reviewId,context:context.replace(/^\[(?:Document role: (?:answer|review|task)|Learning review: [A-Za-z0-9_-]{16,100})\]\n?/gm,'')};
+  const workDate=context.match(/^\[Work date: (\d{4}-\d{2}-\d{2})\]$/m)?.[1]||'';
+  return {role:role||'answer',reviewId,workDate,context:context.replace(/^\[(?:Document role: (?:answer|review|task)|Learning review: [A-Za-z0-9_-]{16,100}|Work date: \d{4}-\d{2}-\d{2})\]\n?/gm,'')};
 }
 export function documentContext(context:string,role:DocumentRole,reviewId=''){
-  const clean=documentMeta(context).context;
-  return `[Document role: ${role}]\n${reviewId?`[Learning review: ${reviewId}]\n`:''}${clean}`.slice(0,2000);
+  const meta=documentMeta(context),clean=meta.context;
+  return `[Document role: ${role}]\n${reviewId?`[Learning review: ${reviewId}]\n`:''}${meta.workDate?`[Work date: ${meta.workDate}]\n`:''}${clean}`.slice(0,2000);
 }
 // Only explicit links establish a work group. A date or similar title never does.
 export function documentGroups(documents:LearnerDocument[]){

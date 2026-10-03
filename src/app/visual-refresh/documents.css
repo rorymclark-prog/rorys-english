@@ -2,3 +2,5 @@
 .documents-space .doc-hero h1{font-size:clamp(1.8rem,2.8vw,2.45rem)}
 .documents-space .ux-route-grid{margin-bottom:17px}
 .documents-space .doc-steps{margin-bottom:18px}
+
+.saved-writing{margin:24px 0}.documents-space.doc-inline{margin-top:20px}.doc-inline .doc-workspace{grid-template-columns:minmax(0,1fr)}.doc-inline .doc-detail{min-width:0}.doc-inline .doc-detail-heading h2{font-size:1.35rem}

@@ -1,4 +1,5 @@
 "use client";
+import SavedWriting from '@/components/SavedWriting';
 import {isTeachingPack} from '@/lib/teaching-files';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
@@ -63,6 +64,7 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
       <button className={button} disabled={busy||!title.trim()}>{busy?'Saving…':'Save review'}</button>
     </form></details>}
     {error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}{message&&<p role="status" className="rounded-xl bg-green-50 p-3 text-sm text-green-800">{message}</p>}
+    {(filter==='all'||filter==='homework')&&<SavedWriting code={code} name={name} teacher={mode==='teacher'} parent={mode==='parent'} reviewIds={records.map(r=>r.id)}/>}
     <nav className="learning-filters flex flex-wrap gap-2" aria-label="Filter learning records">{(['all',...kinds] as const).map(k=><button key={k} type="button" aria-pressed={filter===k} onClick={()=>setFilter(k)} className={`rounded-full border px-3 py-2 text-sm ${filter===k?'border-indigo-600 bg-indigo-600 text-white':'border-black/15 dark:border-white/20'}`}>{k==='all'?'All':labels[k]}</button>)}</nav>
     {checkpoints.length>0&&<section className={card}><h3 className="font-bold">Speaking checkpoints</h3><p className="mt-1 text-xs text-navy-soft dark:text-navy-mist">Rory’s task based observations. Compare similar tasks and support levels before reading a change as progress.</p><div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr><th className="pr-3">Date</th>{Object.entries(ratingLabels).map(([key,label])=><th key={key} className="pr-3">{label}</th>)}</tr></thead><tbody>{checkpoints.slice(-4).map(r=><tr key={r.id} className="border-t border-black/10 dark:border-white/10"><td className="py-2 pr-3">{r.date}</td>{Object.keys(ratingLabels).map(key=><td key={key} className="pr-3">{r.body.ratings?.[key]??'—'}</td>)}</tr>)}</tbody></table></div><p className="mt-2 text-xs">Scale: 1–4. A dash means not observed.</p></section>}
     {loading?<p>Opening the learning record…</p>:!records.length?<p className={card}>No reviews yet. New work and lesson notes will appear here.</p>:!records.some(r=>filter==='all'||r.kind===filter)?<p className={card}>Nothing in this area yet.</p>:<div className="space-y-4">{records.filter(r=>filter==='all'||r.kind===filter).map(r=>{const b=r.body,w=b.writing,rs=replies.filter(x=>x.reviewId===r.id);return <article key={r.id} className={`${card} learning-kind-${r.kind}`}>

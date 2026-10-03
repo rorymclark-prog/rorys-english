@@ -5,6 +5,7 @@ import Link from "next/link";
 import type {HomeworkWeek,Unit} from "@/lib/types";
 import {useStudent} from "@/components/StudentContext";
 import Screen from "@/components/Screen";
+import SavedWriting from "@/components/SavedWriting";
 import SubmissionForm from "@/components/SubmissionForm";
 import SpeakingHomeworkCard from "@/components/views/SpeakingHomeworkCard";
 import {isFerdiSpeakingHomework} from "@/lib/speaking-homework";
@@ -43,7 +44,7 @@ function AssignedCard({assignment,code,previous=false}:{assignment:Assignment;co
 }
 
 export default function HomeworkListView({unit}:{unit:Unit|null}){
-  const {code}=useStudent();
+  const {code,displayName}=useStudent();
   const [assignments,setAssignments]=useState<Assignment[]>([]),[error,setError]=useState(""),[loaded,setLoaded]=useState(false);
   async function refresh(){setError("");try{const r=await fetchAssignments(code);if(r.ok)setAssignments((r.assignments?.rows||[]).map(rowToAssignment));else setError(r.error||"Could not load homework. Please retry.");}catch{setError("Could not load homework. Please retry.");}finally{setLoaded(true)}}
   useEffect(()=>{void refresh();},[code]);
@@ -61,6 +62,7 @@ export default function HomeworkListView({unit}:{unit:Unit|null}){
       {!loaded&&<p role="status" className="work-loading">Checking Rory’s assignments…</p>}
       {(count>0||loaded)&&<section className="work-section"><SectionHeading eyebrow="YOUR CURRENT WORK" title="Ready to do" count={count}/><div className="work-card-list">{readyAssignments.map(a=>isFerdiSpeakingHomework(code,a)?<SpeakingHomeworkCard key={a.id} code={code} assignment={a}/>:<AssignedCard key={a.id} assignment={a} code={code}/>)}{readyWeeks.map(h=><WeekCard key={`${unit!.id}-${h.week}`} week={h} unitId={unit!.id} code={code} upcoming={false}/>)}{loaded&&!error&&count===0&&<div className="work-empty"><BookIcon/><strong>Nothing new to do right now.</strong><p>Your lessons and earlier work are still here when you want to practise.</p></div>}</div></section>}
       {upcomingWeeks.length>0&&<section className="work-section"><SectionHeading eyebrow="PLAN AHEAD" title="Coming up" count={upcomingWeeks.length}/><div className="work-card-list">{upcomingWeeks.map(h=><WeekCard key={`${unit!.id}-${h.week}`} week={h} unitId={unit!.id} code={code} upcoming/>)}</div></section>}
+      <SavedWriting code={code} name={displayName}/>
       {completedAssignments.length>0&&<details className="work-archive"><summary><CheckSquareIcon/><span><strong>Completed assignments</strong><small>{completedAssignments.length} saved for reference</small></span><ChevronRightIcon/></summary><div className="work-card-list">{completedAssignments.map(a=><AssignedCard key={a.id} assignment={a} code={code}/>)}</div></details>}
       {previous.length>0&&<details className="work-archive"><summary><FileIcon/><span><strong>Previous-year assignments</strong><small>Optional revision · {previous.length} items</small></span><ChevronRightIcon/></summary><div className="work-card-list">{previous.map(a=><AssignedCard key={a.id} assignment={a} code={code} previous/>)}</div></details>}
       <Link className="work-library-link" href={`/s/${code}/lessons/`}><BookIcon/><span><strong>Find lessons and past material</strong><small>Current unit, practice and approved resources</small></span><ChevronRightIcon/></Link>
