@@ -110,6 +110,18 @@ test('analysis failure preserves the original and quota is reserved before calli
  const f=fixture(),id=f.upload().document.id;f.status=429;assert.equal(f.post({action:'documentAnalyse',id}).ok,false);assert.equal(f.post({action:'document',id}).document.status,'error');assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
  f.status=200;f.props.set('ai_student-a','40');assert.equal(f.post({action:'documentAnalyse',id}).ok,false);assert.equal(f.calls,1);
 });
+test('incomplete AI output is kept privately without replacing a valid earlier review',()=>{
+ const f=fixture(),id=f.upload().document.id;
+ assert.equal(f.post({action:'documentAnalyse',id}).ok,true);
+ const row=f.books.get('sheet-a').sheets.get('Documents').data.find(r=>r[0]===id);
+ const earlier=JSON.parse(row[6]);delete earlier.writing;row[6]=JSON.stringify(earlier);
+ f.analysis.writing.comparisons=[];
+ assert.equal(f.post({action:'documentAnalyse',id}).ok,false);
+ assert.deepEqual(JSON.parse(row[6]),earlier);
+ assert.equal(row[5],'ready');
+ assert.equal([...f.files.values()].filter(file=>file.getBlob().name?.includes('-incomplete-analysis-')).length,1);
+ assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
+});
 test('active processing leases prevent concurrent AI charges and expired leases can retry',()=>{
  const f=fixture(),id=f.upload().document.id;let nested;f.hook=()=>{f.hook=null;nested=f.post({action:'documentAnalyse',id});};assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(nested.pending,true);assert.equal(f.calls,1);
  const next=f.upload().document.id,sh=f.books.get('sheet-a').sheets.get('Documents');const row=sh.data.find(r=>r[0]===next);row[11]='stale';row[12]=Date.now()-400000;assert.equal(f.post({action:'documentAnalyse',id:next}).ok,true);
@@ -155,6 +167,13 @@ test('automatic complete sentence analysis rejects omissions, extracts and uncer
  assert.equal(f.ctx.documentAnalysisValid_({...full,writing:{...full.writing,comparisons:[{...full.writing.comparisons[0],original:'swim'}]}}),false);
  const unclear={...base,transcription:'I [unclear] home.',corrections:[],writing:{original:'I [unclear] home.',comparisons:[{original:'I [unclear] home.',corrected:'I went home.',improved:'',note:'Guess'}]}};
  assert.equal(f.ctx.documentAnalysisValid_(unclear),false);unclear.writing.comparisons[0].corrected='';assert.equal(f.ctx.documentAnalysisValid_(unclear),true);
+});
+test('full sentences can continue across photographed page labels without allowing changed source words',()=>{
+ const f=fixture(),original='They should be flexible and self confident.';
+ const a={...f.analysis,transcription:'[Page 1]\nThey should be flexible\n\n[Page 2]\nand self confident.',corrections:[{original:'flexible and self confident',suggestion:'flexible and self-confident',explanation:'Hyphenate self-confident.'}],writing:{original,comparisons:[{original,corrected:'They should be flexible and self-confident.',improved:'',note:'Hyphenate self-confident.'}]}};
+ assert.equal(f.ctx.documentAnalysisValid_(a),true);
+ assert.equal(f.ctx.documentAnalysisValid_({...a,transcription:a.transcription.replace('flexible','adaptable')}),false);
+ assert.equal(f.ctx.documentAnalysisValid_({...a,transcription:a.transcription.replace('[Page 2]','an omitted phrase')}),false);
 });
 test('explicit document links preserve originals and reject cross-profile cycles and learner writes',()=>{
  const f=fixture(),first=f.upload().document.id,second=f.upload().document.id;
