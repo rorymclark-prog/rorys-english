@@ -103,7 +103,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
       const text=fragmentsRef.current.map(f=>`[${(f.start_ms/1000).toFixed(1)}s] ${f.speaker}: ${f.delta}`).join('\n').slice(0,24000);
       setSaveState('Saving your conversation…');
       const title=sessionPractice.current?`Lesson practice · ${sessionPractice.current.practice.lessonDate} · ${sessionPractice.current.practice.title}`:guidedRef.current?.savedTitle||topics[topicRef.current].title;
-      const result=await saveSpeaking(code,id,title,text,reflectionRef.current);
+      const result=await saveSpeaking(code,id,title.slice(0,150),text,reflectionRef.current);
       if(!result.ok){savedId.current='';setSaveState('Could not confirm the save. Keep this page open and choose Retry save.');return;}
       setSaveState('Conversation saved. Preparing transcript feedback…');
       const analysis=await analyseSpeaking(code,id);
