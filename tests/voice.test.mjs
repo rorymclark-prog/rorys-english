@@ -4,10 +4,13 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 const exports = {};
+const practiceExports = {};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync("src/lib/lesson-practice.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:practiceExports});
 const guidedExports = {};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/guided-speaking.ts','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports: guidedExports });
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/server/voice-session.ts','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports, require: name => {
   if(name==='../guided-speaking')return guidedExports;
+  if(name==='../lesson-practice')return practiceExports;
   throw Error(name);
 } });
 const {authorizeVoice,voiceConfiguration}=exports;
@@ -89,6 +92,8 @@ test('the teacher route validates the backend role before any paid request and n
       if(name.includes('content/ferdi/units.json'))return [];
       if(name.includes('content/valentin/units.json'))return [];
       if(name.includes('google-http'))return {googleHttp:async()=>{throw Error('Unexpected direct call')}};
+      if(name.includes('lesson-practice'))return practiceExports;
+      if(name.includes('progress-backend'))return {upstream:async()=>{throw Error('Unexpected lesson lookup')},backendSession:async()=>{throw Error('Unexpected login')}};
       if(name.includes('progress-transport'))return {ProgressTransportError:TransportError,postProgress:async(_url,body)=>{checks.push(body);return allowed?{ok:true,students:[]}:{ok:false,authRequired:true};}};
       throw Error(name);
     },

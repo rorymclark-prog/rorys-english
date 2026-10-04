@@ -12,7 +12,8 @@ import FeedbackText from "@/components/FeedbackText";
 import MicrophoneHelp from "@/components/MicrophoneHelp";
 import { ScreenAwake, type AwakeState } from "@/lib/screen-awake";
 import {guidedSpeaking,type GuidedSpeaking} from "@/lib/guided-speaking";
-import {saveSpeaking,analyseSpeaking,attachSpeakingAudio} from "@/lib/learning";
+import {lessonPracticeRecord,type LessonPractice} from "@/lib/lesson-practice";
+import {getLearning,saveSpeaking,analyseSpeaking,attachSpeakingAudio} from "@/lib/learning";
 import {documentRequest,fileBase64,MAX_DOCUMENT_BYTES} from "@/lib/documents";
 const voices = [
   {id:"vesper",label:"Vesper · British"},
@@ -28,6 +29,7 @@ const topics = [
   { id: "opinions", title: "Ideas & opinions", target: "Give an opinion and a specific example.", prompt: "Is it better to learn something alone or with other people? Give an example." },
   { id: "story", title: "Tell a story", target: "Use a clear sequence and past tenses.", prompt: "Tell a short story about a time a plan changed. What happened next?" },
   { id: "unit", title: "My current unit", target: "Use new words from your school unit.", prompt: "Which two or three words from your current unit can you use in a story about your life?" },
+  {id:"lesson",title:"Practise improvements from my last lesson",target:"Work on your lesson targets, then try a fresh example.",prompt:"Use your latest lesson practice plan."},
   { id: "grammar", title: "Build sentences", target: "Practise one grammar pattern in your own sentences.", prompt: "Say a short sentence about something that happened yesterday. Now add one useful detail." },
 ];
 const grammarTargets = [
@@ -58,6 +60,9 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
   const [leftSecs, setLeftSecs] = useState<number | null>(null);
   const capSeconds = useRef(900); const usedSeconds = useRef(0);
   const [fragments, setFragments] = useState<Fragment[]>([]); const [reflection, setReflection] = useState("");
+  const [lessonEntry,setLessonEntry]=useState<{id:string;practice:LessonPractice}|null>(null),[lessonLoading,setLessonLoading]=useState(true),[lessonError,setLessonError]=useState("");
+  const practiceRef=useRef<{id:string;practice:LessonPractice}|null>(null);
+  const sessionPractice=useRef<{id:string;practice:LessonPractice}|null>(null);
   const [guided,setGuided]=useState<GuidedSpeaking|null>(null);
   const guidedRef=useRef<GuidedSpeaking|null>(null);
   const [saveState,setSaveState]=useState("");
@@ -97,7 +102,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     try {
       const text=fragmentsRef.current.map(f=>`[${(f.start_ms/1000).toFixed(1)}s] ${f.speaker}: ${f.delta}`).join('\n').slice(0,24000);
       setSaveState('Saving your conversation…');
-      const title=guidedRef.current?.savedTitle||topics[topicRef.current].title;
+      const title=sessionPractice.current?`Lesson practice · ${sessionPractice.current.practice.lessonDate} · ${sessionPractice.current.practice.title}`:guidedRef.current?.savedTitle||topics[topicRef.current].title;
       const result=await saveSpeaking(code,id,title,text,reflectionRef.current);
       if(!result.ok){savedId.current='';setSaveState('Could not confirm the save. Keep this page open and choose Retry save.');return;}
       setSaveState('Conversation saved. Preparing transcript feedback…');
@@ -150,6 +155,21 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     if(chat)setTopic(topics.findIndex(topic=>topic.id===chat.topic));
   },[code,teacherTest]);
   useEffect(()=>{
+    let live=true;setLessonEntry(null);practiceRef.current=null;setLessonLoading(true);setLessonError("");
+    const selected=teacherTest?practiceStudent:code;
+    const requested=teacherTest?undefined:new URLSearchParams(window.location.search).get("practice")||undefined;
+    if(!teacherTest&&new URLSearchParams(window.location.search).get("mode")==="lesson")setTopic(topics.findIndex(t=>t.id==="lesson"));
+    if(!selected){setLessonLoading(false);return;}
+    getLearning(selected,teacherTest).then(r=>{
+      if(!live)return;
+      if(!r.ok)setLessonError(r.error||"Could not open your lesson practice.");
+      const entry=r.ok?lessonPracticeRecord(r.records||[],requested):null;
+      const value=entry?{id:entry.record.id,practice:entry.practice}:null;
+      setLessonEntry(value);practiceRef.current=value;setLessonLoading(false);
+    }).catch(()=>{if(live){setLessonError('Could not open your lesson practice. Please try again.');setLessonLoading(false);}});
+    return()=>{live=false;};
+  },[code,teacherTest,practiceStudent]);
+  useEffect(()=>{
     if(teacherTest||!studentId)return;
     const read=()=>setLeftSecs(secondsLeft(studentId));
     read();
@@ -157,7 +177,8 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     return ()=>window.removeEventListener("re-speaking-budget-change",read);
   },[teacherTest,studentId]);
   async function start() {
-    if (preview || !available || busy || saving || recording || recordBusy) return;
+    if (preview || !available || busy || saving || recording || recordBusy || (topics[topic].id==="lesson"&&(lessonLoading||!practiceRef.current))) return;
+    sessionPractice.current=topics[topic].id==="lesson"?practiceRef.current:null;
     // The allowance is a fair-use guide, not a punishment: running out is the
     // cue to ask Rory for more, and the wording says so.
     const allowance = teacherTest || !studentId ? CALL_SECONDS : secondsLeft(studentId);
@@ -212,7 +233,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
       });
       check(); controller.current = new AbortController();
       timeout.current = setTimeout(() => finish("The voice connection timed out. Please try again."), 55000);
-      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.current.signal, body: JSON.stringify({ code, token, teacherTest, preview, topic: topics[topic].id, grammar, voice, homeworkFocus: guidedRef.current?.id, practiceStudent: teacherTest ? practiceStudent : undefined, sdp: connection.localDescription?.sdp }) });
+      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.current.signal, body: JSON.stringify({ code, token, teacherTest, preview, topic: topics[topic].id, grammar, voice, homeworkFocus: guidedRef.current?.id, lessonPracticeId: sessionPractice.current?.id, practiceStudent: teacherTest ? practiceStudent : undefined, sdp: connection.localDescription?.sdp }) });
       const result = await response.json(); check(); if (!response.ok) throw new Error(result.error || "Live voice could not connect.");
       await connection.setRemoteDescription({ type: "answer", sdp: result.transport.sdp }); check();
     } catch (error) { if (run === generation.current) finish(error instanceof Error && error.name === "NotAllowedError" ? "Microphone access was declined. Allow it in your browser to try again." : error instanceof Error ? error.message : "Could not connect."); }
@@ -245,15 +266,16 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     {guided&&<div className="re-card hw-studio-note"><strong>Chat {guided.week} · {guided.cue}</strong><p>{guided.prompt}</p>{guided.purpose&&<p><strong>Why this chat? </strong>{guided.purpose}</p>}<p>If you get stuck, say: “Please ask me a simpler question.”</p><Link className="re-text-link" href={`/s/${code}/lessons/${guided.unitId}/homework/${guided.week}/`}>Back to this week&apos;s task →</Link></div>}
     <div className="re-speaking-grid"><section><div className="re-card">{guided?<><p className="re-eyebrow">YOUR FOCUS</p><p>{guided.focus}</p></>:<><p className="re-eyebrow">1 · CHOOSE A CONVERSATION</p><div className="re-topic-options">{topics.map((t, i) => <button key={t.id} disabled={busy || recording || recordBusy} aria-pressed={topic === i} onClick={() => setTopic(i)}><strong>{t.title}</strong><small>{t.target}</small></button>)}</div></>}
       {topics[topic].id === "grammar" && <label className="re-voice-choice">Choose a grammar focus<select value={grammar} onChange={e => setGrammar(e.target.value)} disabled={busy || recording || recordBusy}>{grammarTargets.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}</select></label>}
-      {teacherTest && topics[topic].id === "unit" && <label className="re-voice-choice">Test this student&apos;s current unit<select value={practiceStudent} onChange={e => setPracticeStudent(e.target.value)} disabled={busy || recording || recordBusy}>{practiceOptions.map(p => <option key={p.code} value={p.code}>{p.name}{p.unit ? ` · ${p.unit}` : ""}</option>)}</select></label>}
+      {teacherTest && ["unit","lesson"].includes(topics[topic].id) && <label className="re-voice-choice">Test this student&apos;s practice<select value={practiceStudent} onChange={e => setPracticeStudent(e.target.value)} disabled={busy || recording || recordBusy}>{practiceOptions.map(p => <option key={p.code} value={p.code}>{p.name}{p.unit ? ` · ${p.unit}` : ""}</option>)}</select></label>}
       {!teacherTest && !guided && topics[topic].id === "unit" && <p className="re-small-copy">{unitTitle ? `Current unit: ${unitTitle}` : "Tell the partner your current school topic and a few words you want to practise."}</p>}
+      {topics[topic].id==="lesson"&&<div className="mt-4 rounded-xl border border-indigo-200 p-3 text-sm" aria-label="Lesson practice brief">{lessonLoading?<p>Opening your lesson practice…</p>:lessonEntry?<><strong>{lessonEntry.practice.title} · {lessonEntry.practice.lessonDate}</strong><p className="mt-2">{lessonEntry.practice.recap}</p><ul className="mt-2 ml-5 list-disc">{lessonEntry.practice.focus.map(x=><li key={x}>{x}</li>)}</ul><p className="mt-2">{lessonEntry.practice.speakingPrompt}</p><p className="mt-2">About {lessonEntry.practice.speakingMinutes} minutes. Try once, get a little help, then use it in a different example.</p>{!teacherTest&&<Link className="re-text-link" href={`/s/${code}/progress/#review-${lessonEntry.id}`}>Open the short written task →</Link>}</>:<p>{lessonError||"No lesson practice is ready yet. Ask Rory, or choose another conversation mode."}</p>}</div>}
       <label className="re-voice-choice">Conversation voice<select value={voice} onChange={e=>{const next=e.target.value;setVoice(next);try{localStorage.setItem(`re_voice_${code}`,next);}catch{/* storage unavailable */}}} disabled={busy || recording || recordBusy}>{voices.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}</select></label>
       <p className="re-small-copy">Choose before starting. A voice change starts with your next conversation.</p>
       </div>
       <section className="re-card re-live-panel"><div className={`re-voice-orb is-${muted?"muted":state}`} aria-hidden><MicrophoneIcon /></div><p className="re-eyebrow">{guided?"VOICE CHAT":"LIVE AI CONVERSATION"}</p><h2>{state === "live" ? "Make yourself heard." : state === "connecting" ? "Opening your conversation…" : "A conversation, at your pace."}</h2><p>{guided?guided.cue:topics[topic].target}</p>
         <p className="re-voice-status" role="status">{status || (preview ? "Teacher preview is read-only. Voice is disabled here." : available === null ? "Checking live voice…" : available ? (outOfMinutes ? OUT_OF_MINUTES : budgeted ? `Ready when you are. You have ${spokenLeft(leftSecs!)} of speaking left this week, in conversations of up to ${CALL_MINUTES} minutes.` : `Ready for a conversation of up to ${CALL_MINUTES} minutes.`) : guided ? "Live voice is unavailable right now. Continue with the other steps in your task and tell Rory at your next lesson." : "Live AI voice is awaiting connection. Try a rehearsal below in the meantime.")}</p>
         {busy && <p className="re-timer">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} <small>/ {Math.floor(capSeconds.current / 60)}:{String(capSeconds.current % 60).padStart(2, "0")}</small></p>}
-        <div className="re-voice-actions">{!busy ? <button className="re-button" disabled={!available || preview || saving || recording || recordBusy || outOfMinutes} onClick={() => void start()}>{saving?'Saving this conversation…':outOfMinutes?'No minutes left this week':'Start conversation'}</button> : <><button className="re-button re-secondary" disabled={state !== "live"} onClick={() => { const next = !muted; mic.current?.getAudioTracks().forEach(t => { t.enabled = !next; }); setMuted(next); }}>{muted ? "Unmute microphone" : "Mute microphone"}</button><button className="re-button" disabled={state === "closing"} onClick={end}>{state === "closing" ? "Finishing…" : state === "connecting" ? "Cancel" : "End conversation"}</button></>}</div>
+        <div className="re-voice-actions">{!busy ? <button className="re-button" disabled={!available || preview || saving || recording || recordBusy || outOfMinutes || (topics[topic].id==="lesson"&&(lessonLoading||!lessonEntry))} onClick={() => void start()}>{saving?'Saving this conversation…':outOfMinutes?'No minutes left this week':'Start conversation'}</button> : <><button className="re-button re-secondary" disabled={state !== "live"} onClick={() => { const next = !muted; mic.current?.getAudioTracks().forEach(t => { t.enabled = !next; }); setMuted(next); }}>{muted ? "Unmute microphone" : "Mute microphone"}</button><button className="re-button" disabled={state === "closing"} onClick={end}>{state === "closing" ? "Finishing…" : state === "connecting" ? "Cancel" : "End conversation"}</button></>}</div>
         <audio ref={audio} autoPlay controls className={busy ? "re-live-audio" : "hidden"} aria-label="AI partner audio" />
         {busy&&<p role="status" className="mt-3 text-sm">{awakeState==="held"?"Screen-awake protection is on while this app is visible.":awakeState==="idle"?"Screen-awake protection starts when the microphone connects.":"Screen-awake protection is unavailable or was released by your phone. Keep this screen open."}</p>}
         {busy&&micInterrupted&&<p role="alert" className="mt-3 text-sm">Your phone has paused the microphone. Return to this screen; if it does not recover, end the conversation and start again.</p>}
@@ -261,7 +283,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
         <MicrophoneHelp /></section>
       {!!fragments.length && <section className="re-card"><h2>Conversation captions</h2><p className="re-small-copy">Captions may contain mistakes. Both speakers can speak at once.</p><div className="re-caption-columns">{(["You", "AI partner"] as const).map(s => <div key={s}><h3>{s}</h3><p><FeedbackText text={transcript(s)}/></p></div>)}</div>{!guided&&<><label className="re-reflection">One useful phrase & my next target<textarea rows={3} maxLength={3000} value={reflection} onChange={e => {setReflection(e.target.value);reflectionRef.current=e.target.value;}} placeholder="What will you try again?" /></label><button className="re-button re-secondary" onClick={saveTranscript}>Download conversation & reflection</button>{sampleDownload&&<a className="re-button re-secondary" href={sampleDownload} download="my-speaking-sample">Download my audio sample</a>}</>}{!teacherTest&&<p className="re-small-copy" role="status">{saveState||'When you end, the app saves this conversation for Rory to review.'}</p>}{!teacherTest&&state==='ended'&&saveState.startsWith('Could not')&&<button className="re-button re-secondary" onClick={()=>void persistConversation()}>Retry save</button>}{teacherTest&&<p className="re-small-copy">This test stays in this tab. No student record is created.</p>}{guided&&state==='ended'&&!saving&&!!saveState&&!saveState.startsWith('Could not')&&<Link className="re-text-link" href={`/s/${code}/lessons/${guided.unitId}/homework/${guided.week}/`}>Continue to this week&apos;s task →</Link>}{!teacherTest&&!guided&&<Link className="re-text-link" href={`/s/${code}/progress/`}>View your speaking record →</Link>}</section>}
     </section>{!guided&&<aside><div className="re-card"><ConversationArt/><h2>A little structure helps.</h2><ol className="re-speaking-steps"><li><strong>Get started</strong>Choose a mode and bring one idea or useful word.</li><li><strong>Keep it going</strong>Say more, then ask a question back.</li><li><strong>Make it stick</strong>Try one correction in your own sentence. Ask for shorter chunks if you need them.</li></ol><p className="re-small-copy">This is supplementary practice, not a school assessment. Follow Rory’s assignment for what to submit.</p></div>
-      <section className="re-card"><p className="re-eyebrow">QUICK REHEARSAL · ON THIS DEVICE</p><h2>Try it out loud.</h2><p className="re-rehearsal-prompt">{topics[topic].id === "unit" && lines.length ? lines[0] : topics[topic].prompt}</p><p className="re-small-copy">Record up to three minutes, listen back and try again. Your recording stays in this tab and is not sent to anyone.</p><button className="re-button re-secondary" disabled={preview || busy || recordBusy} onClick={() => recording ? stopRecording() : void record()}>{recording ? "Stop recording" : recordBusy ? "Opening microphone…" : "Record a rehearsal"}</button><p role="status">{recording ? "Recording…" : recordError}</p>{recorded && !recording && <audio controls src={recorded} className="re-live-audio" aria-label="Your rehearsal recording" />}</section>
+      <section className="re-card"><p className="re-eyebrow">QUICK REHEARSAL · ON THIS DEVICE</p><h2>Try it out loud.</h2><p className="re-rehearsal-prompt">{topics[topic].id==="lesson"?lessonEntry?.practice.speakingPrompt||"Choose another mode while Rory prepares lesson practice.":topics[topic].id === "unit" && lines.length ? lines[0] : topics[topic].prompt}</p><p className="re-small-copy">Record up to three minutes, listen back and try again. Your recording stays in this tab and is not sent to anyone.</p><button className="re-button re-secondary" disabled={preview || busy || recordBusy} onClick={() => recording ? stopRecording() : void record()}>{recording ? "Stop recording" : recordBusy ? "Opening microphone…" : "Record a rehearsal"}</button><p role="status">{recording ? "Recording…" : recordError}</p>{recorded && !recording && <audio controls src={recorded} className="re-live-audio" aria-label="Your rehearsal recording" />}</section>
     </aside>}</div>
   </main>;
 }

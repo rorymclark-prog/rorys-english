@@ -1,30 +1,11 @@
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { accountService, type Account, type Reply } from "@/lib/server/account-service";
-import { postProgress, ProgressTransportError } from "@/lib/server/progress-transport";
-import { googleHttp } from "@/lib/server/google-http";
+import { accountService, type Account } from "@/lib/server/account-service";
+import { ProgressTransportError } from "@/lib/server/progress-transport";
+import {upstream,backendSession} from "@/lib/server/progress-backend";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-const sessions = new Map<string, { token: string; expires: number }>();
-const pending = new Map<string, Promise<string>>();
-async function upstream(body: Record<string, unknown>): Promise<Reply> {
-  const endpoint = process.env.APPS_SCRIPT_URL;
-  if (!endpoint) throw new Error("Missing progress service");
-  return postProgress(endpoint, body, googleHttp, fetch);
-}
-async function backendSession(code: string, idToken: string, refresh = false): Promise<string> {
-  if (!refresh && (sessions.get(code)?.expires || 0) > Date.now() + 60000) return sessions.get(code)!.token;
-  if (pending.has(code)) return pending.get(code)!;
-  const attempt = (async () => {
-    const result = await upstream({ action: "firebaseLogin", code, idToken });
-    if (!result.ok || result.role !== "student" || typeof result.token !== "string" || typeof result.expires !== "number") throw new Error("Student connection unavailable");
-    sessions.set(code, { token: result.token, expires: result.expires });
-    return result.token;
-  })();
-  pending.set(code, attempt);
-  try { return await attempt; } finally { pending.delete(code); }
-}
 export async function POST(request: Request) {
   const headers = { "Cache-Control": "no-store, private" };
   // Strict, like /api/voice: a browser always sends Origin on a POST, so a

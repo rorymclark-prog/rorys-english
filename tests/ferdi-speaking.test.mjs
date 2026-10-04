@@ -24,6 +24,7 @@ test('Ferdi homework focus stays bound to approved chat goals', () => {
   const code = ts.transpileModule(fs.readFileSync('src/lib/server/voice-session.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   vm.runInNewContext(code, { exports: voice, require: name => {
     if (name === '../guided-speaking') return guided;
+    if (name === '../lesson-practice') return {};
     throw Error(name);
   } });
   const base = { code: 'ferdi-7h3k', sdp: 'v=0\r\n', topic: 'story' };

@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect,useState} from "react";
+import {LatestLessonPractice} from "@/components/LessonPractice";
 import Link from "next/link";
 import type {HomeworkWeek,Unit} from "@/lib/types";
 import {useStudent} from "@/components/StudentContext";
@@ -27,6 +28,7 @@ export default function TodayView({unit}:{unit:Unit|null}){
   return <main className="re-home today-page">
     <header className="re-page-heading"><p className="re-eyebrow">YOUR LEARNING SPACE</p><h1>Hi, {displayName}. Here’s your next step.</h1><p>Pick one task, practise it, and come back for feedback.</p></header>
     <MomentumStrip studentId={studentId}/>
+    <LatestLessonPractice code={code}/>
     <div className="today-layout"><div className="today-primary">
       <section className="today-next-section" aria-labelledby="today-work-title"><div className="today-section-heading"><div><p className="work-eyebrow">START HERE</p><h2 id="today-work-title">Ready for you</h2></div><Link href={`${base}/homework/`}>All homework <ChevronRightIcon/></Link></div>
         {!loaded&&<div className="work-loading" role="status">Checking for updates from Rory…</div>}

@@ -1,6 +1,7 @@
 import type { Account, Identity } from "./account-service";
+import {lessonPracticeInstructions,type LessonPractice} from "../lesson-practice";
 import {guidedSpeaking} from "../guided-speaking";
-export type VoiceRequest = { code?: unknown; token?: unknown; sdp?: unknown; topic?: unknown; grammar?: unknown; voice?: unknown; homeworkFocus?: unknown; practiceStudent?: unknown; preview?: unknown; teacherTest?: unknown };
+export type VoiceRequest = { code?: unknown; token?: unknown; sdp?: unknown; topic?: unknown; grammar?: unknown; voice?: unknown; homeworkFocus?: unknown; lessonPracticeId?:unknown; practiceStudent?: unknown; preview?: unknown; teacherTest?: unknown };
 export const voiceOptions = {
   vesper: "Vesper",
   willow: "Willow",
@@ -15,6 +16,7 @@ export const voiceTopics: Record<string, { title: string; target: string }> = {
   opinions: { title: "Ideas & opinions", target: "State an opinion, support it with an example, and respond politely to a different view." },
   story: { title: "Tell a story", target: "Describe a real or imaginary event using a clear sequence and past tenses." },
   unit: { title: "Current unit", target: "Use the current school unit's vocabulary in original conversation and sentences." },
+  lesson: {title:"Practise improvements from my last lesson",target:"Use your lesson targets in a fresh conversation, then try again with less support."},
   grammar: { title: "Grammar builder", target: "Build original sentences with one chosen grammar pattern." },
 };
 export const grammarTargets: Record<string, string> = {
@@ -38,14 +40,15 @@ export async function authorizeVoice(body: VoiceRequest, roster: Record<string, 
   if (!identity.email_verified || identity.uid !== account.uid || identity.email?.toLowerCase() !== account.email.toLowerCase()) throw new Error("This account cannot use these lessons.");
   return identity.uid;
 }
-export function voiceConfiguration(body: VoiceRequest, unit?: { title: string; vocabulary?: string[] } | null) {
+export function voiceConfiguration(body: VoiceRequest, unit?: { title: string; vocabulary?: string[] } | null, lessonPractice?:LessonPractice|null) {
   if (typeof body.sdp !== "string" || body.sdp.length > 50000 || !body.sdp.startsWith("v=0")) throw new Error("The microphone connection could not be prepared.");
   if (typeof body.topic !== "string" || !Object.hasOwn(voiceTopics, body.topic)) throw new Error("Choose a speaking topic.");
   if (body.topic === "grammar" && (typeof body.grammar !== "string" || !Object.hasOwn(grammarTargets, body.grammar))) throw new Error("Choose a grammar target.");
   if (body.voice !== undefined && (typeof body.voice !== "string" || !Object.hasOwn(voiceOptions, body.voice))) throw new Error("Choose an available voice.");
+  if(body.topic==="lesson"&&!lessonPractice)throw new Error("No shared lesson practice is available.");
   const topic = voiceTopics[body.topic];
   const focus = body.topic === "grammar" ? `Grammar focus: ${grammarTargets[body.grammar as string]}. Practise with meaningful original examples, not isolated rules.`
-    : body.topic === "unit" ? unit ? `Current unit: ${unit.title}. ${unit.vocabulary?.length ? `Verified practice words: ${unit.vocabulary.join(", ")}. Weave a few into original questions and invite the learner to use them. Do not recite a list.` : "No verified vocabulary list is available. Ask the learner for two or three words from class, then practise those. Do not invent textbook details."}` : "No current unit is set. Ask which school topic and two or three words the learner wants to practise; do not invent textbook details." : "";
+    : body.topic === "unit" ? unit ? `Current unit: ${unit.title}. ${unit.vocabulary?.length ? `Verified practice words: ${unit.vocabulary.join(", ")}. Weave a few into original questions and invite the learner to use them. Do not recite a list.` : "No verified vocabulary list is available. Ask the learner for two or three words from class, then practise those. Do not invent textbook details."}` : "No current unit is set. Ask which school topic and two or three words the learner wants to practise; do not invent textbook details." : body.topic === "lesson" && lessonPractice ? lessonPracticeInstructions(lessonPractice) : "";
   const guided = typeof body.code === "string" && typeof body.homeworkFocus === "string"
     ? guidedSpeaking(body.code, body.homeworkFocus) : null;
   const homeworkFocus = guided && body.topic === guided.topic ? guided.instructions : "";

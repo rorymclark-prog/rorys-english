@@ -4,13 +4,16 @@ import { createHash } from "node:crypto";
 import type { Account } from "@/lib/server/account-service";
 import { authorizeVoice, voiceConfiguration } from "@/lib/server/voice-session";
 import { postProgress, ProgressTransportError } from "@/lib/server/progress-transport";
+import {lessonPracticeRecord} from "@/lib/lesson-practice";
+import type {LearningRecord} from "@/lib/learning";
+import {upstream,backendSession} from "@/lib/server/progress-backend";
 import { googleHttp } from "@/lib/server/google-http";
 import studentContent from "../../../../content/students.json";
 import ferdiUnits from "../../../../content/ferdi/units.json";
 import valentinUnits from "../../../../content/valentin/units.json";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 90;
+export const maxDuration = 180;
 const headers = { "Cache-Control": "no-store, private" };
 const attempts = new Map<string, number[]>();
 const enabled = () => process.env.LIVE_VOICE_ENABLED === "true" && !!process.env.OPENAI_API_KEY;
@@ -51,7 +54,20 @@ export async function POST(request: Request) {
     const student = typeof practiceCode === "string" && Object.hasOwn(roster, practiceCode) ? studentContent.find(s => s.code === practiceCode) : null;
     const units = student?.id === "ferdi" ? ferdiUnits : student?.id === "valentin" ? valentinUnits : [];
     const unit = units.find(u => u.active);
-    config = voiceConfiguration(body, unit ? { title: unit.title, vocabulary: "voiceVocabulary" in unit ? unit.voiceVocabulary : undefined } : null);
+    let lessonPractice=null;
+    if(body.topic==="lesson") {
+      if(!student)throw new Error("Choose a learner with a saved practice plan.");
+      // Teacher tests read the same shared view as the learner, not private reviews.
+      let result=body.teacherTest===true
+        ? await upstream({action:"learningRecords",code:practiceCode,session:body.token,preview:true})
+        : await upstream({action:"learningRecords",code:practiceCode,session:await backendSession(practiceCode,body.token)});
+      if(body.teacherTest!==true&&result.authRequired)result=await upstream({action:"learningRecords",code:practiceCode,session:await backendSession(practiceCode,body.token,true)});
+      if(!result.ok||!Array.isArray(result.records))return Response.json({error:"Could not load your lesson practice. Please try again."},{status:503,headers});
+      if(body.lessonPracticeId!==undefined&&(typeof body.lessonPracticeId!=="string"||body.lessonPracticeId.length>100))throw new Error("Invalid practice selection.");
+      lessonPractice=lessonPracticeRecord(result.records as LearningRecord[],body.lessonPracticeId)?.practice||null;
+      if(!lessonPractice)return Response.json({error:"This lesson practice is not available. Open your latest practice plan or choose another mode."},{status:409,headers});
+    }
+    config = voiceConfiguration(body, unit ? { title: unit.title, vocabulary: "voiceVocabulary" in unit ? unit.voiceVocabulary : undefined } : null,lessonPractice);
   }
   catch { return Response.json({ error: "Choose a topic and try connecting your microphone again." }, { status: 400, headers }); }
   // Per-instance burst protection, not an account-wide spending limit.
