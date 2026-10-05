@@ -23,6 +23,7 @@ import LearningView from "./LearningView";
 import TeachingFilesView from "./TeachingFilesView";
 import CalendarView from "./CalendarView";
 import TeachingProgress from "./TeachingProgress";
+import RecordedLessonLinks from "@/components/RecordedLessonLinks";
 import TeacherReviewPanel from "./TeacherReviewPanel";
 import AppMenu from "@/components/AppMenu";
 import ProfileAvatar from "@/components/ProfileAvatar";
@@ -44,6 +45,7 @@ export default function TeacherDashboardView({initialCalendar=false}:{initialCal
   const [generatedAt, setGeneratedAt] = useState<string | undefined>();
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
+  const [recordingReviewId,setRecordingReviewId]=useState<string|undefined>();
   const [showFullProgress, setShowFullProgress] = useState(false);
   const [addingStudent, setAddingStudent] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -141,9 +143,11 @@ export default function TeacherDashboardView({initialCalendar=false}:{initialCal
   if (secret && loadState === "ok" && selected) {
     return (
       <TeacherStudentPanel
+        key={selected.code}
         secret={secret}
         student={selected}
-        onBack={() => setSelectedCode(null)}
+        initialReviewId={recordingReviewId}
+        onBack={() => {setSelectedCode(null);setRecordingReviewId(undefined);}}
         onViewProgress={() => setShowFullProgress(true)}
         onPatch={(patch) => patchStudent(selected.code, patch)}
       />
@@ -170,6 +174,7 @@ export default function TeacherDashboardView({initialCalendar=false}:{initialCal
         {loadState === "loading" && <div className="teacher-student-grid" role="status" aria-label="Loading students">{[0,1].map(i=><div key={i} className="h-72 animate-pulse rounded-card bg-amber-soft dark:bg-amber-dusk"/>)}</div>}
         {loadState === "error" && <div className="teacher-empty" role="alert"><ChartIcon/><h2>Let’s try that again</h2><p>Your students’ records could not be loaded.</p><button className="teacher-primary" onClick={()=>setRefreshKey(k=>k+1)}>Reload students</button></div>}
         {loadState === "ok" && students && <>
+          <RecordedLessonLinks students={students} onOpen={(code,id)=>{setRecordingReviewId(id);setSelectedCode(code);}}/>
           <div className="teacher-section-heading"><div><p className="teacher-eyebrow">ONE STEP AT A TIME</p><h2>Your students <span>{students.length}</span></h2></div><button type="button" onClick={()=>setAddingStudent(true)} className="teacher-quiet-button">+ Add student</button></div>
           <div className="teacher-student-grid">
             {students.length===0 && <div className="teacher-empty"><BookIcon/><h2>Your classroom starts here</h2><p>Add your first student to get started.</p></div>}
@@ -267,14 +272,16 @@ function TeacherStudentPanel({
   onBack,
   onViewProgress,
   onPatch,
+  initialReviewId,
 }: {
   secret: string;
   student: TeacherStudent;
   onBack: () => void;
   onViewProgress: () => void;
   onPatch: (patch: Partial<TeacherStudent>) => void;
+  initialReviewId?:string;
 }) {
-  const [section, setSection] = useState<"review" | "assign" | "assess" | "documents" | "learning" | "teaching">("review");
+  const [section, setSection] = useState<"review" | "assign" | "assess" | "documents" | "learning" | "teaching">(initialReviewId?"learning":"review");
   const [note, setNote] = useState(student.focusNote);
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
@@ -348,7 +355,7 @@ function TeacherStudentPanel({
         </nav>
         {section === "teaching" && <TeachingFilesView key={student.code} code={student.code} name={student.name}/>}
         {section === "documents" && <DocumentsView key={student.code} code={student.code} name={student.name} teacher/>}
-        {section === "learning" && <LearningView key={student.code} code={student.code} name={student.name} mode="teacher"/>}
+        {section === "learning" && <LearningView key={student.code} code={student.code} name={student.name} mode="teacher" initialFilter={initialReviewId?'lesson':'all'} focusRecordId={initialReviewId}/>}
         <div hidden={section !== "review"}>{section==="review"&&<SavedWriting code={student.code} name={student.name} teacher/>}<TeacherReviewPanel code={student.code}/></div>
         <div hidden={section !== "assign"}>
         <div className="teacher-form-grid">

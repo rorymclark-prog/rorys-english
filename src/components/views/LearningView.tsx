@@ -29,7 +29,7 @@ const card='rounded-card bg-surface p-5 shadow-card dark:bg-navy-raised dark:sha
 const button='rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40';
 const today=()=>new Date().toISOString().slice(0,10);
 
-export default function LearningView({code,name,mode,initialFilter='all',showHeader=true}:{code:string;name:string;mode:'student'|'parent'|'teacher';initialFilter?:'all'|LearningKind;showHeader?:boolean}) {
+export default function LearningView({code,name,mode,initialFilter='all',showHeader=true,focusRecordId}:{code:string;name:string;mode:'student'|'parent'|'teacher';initialFilter?:'all'|LearningKind;showHeader?:boolean;focusRecordId?:string}) {
   const [records,setRecords]=useState<LearningRecord[]>([]),[replies,setReplies]=useState<LearningReply[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [filter,setFilter]=useState<'all'|LearningKind>(initialFilter);
   const [kind,setKind]=useState<LearningKind>('homework'),[title,setTitle]=useState(''),[date,setDate]=useState(today()),[visibility,setVisibility]=useState<'shared'|'teacher'>('shared');
@@ -43,7 +43,7 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
   const checkpoints=records.filter(r=>r.kind==='speaking'&&r.body.ratings&&Object.values(r.body.ratings).some(v=>v!=null)).sort((a,b)=>a.date.localeCompare(b.date));
   const refresh=useCallback(async()=>{const r=await getLearning(code,mode==='teacher');setLoading(false);if(r.ok){setRecords((r.records||[]).filter(record=>!isTeachingPack(record)));setReplies(r.replies||[]);setError('');}else setError(r.error||'Could not open the learning record.');},[code,mode]);
   useEffect(()=>{void refresh();},[refresh]);
-  useEffect(()=>{if(!loading&&window.location.hash.startsWith("#review-"))document.getElementById(window.location.hash.slice(1))?.scrollIntoView({block:"start"});},[loading,records]);
+  useEffect(()=>{if(!loading){const target=focusRecordId?`review-${focusRecordId}`:window.location.hash.startsWith("#review-")?window.location.hash.slice(1):'';if(target)document.getElementById(target)?.scrollIntoView({block:"start"});}},[loading,records,focusRecordId]);
   useReviewRefresh(()=>void refresh(),[...records.map(r=>r.feedbackAvailableAt),...replies.map(r=>r.feedbackAvailableAt)]);
   async function create(e:React.FormEvent){e.preventDefault();if(mode!=='teacher'||busy)return;setBusy(true);setError('');setMessage('');
     const body:LearningBody={summary:summary.trim(),strengths:split(strengths),targets:split(targets),nextStep:nextStep.trim(),evidenceType:evidenceType.trim(),source:source.trim(),studentNotes:studentNotes.trim(),lessonPoints:lessonPoints.trim(),ratings,tutorPrivate:{worked:worked.trim(),improve:improve.trim(),plan:plan.trim()}};
