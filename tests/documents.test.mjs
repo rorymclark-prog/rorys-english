@@ -211,3 +211,12 @@ test('uploaded Word answers are read automatically as text and prior AI output i
  const before=f.files.size;assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,2);assert.equal(f.files.size,before+1);
  assert.equal(f.post({action:'documentFile',id,index:0}).file.data,word.data);
 });
+
+test('conversation feedback asks for simple explanations and retains caption evidence limits',()=>{
+ const f=fixture(),id=randomUUID();let prompt;
+ f.ctx.documentClaude_=payload=>{prompt=payload.system;return {content:[{type:'text',text:'What went well\nYou gave a clear example.\nTry this\nGive a different example.'}]};};
+ assert.equal(f.post({action:'speakingSave',id,title:'Conversation',transcript:'[1.0s] You: I cycle on my own.',reflection:''}).ok,true);
+ assert.equal(f.post({action:'speakingAnalyse',id}).ok,true);
+ assert.match(prompt,/simple everyday English/);assert.match(prompt,/teaching term in brackets/);assert.match(prompt,/not the AI partner/);assert.match(prompt,/Do not grade/);assert.match(prompt,/caption fragment or self-correction/);
+ assert.equal(f.post({action:'learningRecords'}).records[0].body.transcript,'[1.0s] You: I cycle on my own.');
+});

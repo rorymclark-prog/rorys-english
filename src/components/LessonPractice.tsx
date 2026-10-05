@@ -13,7 +13,7 @@ export function LessonPracticeDetails({code,record,practice,mode}:{code:string;r
     <p className="mt-4"><strong>Write · about {practice.writingMinutes} minutes:</strong> {practice.writingPrompt}</p>
     <p className="mt-2">{mode==='student'?'Use the answer box below to save your own writing, or attach a photograph.':'The student can save writing or a photograph with this task in their app.'} There is no new deadline.</p>
     <p className="mt-3 font-semibold">Check your attempt</p><ul className="ml-5 list-disc">{practice.successCriteria.map(x=><li key={x}>{x}</li>)}</ul>
-    <p className="mt-3 text-xs">Short practice from your lesson. AI hints are practice advice; Rory’s feedback stays separate.</p>
+    <p className="mt-3 text-xs">AI-prepared lesson practice. AI conversation feedback is saved separately after your chat; the full lesson review awaits Rory’s approval.</p>
   </section>;
 }
 export function LatestLessonPractice({code}:{code:string}) {
@@ -35,7 +35,7 @@ export function LessonPracticeEditor({code,record,existing,onSaved}:{code:string
     const practice=readLessonPractice({version:1,status:'ready',sourceReviewId:initial?.sourceReviewId||record.id,lessonDate:record.date,title,recap,focus:focus.split('\n').map(x=>x.trim()).filter(Boolean),speakingPrompt:speaking,coaching,writingPrompt:writing,speakingMinutes:speakMinutes,writingMinutes:writeMinutes,successCriteria:criteria.split('\n').map(x=>x.trim()).filter(Boolean)});
     if(!practice){setMessage('Add a short recap, 1–3 focus points, both tasks, AI coaching and 1–4 success criteria.');return;}
     setBusy(true);setMessage('');id.current||=crypto.randomUUID();
-    const result=await saveLearning(code,{id:id.current,date:practice.lessonDate,kind:'lesson',title:`Lesson practice · ${practice.lessonDate}`,visibility:'shared',body:{summary:practice.recap,evidenceType:'Student practice prepared from the lesson',source:`lesson-practice:${practice.sourceReviewId}`,lessonPractice:practice}});
+    const result=await saveLearning(code,{id:id.current,date:practice.lessonDate,kind:'lesson',title:`Lesson practice · ${practice.lessonDate}`,visibility:'shared',body:{...((existing?.body.feedbackOrigin==='recorded-lesson-practice'||record.body.source?.includes('/lesson-recording/'))?{feedbackOrigin:'recorded-lesson-practice' as const}:{}),summary:practice.recap,evidenceType:'Student practice prepared from the lesson',source:`lesson-practice:${practice.sourceReviewId}`,lessonPractice:practice}});
     setBusy(false);if(result.ok){setMessage('Practice is ready for this student. Private teaching notes were not included.');onSaved();}else setMessage(result.error||'Could not save practice. Your draft stays here.');
   }
   async function pause(){if(!existing||busy)return;setBusy(true);const result=await saveLearning(code,{...existing,visibility:'teacher',body:{...existing.body,lessonPractice:{...initial!,status:'draft'}}});setBusy(false);if(result.ok){setMessage('Practice paused.');onSaved();}else setMessage(result.error||'Could not pause practice.');}

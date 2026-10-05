@@ -8,10 +8,11 @@ import { isStudentPreview } from "@/lib/student-preview";
 import { savedSession } from "@/lib/api";
 import { currentAccount } from "@/lib/account-auth";
 import { ConversationArt, MicrophoneIcon } from "@/components/LearningVisuals";
-import FeedbackText from "@/components/FeedbackText";
 import MicrophoneHelp from "@/components/MicrophoneHelp";
 import { ScreenAwake, type AwakeState } from "@/lib/screen-awake";
 import {guidedSpeaking,type GuidedSpeaking} from "@/lib/guided-speaking";
+import ConversationTranscript from '@/components/ConversationTranscript';
+import {formatConversationTranscript} from '@/lib/conversation-transcript';
 import {lessonPracticeRecord,type LessonPractice} from "@/lib/lesson-practice";
 import {getLearning,saveSpeaking,analyseSpeaking,attachSpeakingAudio} from "@/lib/learning";
 import {documentRequest,fileBase64,MAX_DOCUMENT_BYTES} from "@/lib/documents";
@@ -100,7 +101,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     const id=sessionId.current;if(!id||savedId.current===id)return;savedId.current=id;
     setSaving(true);
     try {
-      const text=fragmentsRef.current.map(f=>`[${(f.start_ms/1000).toFixed(1)}s] ${f.speaker}: ${f.delta}`).join('\n').slice(0,24000);
+      const text=formatConversationTranscript(fragmentsRef.current).slice(0,24000);
       setSaveState('Saving your conversation…');
       const title=sessionPractice.current?`Lesson practice · ${sessionPractice.current.practice.lessonDate} · ${sessionPractice.current.practice.title}`:guidedRef.current?.savedTitle||topics[topicRef.current].title;
       const result=await saveSpeaking(code,id,title.slice(0,150),text,reflectionRef.current);
@@ -255,10 +256,9 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     finally { if (mounted.current) setRecordBusy(false); }
   }
   function saveTranscript() {
-    const text = `Rory's English — speaking practice\n${topics[sessionTopic].title}\nAI feedback is practice advice, not a teacher assessment.\n\n` + fragments.map(f => `[${(f.start_ms / 1000).toFixed(1)}s] ${f.speaker}: ${f.delta}`).join("\n") + `\n\nMy reflection\n${reflection}`;
+    const text = `Rory's English — speaking practice\n${topics[sessionTopic].title}\nAI feedback is practice advice, not a teacher assessment.\n\n` + formatConversationTranscript(fragments) + `\n\nMy reflection\n${reflection}`;
     const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "my-speaking-practice.txt"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  const transcript = (speaker: Fragment["speaker"]) => fragments.filter(f => f.speaker === speaker).map(f => f.delta).join("");
   // null until the client effect has read the device's counter.
   const budgeted = !teacherTest && !!studentId && leftSecs !== null;
   const outOfMinutes = budgeted && leftSecs! < MIN_CALL_SECONDS;
@@ -281,7 +281,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
         {busy&&micInterrupted&&<p role="alert" className="mt-3 text-sm">Your phone has paused the microphone. Return to this screen; if it does not recover, end the conversation and start again.</p>}
         <small>When connected, your microphone audio goes to OpenAI. The first three minutes of your voice are also saved privately for Rory and your parents to review. Caption feedback is separate from audio review. Muting keeps the session running; choose End to finish.</small>
         <MicrophoneHelp /></section>
-      {!!fragments.length && <section className="re-card"><h2>Conversation captions</h2><p className="re-small-copy">Captions may contain mistakes. Both speakers can speak at once.</p><div className="re-caption-columns">{(["You", "AI partner"] as const).map(s => <div key={s}><h3>{s}</h3><p><FeedbackText text={transcript(s)}/></p></div>)}</div>{!guided&&<><label className="re-reflection">One useful phrase & my next target<textarea rows={3} maxLength={3000} value={reflection} onChange={e => {setReflection(e.target.value);reflectionRef.current=e.target.value;}} placeholder="What will you try again?" /></label><button className="re-button re-secondary" onClick={saveTranscript}>Download conversation & reflection</button>{sampleDownload&&<a className="re-button re-secondary" href={sampleDownload} download="my-speaking-sample">Download my audio sample</a>}</>}{!teacherTest&&<p className="re-small-copy" role="status">{saveState||'When you end, the app saves this conversation for Rory to review.'}</p>}{!teacherTest&&state==='ended'&&saveState.startsWith('Could not')&&<button className="re-button re-secondary" onClick={()=>void persistConversation()}>Retry save</button>}{teacherTest&&<p className="re-small-copy">This test stays in this tab. No student record is created.</p>}{guided&&state==='ended'&&!saving&&!!saveState&&!saveState.startsWith('Could not')&&<Link className="re-text-link" href={`/s/${code}/lessons/${guided.unitId}/homework/${guided.week}/`}>Continue to this week&apos;s task →</Link>}{!teacherTest&&!guided&&<Link className="re-text-link" href={`/s/${code}/progress/`}>View your speaking record →</Link>}</section>}
+      {!!fragments.length && <section className="re-card"><h2>Conversation captions</h2><p className="re-small-copy">Captions may contain mistakes. Both speakers can speak at once.</p><ConversationTranscript fragments={fragments}/>{!guided&&<><label className="re-reflection">One useful phrase & my next target<textarea rows={3} maxLength={3000} value={reflection} onChange={e => {setReflection(e.target.value);reflectionRef.current=e.target.value;}} placeholder="What will you try again?" /></label><button className="re-button re-secondary" onClick={saveTranscript}>Download conversation & reflection</button>{sampleDownload&&<a className="re-button re-secondary" href={sampleDownload} download="my-speaking-sample">Download my audio sample</a>}</>}{!teacherTest&&<p className="re-small-copy" role="status">{saveState||'When you end, the app saves this conversation for Rory to review.'}</p>}{!teacherTest&&state==='ended'&&saveState.startsWith('Could not')&&<button className="re-button re-secondary" onClick={()=>void persistConversation()}>Retry save</button>}{teacherTest&&<p className="re-small-copy">This test stays in this tab. No student record is created.</p>}{guided&&state==='ended'&&!saving&&!!saveState&&!saveState.startsWith('Could not')&&<Link className="re-text-link" href={`/s/${code}/lessons/${guided.unitId}/homework/${guided.week}/`}>Continue to this week&apos;s task →</Link>}{!teacherTest&&!guided&&<Link className="re-text-link" href={`/s/${code}/progress/`}>View your speaking record →</Link>}</section>}
     </section>{!guided&&<aside><div className="re-card"><ConversationArt/><h2>A little structure helps.</h2><ol className="re-speaking-steps"><li><strong>Get started</strong>Choose a mode and bring one idea or useful word.</li><li><strong>Keep it going</strong>Say more, then ask a question back.</li><li><strong>Make it stick</strong>Try one correction in your own sentence. Ask for shorter chunks if you need them.</li></ol><p className="re-small-copy">This is supplementary practice, not a school assessment. Follow Rory’s assignment for what to submit.</p></div>
       <section className="re-card"><p className="re-eyebrow">QUICK REHEARSAL · ON THIS DEVICE</p><h2>Try it out loud.</h2><p className="re-rehearsal-prompt">{topics[topic].id==="lesson"?lessonEntry?.practice.speakingPrompt||"Choose another mode while Rory prepares lesson practice.":topics[topic].id === "unit" && lines.length ? lines[0] : topics[topic].prompt}</p><p className="re-small-copy">Record up to three minutes, listen back and try again. Your recording stays in this tab and is not sent to anyone.</p><button className="re-button re-secondary" disabled={preview || busy || recordBusy} onClick={() => recording ? stopRecording() : void record()}>{recording ? "Stop recording" : recordBusy ? "Opening microphone…" : "Record a rehearsal"}</button><p role="status">{recording ? "Recording…" : recordError}</p>{recorded && !recording && <audio controls src={recorded} className="re-live-audio" aria-label="Your rehearsal recording" />}</section>
     </aside>}</div>
