@@ -220,3 +220,16 @@ test('conversation feedback asks for simple explanations and retains caption evi
  assert.match(prompt,/simple everyday English/);assert.match(prompt,/teaching term in brackets/);assert.match(prompt,/not the AI partner/);assert.match(prompt,/Do not grade/);assert.match(prompt,/caption fragment or self-correction/);
  assert.equal(f.post({action:'learningRecords'}).records[0].body.transcript,'[1.0s] You: I cycle on my own.');
 });
+
+test('reviewed lesson snapshots preserve the release time and never expose the private source through parent or preview reads',()=>{
+ const f=fixture(),id=randomUUID(),body={transcript:'PRIVATE LESSON TRANSCRIPT',tutorPrivate:{plan:'PRIVATE TEACHING',lessonAssessment:{version:1,checks:[{task:'Explain a word',score:4}],attempts:[{support:'independent'}]}}};
+ assert.equal(f.post({action:'teacherSaveLearningRecord',id,date:'2026-10-03',kind:'lesson',title:'AI draft pending',visibility:'teacher',body},'teacher').ok,true);
+ const sh=f.books.get('sheet-a').sheets.get('Learning reviews');sh.data.at(-1)[8]='2099-10-05T12:00:00Z';
+ const action={action:'teacherPublishLessonSnapshot',id,includeMetrics:true,snapshot:{summary:'You gave an own example.',strengths:['Clear meaning'],targets:['A new example'],nextStep:'Try without a model',transcript:'FORGED'}};
+ assert.equal(f.post(action,'student').ok,false);assert.equal(f.post({...action,code:'parent-a'},'parent').ok,false);assert.equal(f.post({...action,preview:true},'teacher').ok,false);
+ const result=f.post(action,'teacher');assert.equal(result.ok,true);assert.equal(result.record.reviewPending,true);assert.equal(f.post({action:'learningRecords',code:'parent-a'},'parent').records.length,0);
+ assert.equal(f.post({action:'learningRecords',preview:true},'teacher').records.length,0);
+ sh.data.at(-1)[8]='2020-01-01T00:00:00Z';
+ const parent=f.post({action:'learningRecords',code:'parent-a'},'parent');assert.equal(parent.records.length,1);assert.equal(parent.records[0].body.lessonSnapshot.reviewedBy,'Rory');assert.doesNotMatch(JSON.stringify(parent),/PRIVATE|FORGED|tutorPrivate|transcript/);
+ assert.equal(f.post({...action,code:'student-b'},'teacher').ok,false);
+});

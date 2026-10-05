@@ -51,7 +51,19 @@ function learningService_(p,s) {
       var rows=learningLatest_(code,readerRole).filter(function(r){return readerRole==='teacher'||r[5]!=='teacher';});
       return {ok:true,records:rows.map(function(r){return learningPublic_(r,readerRole);}),replies:learningReplies_(code,rows.map(function(r){return String(r[0]);}))};
     }
+    if(p.action==='learningMemory'&&s.role!=='parent')return {ok:true,settings:learningMemorySettings_(code)};
     if(s.role==='parent'||p.preview)return {ok:false,error:'Read-only access.'};
+    if(p.action==='learningMemoryEnabled'&&s.role==='student') {
+      if(typeof p.enabled!=='boolean')throw new Error('Choose whether to use recent practice.');
+      var memoryLock=LockService.getScriptLock();memoryLock.waitLock(10000);
+      try {var current=learningMemorySettings_(code);current.enabled=p.enabled;PropertiesService.getScriptProperties().setProperty('learning_memory_'+code,JSON.stringify(current));return {ok:true,settings:current};} finally {memoryLock.releaseLock();}
+    }
+    if(p.action==='teacherSetLearningMemory'&&s.role==='teacher') {
+      var current=learningMemoryValidate_(p.settings);
+      var memoryLock=LockService.getScriptLock();memoryLock.waitLock(10000);
+      try {PropertiesService.getScriptProperties().setProperty('learning_memory_'+code,JSON.stringify(current));return {ok:true,settings:current};} finally {memoryLock.releaseLock();}
+    }
+    if(p.action==='teacherPublishLessonSnapshot'&&s.role==='teacher')return publishLessonSnapshot_(code,p);
     if(p.action==='teacherSaveLearningRecord'&&s.role==='teacher') {
       var json=learningPayload_(p),visibility=p.visibility==='teacher'?'teacher':'shared';
       var lock=LockService.getScriptLock();lock.waitLock(10000);
@@ -136,4 +148,39 @@ function learningService_(p,s) {
     }
     return {ok:false,error:'Access denied'};
   } catch(error) {return {ok:false,error:String(error.message||'Could not save this learning record. Please retry.')};}
+}
+
+// Settings only: original learning evidence stays in each learner's existing audit trail.
+function learningMemorySettings_(code) {
+  var raw=PropertiesService.getScriptProperties().getProperty('learning_memory_'+code);
+  return raw?learningMemoryValidate_(JSON.parse(raw)):{enabled:true,since:'',focus:[],excludedIds:[]};
+}
+function learningMemoryValidate_(value) {
+  if(!value||typeof value!=='object'||Array.isArray(value)||typeof value.enabled!=='boolean')throw new Error('Memory settings are incomplete.');
+  if(typeof value.since!=='string'||(value.since&&!/^20\d\d-\d\d-\d\d$/.test(value.since)))throw new Error('Choose a valid start date.');
+  if(!Array.isArray(value.focus)||value.focus.length>2||value.focus.some(function(x){return !documentText_(x,250);}))throw new Error('Use at most two short practice targets.');
+  if(!Array.isArray(value.excludedIds)||value.excludedIds.length>50||value.excludedIds.some(function(x){return !documentId_(x);}))throw new Error('A memory source is invalid.');
+  return {enabled:value.enabled,since:value.since,focus:value.focus.map(function(x){return x.trim();}).filter(Boolean),excludedIds:value.excludedIds.slice()};
+}
+
+// A separate, explicit Rory approval publishes only this small field whitelist.
+function publishLessonSnapshot_(code,p){
+ if(!documentId_(p.id)||typeof p.includeMetrics!=='boolean')throw new Error('Choose a lesson review.');
+ var v=p.snapshot;if(!v||!documentText_(v.summary,1200)||!v.summary.trim()||!documentText_(v.nextStep,800))throw new Error('Add a clear summary and next step.');
+ ['strengths','targets'].forEach(function(k){if(!Array.isArray(v[k])||v[k].length>3||v[k].some(function(x){return !documentText_(x,400);}))throw new Error('Keep the learning points short.');});
+ var lock=LockService.getScriptLock();lock.waitLock(10000);
+ try{
+  var row=learningFind_(code,p.id),privateBody=JSON.parse(row[6]||'{}'),a=privateBody.tutorPrivate&&privateBody.tutorPrivate.lessonAssessment;
+  if(row[5]!=='teacher'||row[3]!=='lesson'||!a||a.version!==1||!Array.isArray(a.checks)||!Array.isArray(a.attempts))throw new Error('A private recorded lesson assessment is needed.');
+  var checks=[],counts=null;
+  if(p.includeMetrics){
+   counts={independent:0,prompted:0,modelled:0,'read-aloud':0};
+   a.attempts.forEach(function(x){if(!Object.prototype.hasOwnProperty.call(counts,x.support))throw new Error('Check the support labels first.');counts[x.support]++;});
+   checks=a.checks.map(function(c){if(!documentText_(c.task,250)||(c.score!==null&&(!Number.isInteger(c.score)||c.score<1||c.score>4)))throw new Error('Check the task scores first.');return {task:c.task,score:c.score};});
+  }
+  var now=new Date().toISOString(),snapshot={version:1,sourceReviewId:p.id,reviewedBy:'Rory',reviewedAt:now,summary:sanitize_(v.summary.trim()),strengths:v.strengths.map(function(x){return sanitize_(x.trim());}).filter(Boolean),targets:v.targets.map(function(x){return sanitize_(x.trim());}).filter(Boolean),nextStep:sanitize_(v.nextStep.trim()),checks:checks,counts:counts,scope:'Selected practice tasks in this lesson. Help needed can change with the task. This is not an English percentage, exam grade or CEFR level.'};
+  var id=p.id+'-snapshot',body={lessonSnapshot:snapshot,summary:snapshot.summary,strengths:snapshot.strengths,targets:snapshot.targets,nextStep:snapshot.nextStep,evidenceType:'Recorded lesson · Rory reviewed summary',source:'lesson-snapshot:'+p.id};
+  var out=[id,now,learningDate_(row[2]),'lesson','Lesson progress · '+learningDate_(row[2]),'shared',JSON.stringify(body),'Rory',row[8]||privateBody.audioReviewAvailableAt||''];
+  learningSheet_(code,true,false).appendRow(out);return {ok:true,record:learningPublic_(out,'teacher')};
+ }finally{lock.releaseLock();}
 }

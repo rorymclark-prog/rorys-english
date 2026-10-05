@@ -1,10 +1,11 @@
+import type {LessonAssessment,LessonSnapshot} from './lesson-assessment';
 import type {LessonPractice} from './lesson-practice';
 import {authed,request,savedSession,type ApiResult} from './api';
 export type LearningKind='homework'|'test'|'speaking'|'lesson';
 export type AudioReview={reviewId?:string;summary:string;strengths:string[];targets:string[];nextStep:string;ratings?:Record<string,number|null>;reviewedAt?:string;reviewedBy?:string};
 export type WritingComparison={original:string;corrected:string;improved:string;note:string};
 export type PlainReview={summary?:string;strengths?:string[];targets?:string[];nextStep?:string};
-export type LearningBody={plainReview?:PlainReview;plainAiFeedback?:PlainReview;feedbackOrigin?:'recorded-lesson-practice';lessonPractice?:LessonPractice;summary?:string;evidenceType?:string;source?:string;strengths?:string[];targets?:string[];nextStep?:string;studentNotes?:string;lessonPoints?:string;ratings?:Record<string,number|null>;writing?:{original?:string;corrected?:string;model?:string;comparisons?:WritingComparison[];corrections?:{original:string;corrected:string;note:string}[];practice?:string[]};transcript?:string;reflection?:string;aiAnalysis?:string|null;audioDocumentId?:string;audioReview?:AudioReview;tutorPrivate?:{worked?:string;improve?:string;plan?:string;plainWorked?:string;plainImprove?:string;plainPlan?:string}};
+export type LearningBody={lessonSnapshot?:LessonSnapshot;plainReview?:PlainReview;plainAiFeedback?:PlainReview;feedbackOrigin?:'recorded-lesson-practice';lessonPractice?:LessonPractice;summary?:string;evidenceType?:string;source?:string;strengths?:string[];targets?:string[];nextStep?:string;studentNotes?:string;lessonPoints?:string;ratings?:Record<string,number|null>;writing?:{original?:string;corrected?:string;model?:string;comparisons?:WritingComparison[];corrections?:{original:string;corrected:string;note:string}[];practice?:string[]};transcript?:string;reflection?:string;aiAnalysis?:string|null;audioDocumentId?:string;audioReview?:AudioReview;tutorPrivate?:{lessonAssessment?:LessonAssessment;worked?:string;improve?:string;plan?:string;plainWorked?:string;plainImprove?:string;plainPlan?:string}};
 export type LearningRecord={id:string;created:string;date:string;kind:LearningKind;title:string;visibility:'shared'|'teacher';author:string;body:LearningBody;feedbackAvailableAt?:string;reviewPending?:boolean};
 export type LearningReply={id:string;reviewId:string;created:string;answer:string;author:string;feedbackAvailableAt?:string};
 export type LearningResult=ApiResult&{records?:LearningRecord[];replies?:LearningReply[];record?:LearningRecord;received?:boolean};
@@ -15,3 +16,5 @@ export const saveSpeaking=(code:string,id:string,title:string,transcript:string,
 export const analyseSpeaking=(code:string,id:string)=>authed<LearningResult>(code,{action:'speakingAnalyse',id});
 export const attachSpeakingAudio=(code:string,id:string,documentId:string)=>authed<LearningResult>(code,{action:'speakingAttachAudio',id,documentId});
 export const reviewSpeakingAudio=(code:string,id:string,reviewId:string,review:AudioReview)=>request<LearningResult>({action:'teacherReviewSpeaking',code,id,reviewId,review,session:savedSession('__teacher__')?.token||''});
+
+export const publishLessonSnapshot=(code:string,id:string,snapshot:Pick<LessonSnapshot,'summary'|'strengths'|'targets'|'nextStep'>,includeMetrics:boolean)=>request<LearningResult>({action:'teacherPublishLessonSnapshot',code,id,snapshot,includeMetrics,session:savedSession('__teacher__')?.token||''});

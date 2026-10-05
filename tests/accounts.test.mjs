@@ -39,7 +39,7 @@ test('invalid Firebase tokens and other learner routes cannot reach the progress
   assert.equal((await accountService({ ...request, code: 'other-learner' }, other.deps)).ok, false); assert.equal(other.calls.length, 0);
 });
 test('managed students cannot invoke teacher actions even with a forged teacher secret', async () => {
-  for (const action of ['teacherAccess','teacherDashboard','teacherReview','teacherAddStudent','teacherAssignHomework','teacherCalendarLessons','teacherCalendarLink','teacherCalendarRevoke','teacherCalendarSave','teacherCalendarCancel','teacherCalendarRespond','teacherCalendarBreak']) {
+  for (const action of ['teacherSetLearningMemory','teacherPublishLessonSnapshot','teacherAccess','teacherDashboard','teacherReview','teacherAddStudent','teacherAssignHomework','teacherCalendarLessons','teacherCalendarLink','teacherCalendarRevoke','teacherCalendarSave','teacherCalendarCancel','teacherCalendarRespond','teacherCalendarBreak']) {
     const f = setup();
     assert.equal((await accountService({ ...request, action, teacherSecret: 'forged' }, f.deps)).ok, false); assert.equal(f.calls.length, 0);
   }
@@ -72,4 +72,10 @@ test('preview requests cannot write or invoke AI, even with a teacher session',a
   }
   const f=setup();const body={action:'submissions',code:'learner',session:'teacher-session',preview:true};
   assert.equal((await accountService(body,f.deps)).ok,true);assert.deepEqual(f.calls,[body]);
+});
+
+test('managed students can read and toggle only their own voice memory; preview remains read only',async()=>{
+ for(const action of ['learningMemory','learningMemoryEnabled']){const f=setup();assert.equal((await accountService({...request,action,enabled:false},f.deps)).ok,true);assert.equal(f.calls[0].code,'learner');}
+ const f=setup();assert.equal((await accountService({...request,action:'learningMemoryEnabled',preview:true,enabled:false},f.deps)).ok,false);assert.equal(f.calls.length,0);
+ assert.equal((await accountService({action:'learningMemory',code:'learner',session:'teacher-preview',preview:true},f.deps)).ok,true);
 });

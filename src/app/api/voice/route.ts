@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import type { Account } from "@/lib/server/account-service";
 import { authorizeVoice, voiceConfiguration } from "@/lib/server/voice-session";
 import { postProgress, ProgressTransportError } from "@/lib/server/progress-transport";
+import {buildLearningMemory,memoryInput} from "@/lib/learning-memory";
 import {lessonPracticeRecord} from "@/lib/lesson-practice";
 import type {LearningRecord} from "@/lib/learning";
 import {upstream,backendSession} from "@/lib/server/progress-backend";
@@ -54,20 +55,24 @@ export async function POST(request: Request) {
     const student = typeof practiceCode === "string" && Object.hasOwn(roster, practiceCode) ? studentContent.find(s => s.code === practiceCode) : null;
     const units = student?.id === "ferdi" ? ferdiUnits : student?.id === "valentin" ? valentinUnits : [];
     const unit = units.find(u => u.active);
-    let lessonPractice=null;
-    if(body.topic==="lesson") {
-      if(!student)throw new Error("Choose a learner with a saved practice plan.");
-      // Teacher tests read the same shared view as the learner, not private reviews.
-      let result=body.teacherTest===true
-        ? await upstream({action:"learningRecords",code:practiceCode,session:body.token,preview:true})
-        : await upstream({action:"learningRecords",code:practiceCode,session:await backendSession(practiceCode,body.token)});
-      if(body.teacherTest!==true&&result.authRequired)result=await upstream({action:"learningRecords",code:practiceCode,session:await backendSession(practiceCode,body.token,true)});
-      if(!result.ok||!Array.isArray(result.records))return Response.json({error:"Could not load your lesson practice. Please try again."},{status:503,headers});
-      if(body.lessonPracticeId!==undefined&&(typeof body.lessonPracticeId!=="string"||body.lessonPracticeId.length>100))throw new Error("Invalid practice selection.");
-      lessonPractice=lessonPracticeRecord(result.records as LearningRecord[],body.lessonPracticeId)?.practice||null;
-      if(!lessonPractice)return Response.json({error:"This lesson practice is not available. Open your latest practice plan or choose another mode."},{status:409,headers});
-    }
-    config = voiceConfiguration(body, unit ? { title: unit.title, vocabulary: "voiceVocabulary" in unit ? unit.voiceVocabulary : undefined } : null,lessonPractice);
+    let lessonPractice=null,learningMemory=null;
+    if(student){
+      const session=body.teacherTest===true?body.token:await backendSession(practiceCode,body.token);
+      const read=(action:string,token=session)=>upstream({action,code:practiceCode,session:token,...(body.teacherTest===true?{preview:true}:{})});
+      let [result,settings]=await Promise.all([read("learningRecords"),read("learningMemory")]);
+      if(body.teacherTest!==true&&(result.authRequired||settings.authRequired)){
+        const renewed=await backendSession(practiceCode,body.token,true);
+        [result,settings]=await Promise.all([read("learningRecords",renewed),read("learningMemory",renewed)]);
+      }
+      if(!result.ok||!Array.isArray(result.records)||!settings.ok)return Response.json({error:"Could not load your learning context. Try again before starting a conversation."},{status:503,headers});
+      learningMemory=buildLearningMemory(practiceCode,result.records as LearningRecord[],settings.settings);
+      if(body.topic==="lesson") {
+        if(body.lessonPracticeId!==undefined&&(typeof body.lessonPracticeId!=="string"||body.lessonPracticeId.length>100))throw new Error("Invalid practice selection.");
+        lessonPractice=lessonPracticeRecord(result.records as LearningRecord[],body.lessonPracticeId)?.practice||null;
+        if(!lessonPractice)return Response.json({error:"This lesson practice is not available. Open your latest practice plan or choose another mode."},{status:409,headers});
+      }
+    }else if(body.topic==="lesson")throw new Error("Choose a learner with a saved practice plan.");
+    config = voiceConfiguration(body, unit ? { title: unit.title, vocabulary: "voiceVocabulary" in unit ? unit.voiceVocabulary : undefined } : null,lessonPractice,learningMemory?memoryInput(learningMemory):undefined);
   }
   catch { return Response.json({ error: "Choose a topic and try connecting your microphone again." }, { status: 400, headers }); }
   // Per-instance burst protection, not an account-wide spending limit.

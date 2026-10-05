@@ -7,6 +7,7 @@ const load=(file,requires={})=>{const exports={};vm.runInNewContext(ts.transpile
 const practice=load('src/lib/lesson-practice.ts'),guided=load('src/lib/guided-speaking.ts');
 const voice=load('src/lib/server/voice-session.ts',{'../lesson-practice':practice,'../guided-speaking':guided});
 const plan={version:1,status:'ready',sourceReviewId:'source-lesson',lessonDate:'2026-10-03',title:'A fresh story',recap:'We practised reasons.',focus:['Use past verbs','Add a reason'],speakingPrompt:'Tell a fictional story about a changed plan.',coaching:'Ask about one event, then a second. Help with one verb only if needed.',writingPrompt:'Write four original sentences.',speakingMinutes:6,writingMinutes:5,successCriteria:['A clear sequence','An original reason']};
+const memory=load('src/lib/learning-memory.ts',{'./lesson-practice':practice});
 const record={id:'practice-a',created:'2026-10-04T10:00:00Z',date:'2026-10-03',kind:'lesson',visibility:'shared',title:'Practice',author:'Rory',body:{lessonPractice:plan,tutorPrivate:{plan:'PRIVATE TEACHER SECRET'},transcript:'RAW RECORDING SECRET'}};
 test('practice selection requires a shared ready lesson and excludes drafts, held reviews and mismatched dates',()=>{
  assert.equal(practice.lessonPracticeRecord([record]).record.id,'practice-a');
@@ -32,6 +33,7 @@ test('lesson voice reads only the authenticated student view, refuses another pl
   if(name==='node:crypto')return {createHash};
   if(name==='firebase-admin/app')return {getApps:()=>[{name:'english-server'}]};
   if(name==='firebase-admin/auth')return {getAuth:()=>({verifyIdToken:async()=>({uid:'uid-a',email:'a@example.test',email_verified:true})})};
+  if(name.includes('learning-memory'))return memory;
   if(name.includes('voice-session'))return voice;if(name.includes('lesson-practice'))return practice;
   if(name.includes('progress-backend'))return {backendSession:async(code,token)=>{reads.push({login:code,token});return 'backend-session';},upstream:async body=>{reads.push(body);return {ok:true,records};}};
   if(name.includes('progress-transport'))return {ProgressTransportError:TransportError,postProgress:async()=>({ok:true,students:[]})};

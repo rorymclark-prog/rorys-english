@@ -92,6 +92,7 @@ test('the teacher route validates the backend role before any paid request and n
       if(name.includes('content/ferdi/units.json'))return [];
       if(name.includes('content/valentin/units.json'))return [];
       if(name.includes('google-http'))return {googleHttp:async()=>{throw Error('Unexpected direct call')}};
+      if(name.includes('learning-memory'))return {};
       if(name.includes('lesson-practice'))return practiceExports;
       if(name.includes('progress-backend'))return {upstream:async()=>{throw Error('Unexpected lesson lookup')},backendSession:async()=>{throw Error('Unexpected login')}};
       if(name.includes('progress-transport'))return {ProgressTransportError:TransportError,postProgress:async(_url,body)=>{checks.push(body);return allowed?{ok:true,students:[]}:{ok:false,authRequired:true};}};
