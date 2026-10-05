@@ -3,7 +3,7 @@ import {visualProgress} from '@/lib/progress-visuals';
 import {skillDomains} from '@/lib/skill-progress';
 import {readableDate} from '@/lib/clarity';
 import ProgressRing from './ProgressRing';
-const help={independent:'Independent',hints:'With hints',model:'With a model'};
+const help={independent:'Independent',hints:'With hints',model:'With a model',unknown:'Help / preparation unknown'};
 export default function ProgressVisualSummary({records}:{records:LearningRecord[]}){
  const p=visualProgress(records);
  return <div className="progress-visual-summary mt-4"><div className="progress-overview-grid">

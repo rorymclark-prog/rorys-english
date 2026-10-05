@@ -7,7 +7,7 @@ export const b2WritingGuide='Austrian B2 writing rubric: completing the task, or
 export function b2WritingTotal(m:B2WritingMarks){return Object.values(m).some(v=>v===null)?null:Object.values(m).reduce<number>((n,v)=>n+v!,0);}
 export type SkillResult={domain:SkillDomain;goalId?:string;goalPlanId?:string;rubric?:'austrian-b2-writing';subscores?:B2WritingMarks;criterion:string;earned:number|null;possible:number;evidence:string;evidenceType:'written'|'transcript'|'audio'|'live'};
 export type WordCheck={word:string;recall:boolean|null;use:boolean|null;retained:boolean|null;previousDate:string;evidence:string};
-export type SkillCheck={version:1;sourceKind?:'lesson'|'homework'|'conversation'|'writing'|'quiz'|'school-test'|'checkpoint';sourceRef?:string;unitId:string;unitTitle:string;protocol:string;help:'independent'|'hints'|'model';stage:'baseline'|'checkpoint'|'retention';results:SkillResult[];vocabularySource:string;words:WordCheck[];nextCheck:string};
+export type SkillCheck={version:1;sourceKind?:'lesson'|'homework'|'conversation'|'writing'|'quiz'|'school-test'|'checkpoint';sourceRef?:string;unitId:string;unitTitle:string;protocol:string;help:'independent'|'hints'|'model'|'unknown';stage:'baseline'|'checkpoint'|'retention';results:SkillResult[];vocabularySource:string;words:WordCheck[];nextCheck:string};
 export type SkillSnapshot=Omit<SkillCheck,'results'|'words'|'sourceRef'> & {results:Omit<SkillResult,'evidence'>[];words:Omit<WordCheck,'evidence'>[]};
 function validWritingRubric(r:SkillResult):boolean{
  if(r.rubric===undefined)return r.subscores===undefined;
@@ -18,7 +18,7 @@ function validWritingRubric(r:SkillResult):boolean{
 const dateValid=(d:string)=>/^20\d\d-\d\d-\d\d$/.test(d)&&!isNaN(new Date(d+'T12:00:00Z').getTime())&&new Date(d+'T12:00:00Z').toISOString().slice(0,10)===d;
 function valid(value:unknown,date:string,privateEvidence:boolean):boolean{
  if(!value||typeof value!=='object'||!dateValid(date)||JSON.stringify(value).length>26000)return false;const c=value as SkillCheck;
- if(c.version!==1||[c.unitId,c.unitTitle,c.protocol,c.vocabularySource,c.nextCheck].some(x=>typeof x!=='string'||x.length>1500)||!c.unitId.trim()||!c.unitTitle.trim()||!['independent','hints','model'].includes(c.help)||!['baseline','checkpoint','retention'].includes(c.stage)||!Array.isArray(c.results)||c.results.length>8||!Array.isArray(c.words)||c.words.length>60)return false;
+ if(c.version!==1||[c.unitId,c.unitTitle,c.protocol,c.vocabularySource,c.nextCheck].some(x=>typeof x!=='string'||x.length>1500)||!c.unitId.trim()||!c.unitTitle.trim()||!['independent','hints','model','unknown'].includes(c.help)||!['baseline','checkpoint','retention'].includes(c.stage)||!Array.isArray(c.results)||c.results.length>8||!Array.isArray(c.words)||c.words.length>60)return false;
  if(c.sourceKind!==undefined&&!['lesson','homework','conversation','writing','quiz','school-test','checkpoint'].includes(c.sourceKind)||c.sourceRef!==undefined&&(typeof c.sourceRef!=='string'||c.sourceRef.length>600))return false;
  if(c.results.some(r=>!r||typeof r!=='object')||c.words.some(w=>!w||typeof w!=='object'||typeof w.word!=='string'))return false;
  if(c.words.some(w=>[w.recall,w.use,w.retained].some(x=>x!==null))&&c.help!=='independent')return false;
