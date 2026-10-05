@@ -9,12 +9,12 @@ import {useReviewRefresh} from '@/lib/use-review-refresh';
 const DocumentsView=dynamic(()=>import('@/components/views/DocumentsView'));
 const dateLabel=(date:string)=>new Date(date.length===10?`${date}T12:00:00`:date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 
-export default function SavedWriting({code,name,teacher=false,parent=false,reviewIds=[]}:{code:string;name:string;teacher?:boolean;parent?:boolean;reviewIds?:string[]}){
+export default function SavedWriting({code,name,teacher=false,parent=false,reviewIds=[],onlyRoryFeedback=false}:{code:string;name:string;teacher?:boolean;parent?:boolean;reviewIds?:string[];onlyRoryFeedback?:boolean}){
   const [documents,setDocuments]=useState<LearnerDocument[]>([]),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[open,setOpen]=useState('');
   const refresh=useCallback(async()=>{try{const result=await documentRequest(code,teacher,{action:'documents'});if(result.ok){setDocuments(result.documents||[]);setError('');}else setError(result.error||'Could not load uploaded homework.');}catch{setError('Could not load uploaded homework.');}finally{setLoaded(true);}},[code,teacher]);
   useEffect(()=>{void refresh();},[refresh]);
   useReviewRefresh(()=>void refresh(),documents.map(d=>d.feedbackAvailableAt));
-  const groups=savedWritingGroups(documents,reviewIds);
+  const groups=savedWritingGroups(documents,reviewIds).filter(group=>!onlyRoryFeedback||group.items.some(item=>item.feedback&&!item.reviewPending));
   if(loaded&&!error&&!groups.length)return null;
   return <section className="saved-writing space-y-3" aria-label="Uploaded homework and writing">
     <header className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Uploaded homework & writing</h2><p className="text-sm text-navy-soft dark:text-navy-mist">Completed work, original pages and sentence reviews.</p></div><button type="button" className="doc-link" onClick={()=>void refresh()}>Refresh uploads</button></header>

@@ -35,7 +35,7 @@ export default function MomentumStrip({studentId}:{studentId:string}){
 
   const streak=currentStreak(days),best=bestStreak(days),week=recentActivity(days,7),today=localDay();
   const label=streak===0
-    ?"No days recorded yet this week."
+    ?"No activity recorded on this device in the last seven days."
     :`${streak} ${streak===1?"day":"days"} in a row. ${week.filter(d=>d.active).length} of the last 7 days active.`;
 
   return <section className="momentum-strip" aria-label="Your recent activity">
@@ -56,7 +56,7 @@ export default function MomentumStrip({studentId}:{studentId:string}){
       })}
     </ol>
     <p className="momentum-note">{streak===0
-      ?"Send any piece of work and this starts."
+      ?"This counts work you send from this device. Your saved work is in Feedback."
       :best>streak?<>Your best run so far is <span className="tnum">{best}</span> days.</>
       :"That is your best run so far."}</p>
     <p className="sr-only">{label}</p>

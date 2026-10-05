@@ -34,7 +34,7 @@ export default function SpeakingAudioReview({code,name,mode,record,onSaved}:{cod
     else setMessage(result.error||'Could not confirm the audio review. Keep this page open and try again.');
   }
   return <section className="mt-4 rounded-xl border border-indigo-200 p-3 text-sm dark:border-white/15">
-    <h4 className="font-semibold">Voice recording</h4><p className="mt-1 text-xs text-navy-soft dark:text-navy-mist">Listen to the saved sample. Its audio can support a separate review of speech; caption feedback only checks the transcript.</p>
+    <h4 className="font-semibold">Your saved AI conversation audio sample</h4><p className="mt-1 text-xs text-navy-soft dark:text-navy-mist">This sample is from your AI practice, not your lesson with Rory. AI conversation feedback checks the captions; Rory can listen to this audio separately.</p>
     {audioUrl?<audio className="mt-2 w-full" controls src={audioUrl} aria-label="Student voice recording"/>:<button type="button" className="mt-2 rounded-xl border border-indigo-300 px-3 py-2 font-semibold" disabled={loading} onClick={()=>void openAudio()}>{loading?'Opening recording…':'Listen to recording'}</button>}
     {audioError&&<p role="alert" className="mt-2 text-red-700">{audioError}</p>}
     {review&&<div className="mt-3 rounded-xl bg-indigo-50 p-3 dark:bg-navy"><strong>Rory’s audio review</strong><p className="mt-1 whitespace-pre-wrap">{review.summary}</p>{!!review.strengths?.length&&<p className="mt-2">Strengths: {review.strengths.join(' · ')}</p>}{!!review.targets?.length&&<p className="mt-1">Next focus: {review.targets.join(' · ')}</p>}{review.nextStep&&<p className="mt-1">Next try: {review.nextStep}</p>}</div>}

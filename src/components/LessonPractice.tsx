@@ -1,27 +1,29 @@
 "use client";
 import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
+import {readableDate} from '@/lib/clarity';
 import {getLearning,saveLearning,type LearningRecord} from '@/lib/learning';
 import {lessonPracticeRecord,readLessonPractice,type LessonPractice} from '@/lib/lesson-practice';
 
 export function LessonPracticeDetails({code,record,practice,mode}:{code:string;record:LearningRecord;practice:LessonPractice;mode:'student'|'parent'|'teacher'}) {
   return <section className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-800 dark:bg-navy-raised">
-    <p className="re-eyebrow">FROM YOUR LESSON · {practice.lessonDate}</p><h3 className="mt-1 text-lg font-bold">{practice.title}</h3><p className="mt-2">{practice.recap}</p>
+    <p className="re-eyebrow">FROM YOUR LESSON · {readableDate(practice.lessonDate)}</p><h3 className="mt-1 text-lg font-bold">{practice.title}</h3><p className="mt-2">{practice.recap}</p>
     <ul className="mt-3 ml-5 list-disc">{practice.focus.map(x=><li key={x}>{x}</li>)}</ul>
     <p className="mt-3"><strong>Speak · about {practice.speakingMinutes} minutes:</strong> {practice.speakingPrompt}</p>
     {mode==='student'&&<Link className="re-button mt-3 inline-block" href={`/s/${code}/speak/?mode=lesson&practice=${encodeURIComponent(record.id)}`}>Practise with AI →</Link>}
     <p className="mt-4"><strong>Write · about {practice.writingMinutes} minutes:</strong> {practice.writingPrompt}</p>
     <p className="mt-2">{mode==='student'?'Use the answer box below to save your own writing, or attach a photograph.':'The student can save writing or a photograph with this task in their app.'} There is no new deadline.</p>
     <p className="mt-3 font-semibold">Check your attempt</p><ul className="ml-5 list-disc">{practice.successCriteria.map(x=><li key={x}>{x}</li>)}</ul>
-    <p className="mt-3 text-xs">AI-prepared lesson practice. AI conversation feedback is saved separately after your chat; the full lesson review awaits Rory’s approval.</p>
+    <p className="mt-3 text-xs">Optional practice. Your AI conversation feedback is saved separately after the chat.</p>
   </section>;
 }
-export function LatestLessonPractice({code}:{code:string}) {
-  const [entry,setEntry]=useState<ReturnType<typeof lessonPracticeRecord>>(null);
-  useEffect(()=>{let live=true;setEntry(null);getLearning(code).then(r=>{if(live&&r.ok)setEntry(lessonPracticeRecord(r.records||[]));}).catch(()=>{});return()=>{live=false;};},[code]);
+export function LatestLessonPractice({code,showFiles=true}:{code:string;showFiles?:boolean}) {
+  const [entry,setEntry]=useState<ReturnType<typeof lessonPracticeRecord>>(null),[error,setError]=useState(false),[retry,setRetry]=useState(0);
+  useEffect(()=>{let live=true;setEntry(null);setError(false);getLearning(code).then(r=>{if(live){if(r.ok)setEntry(lessonPracticeRecord(r.records||[]));else setError(true);}}).catch(()=>{if(live)setError(true);});return()=>{live=false;};},[code,retry]);
+  if(error)return <section className="re-card mt-5"><p role="alert">Could not check your latest lesson recap. <button type="button" className="underline" onClick={()=>setRetry(x=>x+1)}>Try again</button></p></section>;
   if(!entry)return null;
   const {record,practice}=entry;
-  return <section className="re-card mt-5"><p className="re-eyebrow">{record.body.feedbackOrigin==='recorded-lesson-practice'?'RECAP FROM YOUR RECORDED LESSON':'RECAP FROM YOUR LAST LESSON'} · {practice.lessonDate}</p><h2 className="mt-1 text-xl font-bold">{practice.title}</h2><p className="mt-2 text-sm">{practice.recap}</p>{record.body.feedbackOrigin==='recorded-lesson-practice'&&<p className="mt-2 text-xs">AI-prepared recap and practice from your lesson recording. Rory’s full lesson analysis is separate and awaits his review.</p>}<div className="mt-4 flex flex-wrap gap-3"><Link className="re-button re-secondary" href={`/s/${code}/progress/#review-${record.id}`}>{record.body.feedbackOrigin==='recorded-lesson-practice'?'Read recorded lesson recap & practice':'Read lesson recap & targets'}</Link><Link className="re-button" href={`/s/${code}/speak/?mode=lesson&practice=${encodeURIComponent(record.id)}`}>Practise with AI · {practice.speakingMinutes} min</Link><Link className="re-button re-secondary" href={`/s/${code}/progress/#review-${record.id}`}>Short writing task · {practice.writingMinutes} min</Link></div></section>;
+  return <section className="re-card mt-5"><p className="re-eyebrow">{record.body.feedbackOrigin==='recorded-lesson-practice'?'RECAP FROM YOUR RECORDED LESSON':'RECAP FROM YOUR LAST LESSON'} · {readableDate(practice.lessonDate)}</p><h2 className="mt-1 text-xl font-bold">{practice.title}</h2><p className="mt-2 text-sm font-semibold">Optional · about {practice.speakingMinutes+practice.writingMinutes} minutes total · no deadline</p><p className="mt-2 text-sm">{practice.recap}</p>{record.body.feedbackOrigin==='recorded-lesson-practice'&&<p className="mt-2 text-xs">AI-prepared recap and practice from your lesson recording. Rory’s full lesson analysis is separate and awaits his review.</p>}<div className="mt-4 flex flex-wrap gap-3"><Link className="re-button re-secondary" href={`/s/${code}/progress/#review-${record.id}`}>{record.body.feedbackOrigin==='recorded-lesson-practice'?'Read recorded lesson recap & practice':'Read lesson recap & targets'}</Link><Link className="re-button" href={`/s/${code}/speak/?mode=lesson&practice=${encodeURIComponent(record.id)}`}>Practise with AI · {practice.speakingMinutes} min</Link><Link className="re-button re-secondary" href={`/s/${code}/progress/#write-${record.id}`}>Short writing task · {practice.writingMinutes} min</Link>{showFiles&&<Link className="re-button re-secondary" href={`/s/${code}/lessons/`}>Lesson slides & files</Link>}</div></section>;
 }
 export function LessonPracticeEditor({code,record,existing,onSaved}:{code:string;record:LearningRecord;existing?:LearningRecord;onSaved:()=>void}) {
   const initial=readLessonPractice((existing||record).body.lessonPractice);
@@ -35,7 +37,7 @@ export function LessonPracticeEditor({code,record,existing,onSaved}:{code:string
     const practice=readLessonPractice({version:1,status:'ready',sourceReviewId:initial?.sourceReviewId||record.id,lessonDate:record.date,title,recap,focus:focus.split('\n').map(x=>x.trim()).filter(Boolean),speakingPrompt:speaking,coaching,writingPrompt:writing,speakingMinutes:speakMinutes,writingMinutes:writeMinutes,successCriteria:criteria.split('\n').map(x=>x.trim()).filter(Boolean)});
     if(!practice){setMessage('Add a short recap, 1–3 focus points, both tasks, AI coaching and 1–4 success criteria.');return;}
     setBusy(true);setMessage('');id.current||=crypto.randomUUID();
-    const result=await saveLearning(code,{id:id.current,date:practice.lessonDate,kind:'lesson',title:`Lesson practice · ${practice.lessonDate}`,visibility:'shared',body:{...((existing?.body.feedbackOrigin==='recorded-lesson-practice'||record.body.source?.includes('/lesson-recording/'))?{feedbackOrigin:'recorded-lesson-practice' as const}:{}),summary:practice.recap,evidenceType:'Student practice prepared from the lesson',source:`lesson-practice:${practice.sourceReviewId}`,lessonPractice:practice}});
+    const result=await saveLearning(code,{id:id.current,date:practice.lessonDate,kind:'lesson',title:`Lesson practice · ${readableDate(practice.lessonDate)}`,visibility:'shared',body:{...((existing?.body.feedbackOrigin==='recorded-lesson-practice'||record.body.source?.includes('/lesson-recording/'))?{feedbackOrigin:'recorded-lesson-practice' as const}:{}),summary:practice.recap,evidenceType:'Student practice prepared from the lesson',source:`lesson-practice:${practice.sourceReviewId}`,lessonPractice:practice}});
     setBusy(false);if(result.ok){setMessage('Practice is ready for this student. Private teaching notes were not included.');onSaved();}else setMessage(result.error||'Could not save practice. Your draft stays here.');
   }
   async function pause(){if(!existing||busy)return;setBusy(true);const result=await saveLearning(code,{...existing,visibility:'teacher',body:{...existing.body,lessonPractice:{...initial!,status:'draft'}}});setBusy(false);if(result.ok){setMessage('Practice paused.');onSaved();}else setMessage(result.error||'Could not pause practice.');}

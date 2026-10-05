@@ -29,6 +29,7 @@ import AppMenu from "@/components/AppMenu";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import QuickAppearance from "@/components/QuickAppearance";
 import StudentPreviewButton from "@/components/StudentPreviewButton";
+import {readableDate} from "@/lib/clarity";
 import studentRoster from "../../../content/students.json";
 
 // One-time removal of the old persisted password; only expiring tokens remain.
@@ -261,7 +262,7 @@ function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () 
     <div className="teacher-card-heading"><ProfileAvatar code={student.code} name={student.name} className="teacher-avatar"/><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
     <div className="teacher-card-data"><ScoreRing value={s?.bestQuizPct}/><div className="teacher-card-counts"><div><CheckSquareIcon/><span><strong>{s?.homeworkDone ?? "—"}</strong> homework recorded</span></div><div><BookIcon/><span><strong>{s?.writingSamples ?? "—"}</strong> writing samples</span></div><div><ChartIcon/><span><strong>{s?.quizRounds ?? "—"}</strong> quiz rounds</span></div></div></div>
     <div className="teacher-focus"><span>{student.focusNote ? "CURRENT FOCUS" : "NEXT STEP"}</span><p>{student.focusNote || "Open their workspace to review answers or assign a little practice."}</p></div>
-    <div className="teacher-card-footer"><span>{s?.lastUpdated ? `Last activity ${s.lastUpdated}` : "No activity recorded yet"}</span><strong>Open workspace <span aria-hidden>↗</span></strong></div>
+    <div className="teacher-card-footer"><span>{s?.lastUpdated ? `Last activity ${readableDate(s.lastUpdated)}` : "No activity recorded yet"}</span><strong>Open work to review <span aria-hidden>↗</span></strong></div>
   </button>;
 }
 
@@ -341,21 +342,21 @@ function TeacherStudentPanel({
       </header>
       <main>
         <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`}>
-          <div className="teacher-banner-name"><ProfileAvatar code={student.code} name={student.name} editable className="teacher-avatar"/><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Last activity ${s.lastUpdated}` : "Ready for the first step"}</p></div></div>
+          <div className="teacher-banner-name"><ProfileAvatar code={student.code} name={student.name} editable className="teacher-avatar"/><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Last activity ${readableDate(s.lastUpdated)}` : "Ready for the first step"}</p></div></div>
           <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ScoreRing value={s?.bestQuizPct}/><span>Full progress <span aria-hidden>↗</span></span></button>
         </section>
         <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>
         <nav className="teacher-section-nav" aria-label="Student workspace sections">
-          <button type="button" aria-pressed={section === "teaching"} onClick={()=>setSection("teaching")}><BookIcon/><span>Teaching files<small>PowerPoints & teacher notes</small></span></button>
-          <button type="button" aria-pressed={section === "learning"} onClick={()=>setSection("learning")}><MessageIcon/><span>Reviews<small>Writing, speaking & lessons</small></span></button>
+          <button type="button" aria-pressed={section === "teaching"} onClick={()=>setSection("teaching")}><BookIcon/><span>Teaching materials<small>PowerPoints & teacher notes</small></span></button>
+          <button type="button" aria-pressed={section === "learning"} onClick={()=>setSection("learning")}><MessageIcon/><span>Feedback & lesson notes<small>Saved reviews & practice</small></span></button>
           <button type="button" aria-pressed={section === "documents"} onClick={()=>setSection("documents")}><FileIcon/><span>Documents<small>Scan, upload & discuss</small></span></button>
-          <button type="button" aria-pressed={section === "review"} onClick={()=>setSection("review")}><CheckSquareIcon/><span>Work & feedback<small>Read, respond, encourage</small></span></button>
-          <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><PencilIcon/><span>Plan homework<small>Set the next step</small></span></button>
-          <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><TargetIcon/><span>Assessments<small>Record & reflect</small></span></button>
+          <button type="button" aria-pressed={section === "review"} onClick={()=>setSection("review")}><CheckSquareIcon/><span>Work to review<small>New answers & uploaded work</small></span></button>
+          <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><PencilIcon/><span>Assign homework<small>Set the next step</small></span></button>
+          <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><TargetIcon/><span>School results<small>Tests & writing checkpoints</small></span></button>
         </nav>
         {section === "teaching" && <TeachingFilesView key={student.code} code={student.code} name={student.name}/>}
         {section === "documents" && <DocumentsView key={student.code} code={student.code} name={student.name} teacher/>}
-        {section === "learning" && <LearningView key={student.code} code={student.code} name={student.name} mode="teacher" initialFilter={initialReviewId?'lesson':'all'} focusRecordId={initialReviewId}/>}
+        {section === "learning" && <LearningView key={student.code} code={student.code} name={student.name} mode="teacher" initialFilter={initialReviewId?'recorded':'all'} focusRecordId={initialReviewId}/>}
         <div hidden={section !== "review"}>{section==="review"&&<SavedWriting code={student.code} name={student.name} teacher/>}<TeacherReviewPanel code={student.code}/></div>
         <div hidden={section !== "assign"}>
         <div className="teacher-form-grid">

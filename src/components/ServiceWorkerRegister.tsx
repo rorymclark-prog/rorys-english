@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
  */
 export default function ServiceWorkerRegister() {
   const [updated, setUpdated] = useState(false);
+  const [dismissed,setDismissed]=useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
@@ -18,7 +19,7 @@ export default function ServiceWorkerRegister() {
     // only treat it as an update if a controller already existed.
     const hadController = !!navigator.serviceWorker.controller;
     const onControllerChange = () => {
-      if (hadController) setUpdated(true);
+      if (hadController) {setUpdated(true);setDismissed(false);}
     };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
@@ -37,7 +38,7 @@ export default function ServiceWorkerRegister() {
     };
   }, []);
 
-  if (!updated) return null;
+  if (!updated||dismissed) return null;
 
   return (
     <div
@@ -50,8 +51,8 @@ export default function ServiceWorkerRegister() {
         onClick={() => window.location.reload()}
         className="flex w-full items-center justify-center gap-2 rounded-card bg-amber-deep p-3 text-sm font-bold text-white shadow-card transition ease-out2026 active:scale-[.97] dark:bg-amber dark:text-navy dark:shadow-card-dark"
       >
-        ✨ New version available — tap to refresh
-      </button>
+        New app update · refresh when your work is saved
+      </button><button type="button" className="mt-1 rounded-lg bg-surface px-3 py-2 text-sm font-semibold text-navy dark:bg-navy-raised dark:text-cream" onClick={()=>setDismissed(true)}>Keep working · update later</button>
     </div>
   );
 }

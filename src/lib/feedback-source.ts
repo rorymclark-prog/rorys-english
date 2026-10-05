@@ -4,6 +4,14 @@ export function latestRecordedLesson(records:LearningRecord[]):LearningRecord|nu
   return records.filter(r=>r.kind==='lesson'&&r.body.source?.includes('/lesson-recording/'))
     .sort((a,b)=>b.date.localeCompare(a.date)||b.created.localeCompare(a.created))[0]||null;
 }
+export type FeedbackFilter='all'|'homework'|'test'|'speaking'|'lesson'|'recorded'|'chat'|'rory';
+export function matchesFeedbackFilter(record:LearningRecord,filter:FeedbackFilter):boolean{
+  if(filter==='all')return true;
+  if(filter==='recorded')return !!record.body.source?.includes('/lesson-recording/')||record.body.feedbackOrigin==='recorded-lesson-practice';
+  if(filter==='chat')return record.kind==='speaking'&&record.body.evidenceType==='AI conversation captions';
+  if(filter==='rory')return !!record.body.audioReview||(record.author==='Rory'&&record.body.evidenceType!=='AI conversation captions'&&!record.body.aiAnalysis&&!record.body.lessonPractice&&!record.body.source?.includes('/lesson-recording/')&&record.visibility==='shared');
+  return record.kind===filter;
+}
 
 export function feedbackSource(record:LearningRecord):{label:string;note:string}|null{
   const b=record.body;

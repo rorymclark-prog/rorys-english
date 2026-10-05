@@ -30,6 +30,7 @@ export default function ProgressView({
 }) {
   const [state, setState] = useState<"loading" | "ok" | "error" | "off">("loading");
   const [data, setData] = useState<Progress | null>(null);
+  const [retry,setRetry]=useState(0);
 
   useEffect(() => {
     if (!remoteEnabled()) {
@@ -51,7 +52,7 @@ export default function ProgressView({
     return () => {
       live = false;
     };
-  }, [fetchCode]);
+  }, [fetchCode,retry]);
 
   return (
     <>
@@ -72,14 +73,14 @@ export default function ProgressView({
           )}
           <div className="min-w-0">
             <h1 className="display text-2xl text-navy break-words dark:text-cream">
-              {mode === "parent" || mode === "teacher" ? `${displayName}'s progress` : "Progress"}
+              {mode === "parent" || mode === "teacher" ? `${displayName}'s progress` : "Feedback"}
             </h1>
             <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">
               {mode === "parent"
-                ? "A snapshot for parents"
+                ? "Shared feedback and saved practice"
                 : mode === "teacher"
-                  ? "Full detail"
-                  : "Everything you've done so far"}
+                  ? "Feedback and saved practice"
+                  : "Lesson recaps, AI practice advice and feedback from Rory"}
             </p>
           </div>
         </div>
@@ -109,15 +110,15 @@ export default function ProgressView({
 
         {state === "error" && (
           <Note>
-            Couldn&apos;t load progress right now. Check your connection and try again.
+            Couldn&apos;t load your saved feedback. <button type="button" className="underline" onClick={()=>{setState('loading');setRetry(x=>x+1);}}>Try again</button>
           </Note>
         )}
 
         {state === "ok" && data && (
           <>
-            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Rory’s reviews come first. The numbers below show activity, not a grade of what you have mastered.</p>
+            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Each entry says whether it is AI practice advice, a lesson recap or feedback from Rory.</p>
             <LearningView code={fetchCode} name={displayName} mode={mode} />
-            <h2 className="progress-history-heading">Practice history</h2>
+            <details className="mt-6 rounded-card border border-black/10 p-4 dark:border-white/15"><summary className="cursor-pointer font-bold">Practice history & activity counts</summary><h2 className="progress-history-heading">Practice history</h2>
             <p className="ux-subtle">Quiz scores show attempts, not proof that a topic is mastered.</p>
             <SummaryTiles data={data} />
             <SectionCard title="Homework" section={data.homework} />
@@ -125,7 +126,7 @@ export default function ProgressView({
             <SectionCard title="School tests" section={data.schoolTests} groupBySemester />
             <SectionCard title="Writing" section={data.writing} groupBySemester />
             <SectionCard title="Speaking" section={data.speaking} />
-            <SectionCard title="Mock tests" section={data.mockTests} groupBySemester />
+            <SectionCard title="Mock tests" section={data.mockTests} groupBySemester /></details>
             {mode === "parent" && <details className="mt-5"><summary className="cursor-pointer rounded-card bg-surface p-4 font-bold shadow-card dark:bg-navy-raised dark:shadow-card-dark">View saved documents and homework files</summary><DocumentsView code={fetchCode} name={displayName} parent /></details>}
             {data.generatedAt && (
               <p className="tnum mt-4 text-center text-xs text-navy-soft dark:text-navy-mist">

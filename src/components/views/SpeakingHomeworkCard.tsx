@@ -10,7 +10,7 @@ const unitId = "english-in-context5-unit01-2026";
 const weeks = [
   {
     number: 1,
-    when: "WEEK OF 23 SEPTEMBER",
+    when: "PRACTICE 1 · AVAILABLE FROM 23 SEPTEMBER",
     title: "A family day out",
     time: "About 30 minutes total",
     instruction: <>Tell a story about a <mark>family day out</mark> when a small plan changed. Then write your best version. A real or invented family is fine.</>,
@@ -24,16 +24,16 @@ const weeks = [
   },
   {
     number: 2,
-    when: "WEEK OF 30 SEPTEMBER",
-    title: "Family: usual and now",
+    when: "PRACTICE 2 · AVAILABLE FROM 30 SEPTEMBER",
+    title: "An email about a family weekend",
     time: "About 35–40 minutes total",
-    instruction: <>Compare what your family <mark>usually</mark> does with what they are doing <mark>now</mark>. Use your ideas in a short email.</>,
+    instruction: <>Talk about what your family <mark>usually</mark> does, then tell a story about <mark>last weekend</mark>. Use your ideas in a short email.</>,
     examples: [
       <>We <mark>usually</mark> eat dinner at home.</>,
-      <>Today, we <mark>are eating</mark> at my grandparents&apos; house.</>,
-      <>My brother <mark>usually plays</mark> football, but <mark>now he is reading</mark>.</>,
+      <>Last weekend, we <mark>ate</mark> at my grandparents&apos; house.</>,
+      <>I liked the visit <mark>because</mark> we cooked together.</>,
     ],
-    starter: <>We <mark>usually</mark> … / <mark>Today</mark>, we <mark>are</mark> …</>,
+    starter: <>We <mark>usually</mark> … / <mark>Last weekend</mark>, we … / I liked … <mark>because</mark> …</>,
     writing: "Write a short email",
   },
 ] as const;
@@ -51,8 +51,8 @@ export default function SpeakingHomeworkCard({ code, assignment }: { code: strin
     return () => { live = false; };
   }, [code]);
   return <section className="hw-speaking" aria-labelledby={`speaking-${assignment.id}`}>
-    <div className="hw-heading"><div><p className="hw-kicker">FAMILY LIFE · TWO TEACHING WEEKS</p><h2 id={`speaking-${assignment.id}`}>Speaking and writing, one step at a time</h2><p><strong>One chat and one short written answer each week.</strong> The chat replaces the speaking rehearsal in the linked task.</p></div><span className="hw-time">30–40 min / week</span></div>
-    <p className="hw-gentle-note">Choose your own ideas. These are examples to help you start, not sentences to memorise. <strong>Stop at 45 minutes for the week.</strong></p>
+    <div className="hw-heading"><div><p className="hw-kicker">FAMILY LIFE · TWO PRACTICE SETS</p><h2 id={`speaking-${assignment.id}`}>Speaking and writing, one step at a time</h2><p><strong>Each set has one chat and one written answer.</strong> The chat replaces the speaking rehearsal in the linked task.</p></div><span className="hw-time">30–40 min / set</span></div>
+    <p className="hw-gentle-note">Choose your own ideas. These are examples to help you start, not sentences to memorise. <strong>Work on one set at a time. Stop at 45 minutes.</strong></p>
     <div className="hw-chat-grid">{weeks.map(week => {
       const guided = guidedSpeakingForHomework(code, unitId, week.number);
       const saved = records.some(r => r.kind === "speaking" && r.title.startsWith(`Family life · Chat ${week.number}`));
@@ -72,6 +72,6 @@ export default function SpeakingHomeworkCard({ code, assignment }: { code: strin
       </article>;
     })}</div>
     <p className="hw-how"><strong>Easy finish:</strong> end the voice chat and check it is saved. Open the writing task, type your answer or attach clear photos of your handwritten work, then press <strong>Send answers to Rory</strong> and check the receipt. <mark>No transcript to copy or paste.</mark></p>
-    <p className="hw-footnote">If live voice is unavailable, finish the short writing task and tell Rory at your next lesson. There is no holiday catch-up task or fixed deadline.</p>
+    <p className="hw-footnote">If live voice is unavailable, finish the short writing task and tell Rory at your next lesson. The dates show when each set became available. No deadline has been set. There is no holiday catch-up task.</p>
   </section>;
 }

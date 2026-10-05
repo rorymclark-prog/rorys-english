@@ -27,10 +27,10 @@ const conversations: GuidedSpeaking[] = [
   {
     id: "ferdi-chat-2", studentCode: "ferdi-7h3k", unitId: "english-in-context5-unit01-2026", week: 2,
     topic: "unit", unitLabel: "FAMILY LIFE", title: "Talk about family life.", savedTitle: "Family life · Chat 2: usually and now",
-    focus: "Compare a normal day with today.", cue: "Usually ↔ now",
-    prompt: "Compare what your family usually does with what they are doing now.", duration: "12–15 minutes",
-    purpose: "This is Family life practice: use present simple for routines and present continuous for what is happening now. Collect your own ideas before writing your family-life email.",
-    instructions: "Ask about what the learner's family or an invented family usually does and what they are doing now. Help them contrast present simple and present continuous in their own examples. Ask simple questions and give one brief model if they get stuck.",
+    focus: "Describe a usual routine, a past weekend and a reason.", cue: "Usually → last weekend → because",
+    prompt: "Tell me what your family usually does, what happened last weekend, and one thing you liked or would change. An invented family is fine.", duration: "12–15 minutes",
+    purpose: "Practise the three parts of your email: a usual routine, a past-weekend story, and something you like or would change with a reason.",
+    instructions: "Rehearse the existing family-life email without writing it for the learner. Ask one question at a time: what a real or invented family usually does, what happened on a past weekend, and one thing they like or would change with a because reason. Help with present simple for routines and past verbs for the weekend only when needed. Invite their own new example after a short hint. A fictional family is welcome; do not request private details.",
   },
   {
     id: "valentin-chat-2", studentCode: "valentin-q9m2", unitId: "way2go8-unit01-2026", week: 2,

@@ -6,6 +6,7 @@ import StudentPreviewButton from "./StudentPreviewButton";
 import { RELEASE_NOTES, LATEST_RELEASE } from "@/lib/whats-new";
 import { endStudentPreview, isStudentPreview } from "@/lib/student-preview";
 import { logout } from "@/lib/api";
+import {studentNavigation} from "@/lib/student-navigation";
 import roster from "../../content/students.json";
 export default function AppMenu({code,teacher=false}:{code?:string;teacher?:boolean}) {
   const dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null);
@@ -22,11 +23,7 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
   },[open]);
   const close=()=>dialog.current?.close();
   const viewNews=()=>{setPanel("news");setUnread(false);try{localStorage.setItem(seenKey,LATEST_RELEASE);}catch{/* optional badge */}};
-  const menuGroups=code?[
-    {label:"YOUR DAY",links:[["Today",`/s/${code}/`],["Calendar",`/s/${code}/calendar/`]]},
-    {label:"YOUR WORK",links:[["Homework",`/s/${code}/homework/`],["Test prep",`/s/${code}/test-prep/`],["Documents",`/s/${code}/documents/`],["Feedback & progress",`/s/${code}/progress/`]]},
-    {label:"PRACTISE & FIND",links:[["Speaking",`/s/${code}/speak/`],["Lessons",`/s/${code}/lessons/`],["Practice",`/s/${code}/study/`],["Resources",`/s/${code}/resources/`],["Writing help",`/s/${code}/coach/`]]},
-  ]:[];
+  const menuGroups=code?studentNavigation.map(group=>({label:group.label,links:group.items.map(([suffix,label])=>[label,`/s/${code}/${suffix}`])})):[];
   return <>
     <button ref={trigger} type="button" className="app-menu-trigger" aria-label="Open menu" aria-haspopup="dialog" aria-expanded={open} onClick={()=>{setPanel("menu");dialog.current?.showModal();setOpen(true);}}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menu</span>{unread&&<span className="app-news-dot" aria-label="New updates"/>}</button>
     <dialog ref={dialog} aria-labelledby={titleId} className="app-menu-dialog" onClose={()=>{setOpen(false);trigger.current?.focus();}} onClick={e=>{if(e.target===dialog.current){const rect=dialog.current.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)close();}}}>

@@ -8,6 +8,7 @@ import {markEffort} from "@/lib/momentum";
 import {buildHomeworkIcs,downloadIcs,parseDueDate} from "@/lib/ics";
 import {guidedSpeakingForHomework} from "@/lib/guided-speaking";
 import HomeworkAudioRecorder from "@/components/HomeworkAudioRecorder";
+import {readableDate} from "@/lib/clarity";
 import Screen from "@/components/Screen";
 import {ClockIcon,MessageIcon,PencilIcon} from "@/components/Icons";
 import {MicrophoneIcon} from "@/components/LearningVisuals";
@@ -20,7 +21,7 @@ export default function HomeworkWeekView({unitId,week,backHref,archived=false}:{
   return <Screen title={week.title} subtitle={speaking?"Speaking task":"Writing task"}>
     <div className="week-page">
     <Link href={backHref} className="week-back">← Back to homework</Link>
-    <section className={`week-summary ${speaking?"is-speaking":"is-writing"}`}><span className="week-summary-icon"><Icon/></span><div><p className="work-eyebrow">{archived?"OPTIONAL REVISION":speaking?"SPEAKING TASK":"WRITING TASK"}</p><h2>What you’ll do</h2>{week.description&&<p>{week.description}</p>}<div className="week-facts"><span><ClockIcon/> {week.estimatedMinutes?`About ${week.estimatedMinutes} minutes`:"Work at your own pace"}</span><span>{week.due?`Due ${week.due}`:"No deadline set"}</span></div></div></section>
+    <section className={`week-summary ${speaking?"is-speaking":"is-writing"}`}><span className="week-summary-icon"><Icon/></span><div><p className="work-eyebrow">{archived?"OPTIONAL REVISION":speaking?"SPEAKING TASK":"WRITING TASK"}</p><h2>What you’ll do</h2>{week.description&&<p>{week.description}</p>}<div className="week-facts"><span><ClockIcon/> {week.estimatedMinutes?`About ${week.estimatedMinutes} minutes`:"Work at your own pace"}</span><span>{week.due?`Due ${readableDate(week.due)}`:"No deadline set"}</span>{week.availableFrom&&<span>Available from {readableDate(week.availableFrom)}</span>}</div></div></section>
     {archived&&<p className="week-notice">Previous-year archive · optional revision, not current homework.</p>}
     {guided?<div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-800 dark:bg-navy-raised"><strong>{code==="ferdi-7h3k"?"Step 1 · Speak once":"Conversation practice · speak with your AI partner"}</strong><p className="mt-1">Chat {week.week} takes about {guided.duration} and is saved when you end it. No transcript to copy or paste.</p><Link className="mt-3 inline-block font-bold text-indigo-700 underline dark:text-amber" href={`/s/${code}/speak/?guided=${guided.id}`}>Open Chat {week.week} →</Link></div>:week.tasks.some(task=>task.type==="voice")&&<Link className="inline-block rounded-xl border p-3 font-semibold underline" href={`/s/${code}/speak/`}>Open Speaking studio →</Link>}
     {guided?.purpose&&<p className="week-notice"><strong>Why this chat? </strong>{guided.purpose}</p>}

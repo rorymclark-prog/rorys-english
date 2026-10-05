@@ -163,7 +163,7 @@ export default function ResourcesView({
         style={{ paddingTop: mode === "parent" ? "calc(env(safe-area-inset-top) + 1rem)" : undefined }}
       >
         <p className="work-eyebrow">LESSON LIBRARY</p>
-        <h1 className="display mt-1 text-2xl text-navy dark:text-cream">Resources</h1>
+        <h1 className="display mt-1 text-2xl text-navy dark:text-cream">All lesson files</h1>
         <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">
           Student lesson copies, listening and documents shared by Rory.
         </p>
