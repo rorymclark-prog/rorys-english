@@ -14,6 +14,8 @@ import {
 } from "@/lib/remote";
 import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon, FileIcon, MessageIcon, PencilIcon, TargetIcon } from "@/components/Icons";
 import ProgressView from "./ProgressView";
+import TeacherInsights from "./TeacherInsights";
+import type {Unit} from "@/lib/types";
 import { login, savedSession, forgetSession } from "@/lib/api";
 import { publishAssessment } from "@/lib/remote";
 import { VoiceStudio } from "./SpeakView";
@@ -37,7 +39,7 @@ const STORAGE_KEY = "re_teacher_secret";
 
 type LoadState = "idle" | "loading" | "ok" | "error";
 
-export default function TeacherDashboardView({initialCalendar=false}:{initialCalendar?:boolean}) {
+export default function TeacherDashboardView({initialCalendar=false,activeUnits={}}:{initialCalendar?:boolean;activeUnits?:Record<string,Unit|null>}) {
   const [showCalendar,setShowCalendar]=useState(initialCalendar);
   const [testingVoice, setTestingVoice] = useState(false);
   const [ready, setReady] = useState(false);
@@ -148,6 +150,7 @@ export default function TeacherDashboardView({initialCalendar=false}:{initialCal
         secret={secret}
         student={selected}
         initialReviewId={recordingReviewId}
+        unit={activeUnits[selected.code]||null}
         onBack={() => {setSelectedCode(null);setRecordingReviewId(undefined);}}
         onViewProgress={() => setShowFullProgress(true)}
         onPatch={(patch) => patchStudent(selected.code, patch)}
@@ -183,7 +186,7 @@ export default function TeacherDashboardView({initialCalendar=false}:{initialCal
           </div>
           <section className="teacher-voice-tool"><MessageIcon/><div><h2>Speaking partner test</h2><p>Try a conversation before a lesson. Your test stays separate from student work.</p></div><button type="button" className="teacher-primary" onClick={() => setTestingVoice(true)}>Test voice</button></section>
           <TeachingProgress students={students} onOpen={setSelectedCode}/>
-          <div className="teacher-bottom-note"><CheckSquareIcon/><p>Review the work. Celebrate the effort. Choose the next step.<small>Figures include earlier records. A best quiz score is a snapshot, not a measure of mastery.</small></p></div>
+          <div className="teacher-bottom-note"><CheckSquareIcon/><p>Review the work. Celebrate the effort. Choose the next step.<small>Open a learner’s dashboard for current homework, saved activity and dated assessments.</small></p></div>
           {generatedAt && <p className="teacher-updated">Records updated {generatedAt}</p>}
         </>}
       </main>
@@ -247,22 +250,14 @@ function PasswordGate({
   );
 }
 
-function ScoreRing({ value }: { value: number | string | undefined }) {
-  const numeric = value !== undefined && String(value).trim() !== "" ? Number(value) : NaN;
-  const score = Number.isFinite(numeric) && numeric >= 0 && numeric <= 100 ? numeric : null;
-  return <div className="teacher-score" aria-label={score === null ? "No quiz score recorded" : `Best quiz score: ${score}%`}>
-    <svg viewBox="0 0 100 100" aria-hidden="true"><circle className="teacher-score-track" cx="50" cy="50" r="42"/><circle className="teacher-score-fill" cx="50" cy="50" r="42" pathLength="100" strokeDasharray={`${score ?? 0} 100`}/></svg>
-    <div><strong>{score === null ? "—" : `${score}%`}</strong><small>Best quiz</small></div>
-  </div>;
-}
 function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () => void }) {
   const s = student.summary;
   const unit = studentRoster.find(entry=>entry.code===student.code)?.units.find(unit=>unit.active);
   return <button type="button" onClick={onOpen} className={`teacher-student-card ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`} aria-label={`Open ${student.name}’s teaching workspace`}>
     <div className="teacher-card-heading"><ProfileAvatar code={student.code} name={student.name} className="teacher-avatar"/><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
-    <div className="teacher-card-data"><ScoreRing value={s?.bestQuizPct}/><div className="teacher-card-counts"><div><CheckSquareIcon/><span><strong>{s?.homeworkDone ?? "—"}</strong> homework recorded</span></div><div><BookIcon/><span><strong>{s?.writingSamples ?? "—"}</strong> writing samples</span></div><div><ChartIcon/><span><strong>{s?.quizRounds ?? "—"}</strong> quiz rounds</span></div></div></div>
+    <div className="teacher-card-data"><div className="teacher-saved-label"><BookIcon/><span>Saved work</span></div><div className="teacher-card-counts"><div><CheckSquareIcon/><span><strong>{s?.homeworkDone ?? "—"}</strong> homework recorded</span></div><div><BookIcon/><span><strong>{s?.writingSamples ?? "—"}</strong> writing samples</span></div><div><ChartIcon/><span><strong>{s?.quizRounds ?? "—"}</strong> quiz rounds</span></div></div></div>
     <div className="teacher-focus"><span>{student.focusNote ? "CURRENT FOCUS" : "NEXT STEP"}</span><p>{student.focusNote || "Open their workspace to review answers or assign a little practice."}</p></div>
-    <div className="teacher-card-footer"><span>{s?.lastUpdated ? `Homework / quiz log: ${readableDate(s.lastUpdated)}` : "No activity recorded yet"}</span><strong>Open work to review <span aria-hidden>↗</span></strong></div>
+    <div className="teacher-card-footer"><span>{s?.lastUpdated ? `Homework / quiz log: ${readableDate(s.lastUpdated)}` : "No activity recorded yet"}</span><strong>Open learning dashboard <span aria-hidden>↗</span></strong></div>
   </button>;
 }
 
@@ -274,6 +269,7 @@ function TeacherStudentPanel({
   onViewProgress,
   onPatch,
   initialReviewId,
+  unit,
 }: {
   secret: string;
   student: TeacherStudent;
@@ -281,8 +277,9 @@ function TeacherStudentPanel({
   onViewProgress: () => void;
   onPatch: (patch: Partial<TeacherStudent>) => void;
   initialReviewId?:string;
+  unit:Unit|null;
 }) {
-  const [section, setSection] = useState<"review" | "assign" | "assess" | "documents" | "learning" | "teaching">(initialReviewId?"learning":"review");
+  const [section, setSection] = useState<"overview" | "review" | "assign" | "assess" | "documents" | "learning" | "teaching">(initialReviewId?"learning":"overview");
   const [note, setNote] = useState(student.focusNote);
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
@@ -343,10 +340,11 @@ function TeacherStudentPanel({
       <main>
         <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`}>
           <div className="teacher-banner-name"><ProfileAvatar code={student.code} name={student.name} editable className="teacher-avatar"/><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Homework / quiz log: ${readableDate(s.lastUpdated)}` : "Ready for the first step"}</p></div></div>
-          <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ScoreRing value={s?.bestQuizPct}/><span>Full progress <span aria-hidden>↗</span></span></button>
+          <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ChartIcon/><span>Saved progress & feedback <span aria-hidden>↗</span></span></button>
         </section>
         <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>
         <nav className="teacher-section-nav" aria-label="Student workspace sections">
+          <button type="button" aria-pressed={section === "overview"} onClick={()=>setSection("overview")}><ChartIcon/><span>Learning dashboard<small>Homework, activity & assessment</small></span></button>
           <button type="button" aria-pressed={section === "teaching"} onClick={()=>setSection("teaching")}><BookIcon/><span>Teaching materials<small>PowerPoints & teacher notes</small></span></button>
           <button type="button" aria-pressed={section === "learning"} onClick={()=>setSection("learning")}><MessageIcon/><span>Feedback & lesson notes<small>Saved reviews & practice</small></span></button>
           <button type="button" aria-pressed={section === "documents"} onClick={()=>setSection("documents")}><FileIcon/><span>Documents<small>Scan, upload & discuss</small></span></button>
@@ -354,6 +352,7 @@ function TeacherStudentPanel({
           <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><PencilIcon/><span>Assign homework<small>Set the next step</small></span></button>
           <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><TargetIcon/><span>School results<small>Tests & writing checkpoints</small></span></button>
         </nav>
+        {section === "overview" && <TeacherInsights code={student.code} name={student.name} unit={unit} onReview={()=>setSection("review")} onNotes={()=>setSection("learning")}/>}
         {section === "teaching" && <TeachingFilesView key={student.code} code={student.code} name={student.name}/>}
         {section === "documents" && <DocumentsView key={student.code} code={student.code} name={student.name} teacher/>}
         {section === "learning" && <LearningView key={student.code} code={student.code} name={student.name} mode="teacher" initialFilter={initialReviewId?'recorded':'all'} focusRecordId={initialReviewId}/>}
@@ -441,7 +440,7 @@ function TeacherStudentPanel({
           <p className="teacher-section-intro">Keep a record of school results and your own feedback. Choose what you’d like to add.</p>
           <details open><summary><CheckSquareIcon/>School test<span>Record a result</span></summary><SchoolTestForm secret={secret} code={student.code}/></details>
           <details><summary><ChartIcon/>Mock exam<span>Practise for the real thing</span></summary><MockTestForm secret={secret} code={student.code}/></details>
-          <details><summary><BookIcon/>Writing feedback<span>Prepare and review an AI draft</span></summary><WritingAnalysisForm secret={secret} code={student.code}/></details>
+          <details><summary><BookIcon/>Writing feedback<span>Prepare and review a draft</span></summary><WritingAnalysisForm secret={secret} code={student.code}/></details>
         </div>
       </main>
     </div>
@@ -610,7 +609,7 @@ function WritingAnalysisForm({ secret, code }: { secret: string; code: string })
       </h2>
       <form onSubmit={submit} className="space-y-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
         <p className="text-xs text-navy-soft dark:text-navy-mist">
-          Paste a submitted piece. AI suggests a draft assessment; check it against the original, edit it, then explicitly approve it for the student’s Writing record. This is not an official grade.
+          Paste a submitted piece. Prepare a draft assessment; check it against the original, edit it, then explicitly approve it for the student’s Writing record. This is not an official grade.
         </p>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional, e.g. HW2 essay)" maxLength={200} className={inputCls} />
         <textarea
@@ -623,7 +622,7 @@ function WritingAnalysisForm({ secret, code }: { secret: string; code: string })
         />
         {error && <p className="text-sm text-bad dark:text-bad-bright">{error}</p>}
         <button type="submit" disabled={busy || text.trim().length < 20} className={primaryBtnCls}>
-          {busy ? "Analysing…" : "Prepare AI draft"}
+          {busy ? "Analysing…" : "Prepare draft"}
         </button>
         {result && (
           <div className="space-y-1.5 rounded-lg bg-amber-soft p-3 dark:bg-amber-dusk">
@@ -642,7 +641,7 @@ function WritingAnalysisForm({ secret, code }: { secret: string; code: string })
               <label>CEFR estimate<select disabled={published||publishing} value={result.cefr} onChange={e=>setResult({...result,cefr:e.target.value})} className={inputCls}>{["A1","A2","B1","B1+","B2","B2+","C1","C2"].map(v=><option key={v}>{v}</option>)}</select></label>
               {(["grammar","vocab","coherence"] as const).map(k=><label key={k}>{k} /10<input type="number" min={0} max={10} disabled={published||publishing} value={result[k]} onChange={e=>setResult({...result,[k]:Number(e.target.value)})} className={inputCls}/></label>)}
             </div>
-            <p className="mt-3 text-sm">AI draft, not a published assessment or official Matura grade. Check the source writing before approval.</p>
+            <p className="mt-3 text-sm">Draft, not a published assessment or official Matura grade. Check the source writing before approval.</p>
             <button type="button" disabled={published||publishing} className="mt-3 min-h-11 rounded-xl bg-indigo-700 p-3 text-white disabled:opacity-50" onClick={async()=>{setPublishing(true);const r=await publishAssessment(secret,code,title,result,assessmentId);setPublishing(false);if(r.ok)setPublished(true);setError(r.ok?null:r.error || "Could not publish.");}}>{published?"Published after your approval":publishing?"Publishing…":"Approve and publish assessment"}</button>
           </div>
         )}

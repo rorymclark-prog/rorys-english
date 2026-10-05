@@ -1,0 +1,22 @@
+# Learning dashboard — 5 October 2026
+
+Teacher home → student opens Learning dashboard. The old best-quiz ring is removed from both the student card and workspace banner. Quiz marks remain in dated practice history.
+
+The dashboard reads the existing authenticated per-learner learning records, assignments, task receipts and quiz history. It does not infer a grade from a quiz best, infer mastery from a visit, or create an assessment when opening a page.
+
+- Required homework receipt is received/marked-complete available required tasks ÷ available required tasks. Required/optional choices must be explicitly saved; unclassified tasks are reported and excluded. Received, reviewed and revision-needed remain distinct. Ferdi’s combined assignment is replaced by its two chat+writing sets without duplicate counting. A guided set needs both the saved student conversation and writing receipt.
+- Saved activity uses 7 days, 30 days or all history, with Vienna day boundaries. It counts conversations, most recent receipt per task and quiz rows. Speaking submittedAt, or its original evidence date, prevents later analysis from making an old conversation look new. It is not total time in the app. Uploads, learning replies, unsent drafts and anonymous visits are outside this count.
+- Recorded task checks use the existing support scale of 1–4. Retention comparisons require the same stable objective key, version, verified comparison protocol and non-null scores on different lesson dates. There is no overall English percentage.
+- Teaching checks optionally use 1–4, beside the observation and timestamp. Blank means unobserved/unscored. No historical score is fabricated; a teacher can edit privately. Private teaching history is shown across the most recent five assessed lessons, excluding preparation packs.
+- Rory’s checkpoints use evidence-backed earned/max marks per criterion and a percentage only after all criteria are marked. Independent comparisons require matching objective, protocol, support and marking scheme. A small hint is not an independent first attempt. An incomplete checkpoint has no percentage.
+- Vocabulary coverage matches exact whole words/phrases in recognised learner captions against the current unit list, excluding partner turns. It does not infer unprompted use, correctness, fluency or mastery. Variants/synonyms are not automatically counted. It explicitly labels applying the current list to historical conversations.
+
+Dashboard requirements and confirmed school expectations are stored in a teacher-only test record with stable ID teacher-dashboard-settings, inside tutorPrivate.dashboardSettings. Checkpoints are separate teacher-only test records inside tutorPrivate.checkpoint. Existing backend role filters remove these records from student, parent and preview reads; private fields are stripped independently. Generic feedback lists hide the configuration record.
+
+Checkpoint feedback must be previewed and explicitly approved in the UI. It creates a separate stable ID ending -summary and contains only four user-reviewed summary fields, source label and original evidence date. Detailed marks/evidence, recordings and private teaching remain separate. Existing recorded-lesson summaries retain their dedicated server whitelist and release rules. No actual assessment or sharing was performed while implementing this feature.
+
+Display labels use Feedback, Conversation feedback and Lesson assessment. Draft/review-pending labels and original private provenance remain. Stored keys, original record bodies, model choice, live AI partner identity, teacher approval requirements and five-hour submission feedback controls are preserved.
+
+Proposed assessment rhythm (recommendation, not a scheduled commitment): short opening/exit checks each lesson and a 15–20-minute checkpoint after a unit or roughly 3–4 lessons, followed by an equivalent independent retention check. School class/year and expected tasks must be confirmed before claiming an age/grade benchmark.
+
+Local validation: 214 tests (including homework denominators, linked-set receipts, latest revisions, chronology, checkpoint arithmetic/comparability, vocabulary isolation and teaching-score validation); production build/type checking. Browser visual testing was blocked because the computer-use browser policy check was unavailable. The installed production teacher app had an open school-break form; it was left untouched. No paid conversations, learner messages, real test entries or automatic score migrations were run.

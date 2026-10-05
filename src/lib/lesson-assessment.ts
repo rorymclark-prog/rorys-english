@@ -1,12 +1,12 @@
 export type Support='independent'|'prompted'|'modelled'|'read-aloud';
 export const supportLabels:Record<Support,string>={independent:'Own answer · no example sentence',prompted:'With a small hint',modelled:'After an example or lots of help','read-aloud':'Reading prepared words'};
-export type LessonAssessment={version:1;method:string;limits:string;attempts:{id:string;time:string;task:string;support:Support;evidence:string;confidence:string}[];checks:{key:string;task:string;score:number|null;evidence:string;nextCheck:string;comparable:boolean;comparisonProtocol?:string}[];areas:{title:string;observation:string;assessed:boolean}[];withinLesson:string;retainedProgress:string;teaching:{title:string;observation:string;time:string}[]};
+export type LessonAssessment={version:1;method:string;limits:string;attempts:{id:string;time:string;task:string;support:Support;evidence:string;confidence:string}[];checks:{key:string;task:string;score:number|null;evidence:string;nextCheck:string;comparable:boolean;comparisonProtocol?:string}[];areas:{title:string;observation:string;assessed:boolean}[];withinLesson:string;retainedProgress:string;teaching:{title:string;observation:string;time:string;score?:number|null}[]};
 export function readLessonAssessment(value:unknown):LessonAssessment|null{
  if(!value||typeof value!=='object')return null;const v=value as LessonAssessment;
  if(v.version!==1||typeof v.method!=='string'||typeof v.limits!=='string'||!Array.isArray(v.attempts)||v.attempts.length>20||!Array.isArray(v.checks)||v.checks.length>10||!Array.isArray(v.areas)||v.areas.length>8||!Array.isArray(v.teaching)||v.teaching.length>8)return null;
  if(v.attempts.some(a=>!a||!Object.hasOwn(supportLabels,a.support)||typeof a.id!=='string'||typeof a.task!=='string'||typeof a.confidence!=='string'||typeof a.evidence!=='string'||typeof a.time!=='string'))return null;
  if(v.checks.some(c=>!c||typeof c.key!=='string'||typeof c.task!=='string'||typeof c.evidence!=='string'||typeof c.nextCheck!=='string'||typeof c.comparable!=='boolean'||(c.comparisonProtocol!==undefined&&typeof c.comparisonProtocol!=='string')||(c.score!==null&&(!Number.isInteger(c.score)||c.score<1||c.score>4))))return null;
- if(v.areas.some(a=>!a||typeof a.title!=='string'||typeof a.observation!=='string'||typeof a.assessed!=='boolean')||v.teaching.some(t=>!t||typeof t.title!=='string'||typeof t.observation!=='string'||typeof t.time!=='string'))return null;
+ if(v.areas.some(a=>!a||typeof a.title!=='string'||typeof a.observation!=='string'||typeof a.assessed!=='boolean')||v.teaching.some(t=>!t||typeof t.title!=='string'||typeof t.observation!=='string'||typeof t.time!=='string'||(t.score!=null&&(!Number.isInteger(t.score)||t.score<1||t.score>4||!t.observation.trim()))))return null;
  if(typeof v.withinLesson!=='string'||typeof v.retainedProgress!=='string')return null;
  return v;
 }

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "synthetic-lesson",
+    "created": "2026-10-04",
+    "date": "2026-10-03",
+    "kind": "lesson",
+    "title": "Synthetic recorded lesson",
+    "visibility": "teacher",
+    "author": "AI draft",
+    "body": {
+      "source": "ferdi/lesson-recording/synthetic",
+      "summary": "Synthetic assessment",
+      "tutorPrivate": {
+        "lessonAssessment": {
+          "version": 1,
+          "method": "Synthetic classroom support assessment",
+          "limits": "Synthetic fixture only; no real learner grades.",
+          "attempts": [
+            {
+              "id": "a",
+              "time": "01:00",
+              "task": "Give a reason",
+              "support": "independent",
+              "evidence": "Synthetic own sentence",
+              "confidence": "Fixture"
+            }
+          ],
+          "checks": [
+            {
+              "key": "reason",
+              "task": "Give a reason with because",
+              "score": 3,
+              "evidence": "Synthetic reason with a small hint.",
+              "nextCheck": "A new example next lesson",
+              "comparable": false
+            }
+          ],
+          "areas": [],
+          "withinLesson": "Synthetic supported practice",
+          "retainedProgress": "Not yet checked independently later",
+          "teaching": [
+            {
+              "title": "Clear instructions",
+              "observation": "The synthetic learner understood the task.",
+              "time": "01:00"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "synthetic-chat",
+    "created": "2026-10-03",
+    "date": "2026-10-03",
+    "kind": "speaking",
+    "title": "Family life \u00b7 Chat 1: story",
+    "visibility": "shared",
+    "author": "Student",
+    "body": {
+      "transcript": "[1.0s] AI partner: What happened?\n[3.0s] You: My family went out because it was sunny.",
+      "evidenceType": "AI conversation captions"
+    }
+  }
+]

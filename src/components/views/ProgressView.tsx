@@ -80,7 +80,7 @@ export default function ProgressView({
                 ? "Shared feedback and saved practice"
                 : mode === "teacher"
                   ? "Feedback and saved practice"
-                  : "Lesson recaps, AI practice advice and feedback from Rory"}
+                  : "Lesson recaps, practice advice and feedback from Rory"}
             </p>
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function ProgressView({
 
         {state === "ok" && data && (
           <>
-            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Each entry says whether it is AI practice advice, a lesson recap or feedback from Rory.</p>
+            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Each entry says whether it is practice advice, a lesson recap or feedback from Rory.</p>
             <LearningView code={fetchCode} name={displayName} mode={mode} />
             <details className="mt-6 rounded-card border border-black/10 p-4 dark:border-white/15"><summary className="cursor-pointer font-bold">Practice history & activity counts</summary><h2 className="progress-history-heading">Practice history</h2>
             <p className="ux-subtle">Quiz scores show attempts, not proof that a topic is mastered.</p>
@@ -193,15 +193,10 @@ function SummaryTiles({ data }: { data: Progress }) {
 
   const qz = data.quizzes;
   const pctIdx = col(qz, "%");
-  const bestPct =
-    qz && pctIdx >= 0 && qz.rows.length
-      ? Math.max(...qz.rows.map((r) => Number(r[pctIdx]) || 0))
-      : null;
-
   const tiles: { label: string; value: string }[] = [
     { label: "Homework done", value: String(weeksDone) },
     { label: "Quiz rounds", value: String(qz?.rows.length ?? 0) },
-    { label: "Best quiz", value: bestPct != null ? `${bestPct}%` : "—" },
+    { label: "Quiz rounds with scores", value: String(qz?.rows.filter(r=>pctIdx>=0&&String(r[pctIdx]).trim()!==""&&Number.isFinite(Number(r[pctIdx]))).length??0) },
     { label: "Writing", value: String(data.writing?.rows.length ?? 0) },
     { label: "Speaking", value: String(data.speaking?.rows.length ?? 0) },
     { label: "School tests", value: String(data.schoolTests?.rows.length ?? 0) },

@@ -10,8 +10,9 @@ import { isStudentPreview } from "./student-preview";
 //
 // This counter lives on the device, like everything else in storage.ts. It is a
 // fair-use guide, not a security boundary — clearing the browser clears it. The
-// hard ceiling is the monthly spend cap set in the OpenAI dashboard, which no
-// amount of clicking here can exceed.
+// billing control must be configured separately in the OpenAI dashboard with
+// Enforce a hard limit enabled. Alerts alone do not stop usage, and enforcement
+// can slightly overshoot while the limit state propagates.
 //
 // Where 35 comes from: live voice costs about €0.055 a minute all in (OpenAI's
 // $0.05 a minute for gpt-live-1, converted, plus the gpt-6-sol text delegation

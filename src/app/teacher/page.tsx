@@ -1,3 +1,4 @@
+import {getAllStudents,getBundle} from "@/lib/content";
 import type { Metadata } from "next";
 import "./teacher.css";
 import { SettingsProvider } from "@/components/SettingsContext";
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 export default function TeacherPage() {
   return (
     <div className="min-h-dvh re-teacher-shell">
-      <script dangerouslySetInnerHTML={{ __html: themeScript("__teacher__") }} /><SettingsProvider studentId="__teacher__"><TeacherDashboardView /></SettingsProvider>
+      <script dangerouslySetInnerHTML={{ __html: themeScript("__teacher__") }} /><SettingsProvider studentId="__teacher__"><TeacherDashboardView activeUnits={Object.fromEntries(getAllStudents().map(s=>[s.code,getBundle(s.code)?.activeUnit||null]))} /></SettingsProvider>
     </div>
   );
 }

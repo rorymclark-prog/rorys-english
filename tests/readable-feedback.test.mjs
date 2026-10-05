@@ -22,8 +22,8 @@ test('legacy truncated captions keep the unlabelled ending; unknown formats rema
 });
 test('practice source labels distinguish AI chat, private recording analysis and follow-up tasks',()=>{
  const r={kind:'speaking',body:{evidenceType:'AI conversation captions'}};
- assert.equal(feedbackSource(r).label,'AI conversation feedback');
- assert.equal(feedbackSource({kind:'lesson',body:{source:'student/lesson-recording/2026-10-03/id'}}).label,'AI analysis of recorded lesson');
+ assert.equal(feedbackSource(r).label,'Conversation feedback');
+ assert.equal(feedbackSource({kind:'lesson',body:{source:'student/lesson-recording/2026-10-03/id'}}).label,'Lesson assessment');
  assert.equal(feedbackSource({kind:'lesson',body:{feedbackOrigin:'recorded-lesson-practice'}}).label,'Practice from your recorded lesson');
  assert.equal(feedbackSource({kind:'lesson',body:{summary:'A teacher lesson note'}}),null);
 });
