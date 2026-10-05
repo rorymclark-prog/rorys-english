@@ -14,10 +14,18 @@ test('the family progress panel renders percentages, history and untested areas 
  const React=await import('react'),runtime=await import('react/jsx-runtime'),{renderToStaticMarkup}=await import('react-dom/server');const componentExports={};
  const clarity={readableDate:d=>d},teacherMetrics={viennaDay:()=> '2026-10-05'};
  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/components/SkillProgressPanel.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:componentExports,require:n=>({'react':React,'react/jsx-runtime':null,'@/lib/skill-progress':m,'@/lib/learning-goals':{activeGoalPlan:()=>null},'@/lib/learning':{},'@/lib/teacher-metrics':teacherMetrics,'@/lib/clarity':clarity}[n])||jsxRuntime(n),console});
- function jsxRuntime(n){if(n==='react/jsx-runtime')return runtime;throw Error(n);}
+ function jsxRuntime(n){if(n==='react/jsx-runtime')return runtime;if(n==='./ProgressVisualSummary')return {default:()=>null};throw Error(n);}
  // The runtime is loaded before rendering; no network or actual learner data is used.
  const publicRecord={...record('a','2026-10-03'),visibility:'shared',body:{source:'skill-progress-summary:a',skillSnapshot:m.skillSnapshot(check)}};
  const html=renderToStaticMarkup(React.createElement(componentExports.default,{records:[publicRecord]}));assert.match(html,/60%/);assert.match(html,/6 \/ 10 marks/);assert.match(html,/Grammar/);assert.match(html,/Not assessed/);assert.match(html,/50%/);assert.match(html,/still untested/);assert.doesNotMatch(html,/6 correct independent answers|Defined it correctly|Assess skills/);
+ const empty=renderToStaticMarkup(React.createElement(componentExports.default,{records:[record('private','2026-10-03')]}));assert.match(empty,/when Rory shares them/);assert.doesNotMatch(empty,/0 of 8|Not assessed|6 correct independent answers/);
+});
+
+test('teacher progress drill-down keeps private assessments visible while family views filter them',async()=>{
+ const React=await import('react'),runtime=await import('react/jsx-runtime'),{renderToStaticMarkup}=await import('react-dom/server');let calls=0;const componentExports={};
+ const hooks={...React,useEffect:()=>{},useState:initial=>[++calls===1?[record('private','2026-10-03')]:calls===3?false:typeof initial==='function'?initial():initial,()=>{}]};
+ vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/components/SkillProgressPanel.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:componentExports,require:n=>({'react':hooks,'react/jsx-runtime':runtime,'@/lib/skill-progress':m,'@/lib/learning-goals':{activeGoalPlan:()=>null},'@/lib/learning':{},'@/lib/teacher-metrics':{viennaDay:()=> '2026-10-05'},'@/lib/clarity':{readableDate:d=>d},'./ProgressVisualSummary':{default:()=>React.createElement('p',null,'Private progress chart')}}[n]),console});
+ const html=renderToStaticMarkup(React.createElement(componentExports.SharedSkillProgress,{code:'synthetic',teacher:true}));assert.match(html,/Private teacher view/);assert.match(html,/Private progress chart/);assert.match(html,/60%/);assert.match(html,/6 correct independent answers/);assert.match(html,/Preview progress for student/);assert.doesNotMatch(html,/0 of 8 areas assessed/);
 });
 
 test('official B2 writing keeps four separate bands, correct totals and no invented overall-level conversion',()=>{

@@ -80,7 +80,7 @@ export default function ProgressView({
               {mode === "parent"
                 ? "Shared feedback and saved practice"
                 : mode === "teacher"
-                  ? "Feedback and saved practice"
+                  ? "Private assessments, progress charts and saved feedback"
                   : "Lesson recaps, practice advice and feedback from Rory"}
             </p>
           </div>

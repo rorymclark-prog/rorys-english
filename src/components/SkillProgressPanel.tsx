@@ -7,6 +7,7 @@ import {viennaDay} from '@/lib/teacher-metrics';
 import {readableDate} from '@/lib/clarity';
 import type {ProgressEvidence} from '@/lib/progress-evidence';
 import type {Unit} from '@/lib/types';
+import ProgressVisualSummary from './ProgressVisualSummary';
 const box='mt-1 w-full rounded-lg border border-black/15 bg-transparent p-2 dark:border-white/20';
 const sourceLabels={lesson:'Recorded / live lesson',homework:'Homework',conversation:'Saved conversation',writing:'Written work',quiz:'Quiz', 'school-test':'School test',checkpoint:'Rory’s checkpoint'};
 const domains=Object.keys(skillDomains) as SkillDomain[];
@@ -18,6 +19,7 @@ export default function SkillProgressPanel({records,teacher=false,unit,onSaved,c
  const [selected,setSelected]=useState('');const unitId=selected||unit?.id||scopes[0]?.[0]||'',title=unitId===unit?.id?unit.title:scopes.find(([id])=>id===unitId)?.[1]||'Current learning';
  if(unit&&!scopes.some(([id])=>id===unit.id))scopes.unshift([unit.id,unit.title]);
  const progress=domainProgress(entries,unitId),checked=progress.filter(x=>x.result),vocabEntries=entries.filter(e=>e.check.unitId===unitId&&e.check.words.length),vocab=vocabEntries[0];
+ if(!teacher&&!entries.length)return <section className="insight-card mb-5" aria-label="Learning progress"><p className="teacher-eyebrow">LEARNING PROGRESS</p><h2 className="text-xl font-bold">Your progress results</h2><p className="mt-2">Your checked results will appear here when Rory shares them, with the task, date and what to practise next.</p><p className="mt-2">You can find your saved practice and feedback below.</p></section>;
  return <section className="skill-progress insight-card mb-5" aria-label="Trackable learning progress">
   <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="teacher-eyebrow">LEARNING PROGRESS</p><h2 className="text-xl font-bold">How is {teacher?'this student':'your English'} improving?</h2><p className="mt-2">{title} · {checked.length} of 8 areas assessed</p></div>{scopes.length>1&&<label>Unit<select className={box} value={unitId} onChange={e=>setSelected(e.target.value)}>{scopes.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>}</div>
   <p className="mt-3 text-sm">Percentages show marks earned on a named task or audio rubric. An audio band is not a percentage of sounds pronounced correctly. Change is shown only for equivalent independent checks. Each area keeps its own evidence and date.</p>
@@ -54,5 +56,5 @@ export function SharedSkillProgress({code,teacher=false}:{code:string;teacher?:b
  useEffect(()=>{let live=true;setLoading(true);setError(false);setRecords([]);getLearning(code,teacher).then(r=>{if(!r.ok)throw Error();if(live)setRecords(r.records||[]);}).catch(()=>{if(live)setError(true);}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[code,teacher,retry]);
  if(loading)return <p role="status" className="my-4">Loading measured progress…</p>;
  if(error)return <p className="my-4">Could not load measured progress. <button className="underline" onClick={()=>setRetry(x=>x+1)}>Try again</button></p>;
- return <SkillProgressPanel key={code} records={records}/>;
+ return <>{teacher&&<><p className="my-4 font-semibold">Private teacher view · draft assessments are included. Students and parents see only results you approve and share.</p><ProgressVisualSummary records={records}/></>}<SkillProgressPanel key={code} records={records} teacher={teacher} code={teacher?code:undefined} onSaved={teacher?async()=>{setRetry(x=>x+1);}:undefined}/></>;
 }
