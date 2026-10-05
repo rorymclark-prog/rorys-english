@@ -1,5 +1,5 @@
 export type Support='independent'|'prompted'|'modelled'|'read-aloud';
-export const supportLabels:Record<Support,string>={independent:'Own answer · no language model',prompted:'With a small hint',modelled:'After a model or substantial help','read-aloud':'Reading prepared words'};
+export const supportLabels:Record<Support,string>={independent:'Own answer · no example sentence',prompted:'With a small hint',modelled:'After an example or lots of help','read-aloud':'Reading prepared words'};
 export type LessonAssessment={version:1;method:string;limits:string;attempts:{id:string;time:string;task:string;support:Support;evidence:string;confidence:string}[];checks:{key:string;task:string;score:number|null;evidence:string;nextCheck:string;comparable:boolean;comparisonProtocol?:string}[];areas:{title:string;observation:string;assessed:boolean}[];withinLesson:string;retainedProgress:string;teaching:{title:string;observation:string;time:string}[]};
 export function readLessonAssessment(value:unknown):LessonAssessment|null{
  if(!value||typeof value!=='object')return null;const v=value as LessonAssessment;
