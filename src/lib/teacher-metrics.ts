@@ -1,3 +1,4 @@
+import {softwareCheck,learningRecordsOnce} from "./evidence-common";
 import type {LearningRecord} from './learning';
 import type {Assignment,Progress,Submission} from './remote';
 import type {Unit} from './types';
@@ -61,11 +62,11 @@ export function homeworkMetrics(code:string,unit:Unit|null,assignments:Assignmen
 export function activityMetrics(records:LearningRecord[],submissions:Submission[],progress:Progress|null,days:number,today:string){
  const start=new Date(today+'T12:00:00Z');start.setUTCDate(start.getUTCDate()-(days-1));const from=start.toISOString().slice(0,10),within=(date:string|null)=>!!date&&date<=today&&(days===0||date>=from);
  const events:{day:string;kind:string}[]=[];
- for(const r of records)if(r.author==='Student'&&r.visibility==='shared'&&r.kind==='speaking'&&within(eventDay(r.body.submittedAt||r.date)))events.push({day:eventDay(r.body.submittedAt||r.date)!,kind:'conversation'});
+ for(const r of learningRecordsOnce(records))if(!softwareCheck(r.title)&&r.author==='Student'&&r.visibility==='shared'&&r.kind==='speaking'&&within(eventDay(r.body.submittedAt||r.date)))events.push({day:eventDay(r.body.submittedAt||r.date)!,kind:'conversation'});
  const latest=new Map<string,Submission>();for(const s of submissions){const k=JSON.stringify([s.unit,s.task]);if(!latest.has(k)||s.submitted>latest.get(k)!.submitted)latest.set(k,s);}
  for(const s of latest.values())if(within(eventDay(s.submitted)))events.push({day:eventDay(s.submitted)!,kind:'answer'});
  const section=progress?.quizzes,dateCol=section?.headers.findIndex(h=>h.toLowerCase()==='date')??-1;
- if(section&&dateCol>=0)for(const r of section.rows)if(within(eventDay(r[dateCol])))events.push({day:eventDay(r[dateCol])!,kind:'quiz'});
+ if(section&&dateCol>=0)for(const r of section.rows)if(!softwareCheck(...r.slice(0,3))&&within(eventDay(r[dateCol])))events.push({day:eventDay(r[dateCol])!,kind:'quiz'});
  const dates=[...new Set(events.map(e=>e.day))].sort();
  return {activeDays:dates.length,conversations:events.filter(e=>e.kind==='conversation').length,answers:events.filter(e=>e.kind==='answer').length,quizzes:events.filter(e=>e.kind==='quiz').length,last:dates.at(-1)||null,dates};
 }

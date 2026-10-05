@@ -1,9 +1,10 @@
 "use client";
 import { authed, request, type ApiResult } from "./api";
+import {learnerProgress} from "./evidence-common";
 export const remoteEnabled = () => !!process.env.NEXT_PUBLIC_SYNC_URL;
 export interface Section { headers: string[]; rows: (string | number)[][] }
 export interface Progress extends ApiResult { name?: string; generatedAt?: string; homework?: Section; quizzes?: Section; schoolTests?: Section; writing?: Section; speaking?: Section; mockTests?: Section }
-export const fetchProgress = (code: string) => authed<Progress>(code,{action:"progress"});
+export const fetchProgress = (code: string) => authed<Progress>(code,{action:"progress"}).then(learnerProgress);
 export interface AiResult extends ApiResult {text?: string}
 export const fetchAi = (code:string,kind:"word"|"writing"|"tutor",q:string) => authed<AiResult>(code,{action:"ai",kind,q});
 export interface ResourceItem {name:string;url:string;type:string;modified:string}

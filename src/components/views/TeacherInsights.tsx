@@ -2,12 +2,15 @@
 import {request,savedSession} from '@/lib/api';
 import {useEffect,useState} from 'react';
 import {rowToAssignment,type Progress,type Assignment,type Submission,type AssignmentsResult,type Submissions} from '@/lib/remote';
-import {getLearning,saveLearning,type LearningRecord} from '@/lib/learning';
+import {getLearning,saveLearning,type LearningRecord,type LearningReply} from '@/lib/learning';
 import {dashboardSettings,activityMetrics,homeworkMetrics,assessedLessons,lessonComparisons,readCheckpoint,checkpointResult,checkpointChange,viennaDay,type DashboardSettings,type Checkpoint,type Requirement} from '@/lib/teacher-metrics';
 import {vocabularyCoverage} from '@/lib/vocabulary-coverage';
 import {readLessonAssessment} from '@/lib/lesson-assessment';
 import {readableDate} from '@/lib/clarity';
 import type {Unit} from '@/lib/types';
+import ProgressPortfolioPanel from '@/components/ProgressPortfolioPanel';
+import {documentRequest,type LearnerDocument} from '@/lib/documents';
+import type {ProgressEvidence} from '@/lib/progress-evidence';
 import LearningGoalsPanel from '@/components/LearningGoalsPanel';
 import SkillProgressPanel from '@/components/SkillProgressPanel';
 import LessonAssessmentPanel from '@/components/LessonAssessmentPanel';
@@ -15,8 +18,9 @@ const box='mt-1 w-full rounded-lg border border-black/15 bg-transparent p-2 dark
 const emptySettings:DashboardSettings={version:1,requirements:{},schoolContext:''};
 function Metric({label,value,detail}:{label:string;value:string;detail:string}){return <article className="insight-metric"><p>{label}</p><strong>{value}</strong><small>{detail}</small></article>;}
 export default function TeacherInsights({code,name,unit,onReview,onNotes}:{code:string;name:string;unit:Unit|null;onReview:()=>void;onNotes:()=>void}){
+ const [source,setSource]=useState<ProgressEvidence|null>(null),[documents,setDocuments]=useState<LearnerDocument[]>([]),[replies,setReplies]=useState<LearningReply[]>([]),[evidenceError,setEvidenceError]=useState('');
  const [records,setRecords]=useState<LearningRecord[]>([]),[assignments,setAssignments]=useState<Assignment[]>([]),[submissions,setSubmissions]=useState<Submission[]>([]),[progress,setProgress]=useState<Progress|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[days,setDays]=useState(30),[settings,setSettings]=useState<DashboardSettings>(emptySettings),[savedSettings,setSavedSettings]=useState<DashboardSettings>(emptySettings),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
- async function refresh(){setLoading(true);setError('');try{const [l,a,s,p]=await Promise.all([getLearning(code,true),request<AssignmentsResult>({action:'assignments',code,session:savedSession('__teacher__')?.token||''}),request<Submissions>({action:'submissions',code,session:savedSession('__teacher__')?.token||''}),request<Progress>({action:'progress',code,session:savedSession('__teacher__')?.token||''})]);if(!l.ok||!a.ok||!s.ok||!p.ok)throw Error(l.error||a.error||s.error||p.error||'Some saved records could not be loaded.');setRecords(l.records||[]);setAssignments((a.assignments?.rows||[]).map(rowToAssignment));setSubmissions(s.submissions||[]);setProgress(p);const config=l.records?.find(r=>r.id==='teacher-dashboard-settings')?.body.tutorPrivate?.dashboardSettings;const value=dashboardSettings(config);setSettings(value);setSavedSettings(value);}catch(e){setError(e instanceof Error?e.message:'Could not open saved records.');}finally{setLoading(false);}}
+ async function refresh(){setLoading(true);setError('');try{const [l,a,s,p]=await Promise.all([getLearning(code,true),request<AssignmentsResult>({action:'assignments',code,session:savedSession('__teacher__')?.token||''}),request<Submissions>({action:'submissions',code,session:savedSession('__teacher__')?.token||''}),request<Progress>({action:'progress',code,session:savedSession('__teacher__')?.token||''})]);if(!l.ok||!a.ok||!s.ok||!p.ok)throw Error(l.error||a.error||s.error||p.error||'Some saved records could not be loaded.');setRecords(l.records||[]);setReplies(l.replies||[]);try{const docs=await documentRequest(code,true,{action:'documents'});setDocuments(docs.documents||[]);setEvidenceError(docs.ok?'':'Uploaded documents could not be loaded.');}catch{setDocuments([]);setEvidenceError('Uploaded documents could not be loaded.');}setAssignments((a.assignments?.rows||[]).map(rowToAssignment));setSubmissions(s.submissions||[]);setProgress(p);const config=l.records?.find(r=>r.id==='teacher-dashboard-settings')?.body.tutorPrivate?.dashboardSettings;const value=dashboardSettings(config);setSettings(value);setSavedSettings(value);}catch(e){setError(e instanceof Error?e.message:'Could not open saved records.');}finally{setLoading(false);}}
  useEffect(()=>{void refresh();},[code]);
  async function saveSettings(){setBusy(true);setMessage('');try{const result=await saveLearning(code,{id:'teacher-dashboard-settings',date:viennaDay(),kind:'test',title:'Private dashboard settings',visibility:'teacher',body:{tutorPrivate:{dashboardSettings:settings}}});if(!result.ok)throw Error(result.error||'Could not save settings.');setSavedSettings(settings);setMessage('Requirements and school context saved privately.');}catch(e){setMessage(e instanceof Error?e.message:'Could not save settings.');}finally{setBusy(false);}}
  if(loading)return <p role="status" className="insight-loading">Opening homework, recorded lessons and saved activity…</p>;
@@ -25,7 +29,8 @@ export default function TeacherInsights({code,name,unit,onReview,onNotes}:{code:
  return <section className="teacher-insights" aria-label={`${name}’s learning dashboard`}>
   <header className="insight-header"><div><p className="teacher-eyebrow">LEARNING DASHBOARD · PRIVATE TO RORY</p><h2>Practice, learning and your teaching</h2><p>Each result names the task, date and evidence behind it.</p></div><button className="teacher-quiet-button" onClick={()=>void refresh()}>Refresh dashboard</button></header>
   <LearningGoalsPanel key={`goals-${code}-${records.filter(r=>r.body.tutorPrivate?.goalPlan).map(r=>r.created).join('-')||'new'}`} code={code} records={records} onSaved={refresh}/>
-  <SkillProgressPanel key={code} records={records} teacher unit={unit} code={code} onSaved={refresh}/>
+  <ProgressPortfolioPanel records={records} documents={documents} submissions={submissions} replies={replies} progress={progress} error={evidenceError} onAssess={e=>{setSource(e);window.setTimeout(()=>document.getElementById('marked-skill-check')?.scrollIntoView({behavior:'smooth',block:'start'}),50);}}/>
+  <div id="marked-skill-check"><SkillProgressPanel key={code} records={records} teacher unit={unit} code={code} source={source||undefined} onSaved={refresh}/></div>
   <div className="insight-metrics">
    <Metric label="Required homework received" value={required.length?`${Math.round(received/required.length*100)}%`:'Not set'} detail={required.length?`${received} of ${required.length} available required tasks received or marked complete; ${reviewed} reviewed.`:`${unclassified} tasks need a required / optional choice.`}/>
    <Metric label="Saved activity days" value={String(activity.activeDays)} detail={`${days?`Last ${days} days`:'All saved history'} · conversations, answers and quiz attempts.`}/>
