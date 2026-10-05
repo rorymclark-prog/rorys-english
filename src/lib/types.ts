@@ -45,7 +45,7 @@ export interface UnitMeta {
   active: boolean;
   schoolYear?: string;
   book?: string;
-  status?: "current" | "completed" | "archive" | "awaiting-materials";
+  status?: "current" | "completed" | "archive" | "awaiting-materials" | "tutoring";
   note?: string;
   /** Tutoring may still be catching up while school has moved to this unit. */
   tutoringFocus?: string;

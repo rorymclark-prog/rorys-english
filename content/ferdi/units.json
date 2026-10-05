@@ -10,11 +10,6 @@
     "studyTools": [],
     "resources": [
       {
-        "title": "3 October · A photo from Grandma’s past · student slides",
-        "url": "/lessons/ferdi/2026-27/english-in-context5-unit01/Family_Photo_03_Oct_2026.pdf",
-        "blurb": "The next Family life lesson. Original reading, speaking and email practice. Rory reads the short listening message aloud in class."
-      },
-      {
         "title": "The Saturday mix-up · student slides",
         "url": "/lessons/ferdi/2026-27/english-in-context5-unit01/Student_Slides.pdf",
         "blurb": "Our Family life lesson slides. The listening story is available separately below."
@@ -25,7 +20,35 @@
         "blurb": "The 62-second story for slides 14–15. Listen once for the main idea, then again for details."
       }
     ],
-    "voiceVocabulary": ["relationship", "relative", "stepfather", "stepsister", "half-brother", "only child", "get on with", "grow up", "move out", "keep in touch"]
+    "voiceVocabulary": [
+      "relationship",
+      "relative",
+      "stepfather",
+      "stepsister",
+      "half-brother",
+      "only child",
+      "get on with",
+      "grow up",
+      "move out",
+      "keep in touch"
+    ]
+  },
+  {
+    "id": "english-in-context5-unit02-2026",
+    "title": "3 October lesson · Friendships and helping others",
+    "active": false,
+    "schoolYear": "2026–27",
+    "book": "English in Context 5",
+    "status": "tutoring",
+    "note": "The revised Unit 2 companion used in our 3 October lesson. We worked through the family review, friendship phrases, reading, advice and tense practice on slides 2–9. Later activities are included for reference; they are not extra assigned homework. Unit 1 remains the current school unit recorded above.",
+    "studyTools": [],
+    "resources": [
+      {
+        "title": "3 October · Friendships and helping others · student slides",
+        "url": "/lessons/ferdi/2026-27/english-in-context5-unit02/2026-10-03/Student_Slides.pdf",
+        "blurb": "Student copy of the revised deck used in the lesson, without teacher answer reveals or notes. Slides 2–9 cover the work observed in the recording."
+      }
+    ]
   },
   {
     "id": "unit10",
