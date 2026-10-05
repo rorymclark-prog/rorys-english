@@ -363,20 +363,20 @@ function TeacherStudentPanel({
             into their next AI-tutor/writing-coach reply as soft context. */}
         <section className="mt-5">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">
-            Focus note
+            Homepage notice & focus
           </h2>
           <div className="rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark">
             <textarea
-              aria-label="Student focus note"
+              aria-label="Homepage notice and student focus"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. Great with past tenses now — let's work on conditionals next"
+              placeholder="e.g. Please add your test dates and send me your available recap dates."
               rows={3}
               maxLength={500}
               className="w-full resize-none rounded-lg bg-transparent text-sm text-navy outline-none placeholder:text-navy-soft dark:text-cream dark:placeholder:text-navy-mist"
             />
             <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="text-xs text-navy-soft dark:text-navy-mist">Shown to {student.name} on their Today screen.</p>
+              <p className="text-xs text-navy-soft dark:text-navy-mist">Shown prominently on {student.name}’s Today screen; also used as learning context.</p>
               <button
                 type="button"
                 onClick={saveNote}

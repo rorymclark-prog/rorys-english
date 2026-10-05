@@ -8,12 +8,12 @@ import {useStudent} from "@/components/StudentContext";
 import {fetchNote,fetchAssignments,fetchSubmissions,type Submission,rowToAssignment,isCurrentAssignment,type Assignment} from "@/lib/remote";
 import {BookIcon,CheckSquareIcon,ChevronRightIcon,FileIcon,MessageIcon,PencilIcon,TargetIcon} from "@/components/Icons";
 import {MicrophoneIcon,RepeatIcon} from "@/components/LearningVisuals";
-import FeedbackText from "@/components/FeedbackText";
 import {isFerdiSpeakingHomework} from "@/lib/speaking-homework";
 import {readableDate,submissionStatus,isCompletedAssignment} from "@/lib/clarity";
 import {isStudentPreview} from "@/lib/student-preview";
 import NextLesson from "@/components/NextLesson";
 import MomentumStrip from "@/components/MomentumStrip";
+import YearPlanNotice from "@/components/YearPlanNotice";
 import UnitCover from "@/components/UnitCover";
 
 function WeekLink({h,unit,base,status}:{h:HomeworkWeek;unit:Unit;base:string;status:string}){
@@ -31,6 +31,7 @@ export default function TodayView({unit}:{unit:Unit|null}){
   const ready=(assignments.some(a=>isFerdiSpeakingHomework(code,a))?[]:unit?.homework||[]).filter(h=>!h.availableFrom||h.availableFrom<=today);
   return <main className="re-home today-page">
     <header className="re-page-heading"><p className="re-eyebrow">YOUR LEARNING SPACE</p><h1>Hi, {displayName}. Here’s your next step.</h1><p>Pick one task, practise it, and come back for feedback.</p></header>
+    <YearPlanNotice code={code} note={note} loading={!loaded}/>
     <LatestLessonPractice code={code}/>
     <div className="today-layout"><div className="today-primary">
       <section className="today-next-section" aria-labelledby="today-work-title"><div className="today-section-heading"><div><p className="work-eyebrow">START HERE</p><h2 id="today-work-title">Homework & earlier practice</h2></div><Link href={`${base}/homework/`}>All homework <ChevronRightIcon/></Link></div>
@@ -41,6 +42,6 @@ export default function TodayView({unit}:{unit:Unit|null}){
       </section>
       <section className="today-practice-section" aria-labelledby="today-practice-title"><div className="today-section-heading"><div><p className="work-eyebrow">KEEP GOING</p><h2 id="today-practice-title">Ways to practise</h2></div></div><div className="ux-route-grid"><Link className="ux-route-card" href={`${base}/speak/`}><MicrophoneIcon/><span><strong>Speaking</strong><small>Have a short conversation</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`${base}/lessons/`}><BookIcon/><span><strong>Lessons & files</strong><small>Slides, current unit and past work</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`${base}/study/`}><RepeatIcon/><span><strong>Practice tools</strong><small>Optional study tools</small></span><ChevronRightIcon/></Link></div></section>
       <section className="today-feedback-card"><MessageIcon/><div><p className="work-eyebrow">AFTER YOU TRY</p><h2>Read your feedback</h2><p>See what worked and what to try next.</p><Link href={`${base}/progress/`}>Open feedback <ChevronRightIcon/></Link></div></section>
-    </div><aside className="today-secondary"><NextLesson code={code}/>{!isStudentPreview(code)&&<MomentumStrip studentId={studentId}/>}<section className={`ux-panel ${note?"re-mentor-card":""}`}><div className="ux-panel-heading"><span className="re-avatar">R</span><h2>From Rory</h2></div><p className="ux-subtle today-rory-note">{note?<FeedbackText text={note}/>:!loaded?"Checking your latest note…":"Your next note will appear here when Rory adds it."}</p></section><section className="ux-panel has-unit-cover"><UnitCover src={unit?.coverImage} title={unit?.title||"this unit"}/><div className="ux-panel-heading"><BookIcon/><h2>Current unit</h2></div><p className="ux-chip">{unit?.schoolYear||"2026–27"}</p><h3 className="mt-3 font-bold">{unit?.title||"Ready for the next lesson"}</h3><p className="ux-subtle mt-2">{unit?.note||"Rory will confirm your current materials."}</p><Link className="ux-link-row" href={`${base}/resources/`}><FileIcon/>Open lesson resources<ChevronRightIcon/></Link></section><Link className="ux-route-card" href={`${base}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Practise with Rory’s reviews</small></span><ChevronRightIcon/></Link><p className="re-schedule-note">Fortnightly lessons during term time. Rory confirms dates and deadlines.</p></aside></div>
+    </div><aside className="today-secondary"><NextLesson code={code}/>{!isStudentPreview(code)&&<MomentumStrip studentId={studentId}/>}<section className="ux-panel has-unit-cover"><UnitCover src={unit?.coverImage} title={unit?.title||"this unit"}/><div className="ux-panel-heading"><BookIcon/><h2>Current unit</h2></div><p className="ux-chip">{unit?.schoolYear||"2026–27"}</p><h3 className="mt-3 font-bold">{unit?.title||"Ready for the next lesson"}</h3><p className="ux-subtle mt-2">{unit?.note||"Rory will confirm your current materials."}</p><Link className="ux-link-row" href={`${base}/resources/`}><FileIcon/>Open lesson resources<ChevronRightIcon/></Link></section><Link className="ux-route-card" href={`${base}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Practise with Rory’s reviews</small></span><ChevronRightIcon/></Link><p className="re-schedule-note">Fortnightly lessons during term time. Rory confirms dates and deadlines.</p></aside></div>
   </main>;
 }

@@ -1,0 +1,310 @@
+[
+  {
+    "studentId": "ferdi",
+    "name": "Ferdi",
+    "schoolYear": "2026–27",
+    "book": "English in Context 5 New Edition",
+    "sourceStatus": "Full current book read; teaching drafts prepared",
+    "units": [
+      {
+        "number": 1,
+        "title": "Family life",
+        "pages": [
+          20,
+          29
+        ],
+        "focus": "Simple past; reuse present forms for routines as retrieval.",
+        "writing": "Informal email about family life"
+      },
+      {
+        "number": 2,
+        "title": "Friendships and other relationships",
+        "pages": [
+          30,
+          39
+        ],
+        "focus": "Adjectives and adverbs. Advice with should/should not is useful unit language.",
+        "writing": "Informal email giving friendship advice"
+      },
+      {
+        "number": 3,
+        "title": "School",
+        "pages": [
+          48,
+          57
+        ],
+        "focus": "Modal verbs and prepositions; distinguish prohibition from absence of obligation.",
+        "writing": "Blog comment and formal exchange application"
+      },
+      {
+        "number": 4,
+        "title": "School-life balance",
+        "pages": [
+          58,
+          67
+        ],
+        "focus": "Will future; word formation.",
+        "writing": "Blog comment"
+      },
+      {
+        "number": 5,
+        "title": "How we live",
+        "pages": [
+          76,
+          83
+        ],
+        "focus": "Comparatives and superlatives; relative pronouns.",
+        "writing": "Blog post"
+      },
+      {
+        "number": 6,
+        "title": "At home",
+        "pages": [
+          84,
+          93
+        ],
+        "focus": "Zero, first and second conditionals.",
+        "writing": "Blog comment"
+      },
+      {
+        "number": 7,
+        "title": "Shops and shopping lists",
+        "pages": [
+          102,
+          111
+        ],
+        "focus": "Countable and uncountable nouns; quantifiers.",
+        "writing": "Shopping list"
+      },
+      {
+        "number": 8,
+        "title": "Online shopping",
+        "pages": [
+          112,
+          121
+        ],
+        "focus": "Reported statements and reported questions.",
+        "writing": "Polite email of complaint"
+      },
+      {
+        "number": 9,
+        "title": "Eating and drinking",
+        "pages": [
+          130,
+          139
+        ],
+        "focus": "Participles as adjectives; (a) little/(a) few; will and going to.",
+        "writing": "Poster/leaflet and blog post"
+      },
+      {
+        "number": 10,
+        "title": "Fitness and sport",
+        "pages": [
+          140,
+          149
+        ],
+        "focus": "Simple past and present perfect.",
+        "writing": "Email of application"
+      },
+      {
+        "number": 11,
+        "title": "What's on?",
+        "pages": [
+          156,
+          165
+        ],
+        "focus": "Passive forms.",
+        "writing": "Blog post"
+      },
+      {
+        "number": 12,
+        "title": "Eating and celebrating",
+        "pages": [
+          172,
+          179
+        ],
+        "focus": "Relative clauses and third conditional.",
+        "writing": "Presentation notes; topic-check blog post"
+      },
+      {
+        "number": 13,
+        "title": "Holiday experiences",
+        "pages": [
+          186,
+          195
+        ],
+        "focus": "Future tenses and arrangements.",
+        "writing": "Blog post"
+      },
+      {
+        "number": 14,
+        "title": "The tourist industry",
+        "pages": [
+          196,
+          205
+        ],
+        "focus": "Mixed tenses.",
+        "writing": "Tourism leaflet; final topic formal email"
+      }
+    ],
+    "bookings": [
+      {
+        "date": "2026-10-17",
+        "focus": "Unit 2 · Friendships — continue current work"
+      },
+      {
+        "date": "2026-11-14",
+        "focus": "Unit 3 · School"
+      },
+      {
+        "date": "2026-11-28",
+        "focus": "Unit 4 · School-life balance"
+      },
+      {
+        "date": "2026-12-12",
+        "focus": "Semester 1 preparation — move if test date requires"
+      }
+    ],
+    "milestones": [
+      {
+        "id": "ferdi-semester1-assessment-2026",
+        "title": "Semester 1 · independent take-home assessment",
+        "window": "End of first semester, in term time",
+        "date": "",
+        "duration": 30
+      },
+      {
+        "id": "ferdi-semester2-assessment-2027",
+        "title": "Semester 2 · independent take-home assessment",
+        "window": "End of second semester, in term time",
+        "date": "",
+        "duration": 30
+      }
+    ],
+    "capacity": "To cover the remaining units and both preparation sessions by June, we may need at least two extra term-time visits. Earlier final exams or units that need more than one visit may require more. Rory will confirm this once test dates are known."
+  },
+  {
+    "studentId": "valentin",
+    "name": "Valentin",
+    "schoolYear": "2026–27",
+    "book": "way2go! 8",
+    "sourceStatus": "Publisher unit outline; digital edition/task verification still in progress",
+    "units": [
+      {
+        "number": 1,
+        "title": "Healthy and happy",
+        "pages": [
+          8,
+          21
+        ],
+        "focus": "Health, mental health, healthcare access and future foods",
+        "writing": "Email; blog comment; future-food opinion; narrative"
+      },
+      {
+        "number": 2,
+        "title": "Big bucks or no dough?",
+        "pages": [
+          22,
+          35
+        ],
+        "focus": "Managing money, electronic payments and globalisation",
+        "writing": "Essay; PEEL paragraph; chart and blog work"
+      },
+      {
+        "number": 3,
+        "title": "Up to the job",
+        "pages": [
+          40,
+          53
+        ],
+        "focus": "Job applications, interviews, lifelong learning and future work",
+        "writing": "Application email; CV; article; PEEL paragraph"
+      },
+      {
+        "number": 4,
+        "title": "Checks and balances",
+        "pages": [
+          54,
+          67
+        ],
+        "focus": "Politics, UK and US systems, civil society and human rights",
+        "writing": "Survey report; blog comment; PEEL paragraphs"
+      },
+      {
+        "number": 5,
+        "title": "Caring for our world",
+        "pages": [
+          68,
+          81
+        ],
+        "focus": "Conservation, plastics and practical action",
+        "writing": "Article; complaint email; flyer; summary"
+      },
+      {
+        "number": 6,
+        "title": "All men are created equal",
+        "pages": [
+          88,
+          101
+        ],
+        "focus": "Social groups, discrimination, gender and equality",
+        "writing": "Diary; blog post; poem; PEEL paragraph"
+      },
+      {
+        "number": 7,
+        "title": "For science!",
+        "pages": [
+          102,
+          115
+        ],
+        "focus": "Domestic energy, power generation and climate solutions",
+        "writing": "Essay or article; chart report; video summary"
+      },
+      {
+        "number": 8,
+        "title": "The next chapter",
+        "pages": [
+          122,
+          135
+        ],
+        "focus": "Identity, appearance, self-acceptance and graduation",
+        "writing": "Blog comment; PEEL paragraph; invitation email"
+      }
+    ],
+    "bookings": [
+      {
+        "date": "2026-10-17",
+        "focus": "Semester 1 preparation · 12 November test; scope to confirm"
+      },
+      {
+        "date": "2026-11-14",
+        "focus": "Unit 2 · Big bucks or no dough? + test follow-up"
+      },
+      {
+        "date": "2026-11-28",
+        "focus": "Unit 3 · Up to the job"
+      },
+      {
+        "date": "2026-12-12",
+        "focus": "Unit 4 · Checks and balances"
+      }
+    ],
+    "milestones": [
+      {
+        "id": "valentin-semester1-assessment-2026",
+        "title": "Semester 1 · independent take-home assessment",
+        "window": "End of first semester, in term time",
+        "date": "",
+        "duration": 45
+      },
+      {
+        "id": "valentin-semester2-assessment-2027",
+        "title": "Semester 2 · independent take-home assessment",
+        "window": "End of second semester, in term time",
+        "date": "",
+        "duration": 45
+      }
+    ],
+    "capacity": "One preparation visit each semester. Final English exam date and requirements are still to confirm. Extra recap dates remain a request, not a booking."
+  }
+]

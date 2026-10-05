@@ -1,0 +1,4 @@
+import test from "node:test";import assert from "node:assert/strict";import fs from "node:fs";
+const plans=JSON.parse(fs.readFileSync("content/year-plans.json","utf8"));
+test("year plans keep each learner's curriculum separate",()=>{const f=plans.find(p=>p.studentId==="ferdi"),v=plans.find(p=>p.studentId==="valentin");assert.equal(f.units.length,14);assert.equal(v.units.length,8);assert.equal(f.units[0].title,"Family life");assert.equal(v.units[0].title,"Healthy and happy");assert.equal(f.bookings[0].focus.includes("Friendships"),true);assert.equal(v.bookings[0].focus.includes("12 November"),true);});
+test("planned assessments have no invented dates or holiday deadlines",()=>{for(const p of plans){assert.equal(p.milestones.length,2);for(const m of p.milestones){assert.equal(m.date,"");assert.match(m.window,/term time/);assert.ok(m.duration>0);}assert.equal(p.bookings.length,4);assert.ok(p.bookings.every(b=>!['2026-10-31','2026-12-26'].includes(b.date)));}});

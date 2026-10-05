@@ -1,0 +1,11 @@
+/* Notices and plans retain the existing light/dark workspace palette. */
+.year-plan-notice{margin:0 0 24px;}
+.year-plan-notice h2,.year-plan-page h2{font-size:1.3rem;font-weight:800;margin:8px 0 12px;}
+.year-plan-notice ul{padding-left:22px;list-style:disc;}
+.year-plan-notice li{margin:12px 0;line-height:1.6;}
+.year-plan-notice a,.year-plan-page a{font-weight:700;text-decoration:underline;text-underline-offset:3px;}
+.year-plan-page .ux-panel{margin:0 0 24px;}
+.year-plan-page .ux-panel>p,.year-plan-page article p{margin:10px 0;line-height:1.6;}
+.year-plan-page article{padding:14px 0;border-bottom:1px solid color-mix(in srgb,currentColor 15%,transparent);}
+.year-plan-page article:last-child{border-bottom:0;}
+.year-plan-page h3{font-weight:800;font-size:1.05rem;line-height:1.4;}

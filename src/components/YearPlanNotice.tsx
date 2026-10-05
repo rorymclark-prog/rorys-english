@@ -1,0 +1,5 @@
+import Link from "next/link";
+import FeedbackText from "./FeedbackText";
+export default function YearPlanNotice({code,note,loading=false}:{code:string;note:string;loading?:boolean}){
+return <section className="ux-panel re-mentor-card year-plan-notice" aria-labelledby="year-plan-notice-title"><p className="re-eyebrow">FROM RORY</p><h2 id="year-plan-notice-title">Notices & year plan</h2>{note&&<p className="today-rory-note"><FeedbackText text={note}/></p>}{loading&&<p role="status">Checking Rory’s latest notice…</p>}<ul><li><Link href={`/s/${code}/year-plan/`}>See your English year plan</Link> — proposed units and semester assessments.</li><li><strong>Please add your school test dates and what to study as soon as you know them.</strong> <Link href={`/s/${code}/calendar/`}>Open Calendar → School tests</Link>.</li><li><strong>Can we arrange two additional recap visits?</strong> Please discuss available term-time dates with your family and let Rory know. Dates are not booked yet.</li></ul><p className="ux-subtle">Lessons pause during holidays. Rory will confirm assessment deadlines and any extra visits.</p></section>;
+}
