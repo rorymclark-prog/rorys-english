@@ -46,3 +46,8 @@ test('English helpers use the correct current school context without spending AI
  assert.match(prompt,/way2go! 8/);assert.match(prompt,/Healthy and happy/);assert.doesNotMatch(prompt,/Family life|B1 level/);
  const before=calls;assert.equal(ctx.getAi_({secret:ctx.SECRET,code:'parent',q:'Help'}).ok,false);assert.equal(calls,before);
 });
+
+test('update notices register once across student, teacher and parent routes',()=>{
+ assert.match(fs.readFileSync('src/app/layout.tsx','utf8'),/<ServiceWorkerRegister/);
+ for(const file of ['src/app/teacher/page.tsx','src/app/p/[code]/layout.tsx','src/app/s/[code]/layout.tsx'])assert.doesNotMatch(fs.readFileSync(file,'utf8'),/<ServiceWorkerRegister/);
+});

@@ -262,7 +262,7 @@ function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () 
     <div className="teacher-card-heading"><ProfileAvatar code={student.code} name={student.name} className="teacher-avatar"/><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
     <div className="teacher-card-data"><ScoreRing value={s?.bestQuizPct}/><div className="teacher-card-counts"><div><CheckSquareIcon/><span><strong>{s?.homeworkDone ?? "—"}</strong> homework recorded</span></div><div><BookIcon/><span><strong>{s?.writingSamples ?? "—"}</strong> writing samples</span></div><div><ChartIcon/><span><strong>{s?.quizRounds ?? "—"}</strong> quiz rounds</span></div></div></div>
     <div className="teacher-focus"><span>{student.focusNote ? "CURRENT FOCUS" : "NEXT STEP"}</span><p>{student.focusNote || "Open their workspace to review answers or assign a little practice."}</p></div>
-    <div className="teacher-card-footer"><span>{s?.lastUpdated ? `Last activity ${readableDate(s.lastUpdated)}` : "No activity recorded yet"}</span><strong>Open work to review <span aria-hidden>↗</span></strong></div>
+    <div className="teacher-card-footer"><span>{s?.lastUpdated ? `Homework / quiz log: ${readableDate(s.lastUpdated)}` : "No activity recorded yet"}</span><strong>Open work to review <span aria-hidden>↗</span></strong></div>
   </button>;
 }
 
@@ -342,7 +342,7 @@ function TeacherStudentPanel({
       </header>
       <main>
         <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`}>
-          <div className="teacher-banner-name"><ProfileAvatar code={student.code} name={student.name} editable className="teacher-avatar"/><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Last activity ${readableDate(s.lastUpdated)}` : "Ready for the first step"}</p></div></div>
+          <div className="teacher-banner-name"><ProfileAvatar code={student.code} name={student.name} editable className="teacher-avatar"/><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Homework / quiz log: ${readableDate(s.lastUpdated)}` : "Ready for the first step"}</p></div></div>
           <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ScoreRing value={s?.bestQuizPct}/><span>Full progress <span aria-hidden>↗</span></span></button>
         </section>
         <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>

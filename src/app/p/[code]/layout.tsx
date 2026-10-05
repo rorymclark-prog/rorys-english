@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAllParentCodes, getStudentByParentCode } from "@/lib/content";
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import BackButton from "@/components/BackButton";
 import ThemeInit from "@/components/ThemeInit";
 import SessionGate from "@/components/SessionGate";
@@ -39,7 +38,6 @@ export default async function ParentLayout({
     <div className="mx-auto min-h-dvh max-w-md md:max-w-2xl">
       <ThemeInit />
       <SessionGate code={code}><div className="px-5 pt-4"><BackButton home={`/p/${code}/`}/></div>{children}</SessionGate>
-      <ServiceWorkerRegister />
     </div>
   );
 }

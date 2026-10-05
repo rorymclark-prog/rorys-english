@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./teacher.css";
 import { SettingsProvider } from "@/components/SettingsContext";
 import { themeScript } from "@/lib/appearance";
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import TeacherDashboardView from "@/components/views/TeacherDashboardView";
 
 export const metadata: Metadata = {
@@ -20,7 +19,6 @@ export default function TeacherPage() {
   return (
     <div className="min-h-dvh re-teacher-shell">
       <script dangerouslySetInnerHTML={{ __html: themeScript("__teacher__") }} /><SettingsProvider studentId="__teacher__"><TeacherDashboardView /></SettingsProvider>
-      <ServiceWorkerRegister />
     </div>
   );
 }
