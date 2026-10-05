@@ -10,3 +10,14 @@
 .teacher-voice-tool p{color:var(--re-muted);font-size:.72rem;line-height:1.5;margin-top:3px}
 .teacher-voice-tool button{flex-shrink:0}
 @media(max-width:700px){.teacher-workspace .teacher-section-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.teacher-workspace .teacher-section-nav button{min-height:65px;flex-direction:row;align-items:center;text-align:left;gap:9px;padding:10px}.teacher-voice-tool{flex-wrap:wrap}.teacher-voice-tool button{width:100%}}
+
+/* Dated marks and vocabulary demonstration coverage. */
+.skill-progress-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.skill-progress-tile{padding:16px;border:1px solid color-mix(in srgb,currentColor 15%,transparent);border-radius:16px;min-width:0}
+.skill-progress-tile h3,.skill-progress-tile h4{font-weight:700}
+.skill-progress-value{display:block;font-size:1.7rem;line-height:1.2;margin:12px 0}
+.skill-progress-tile p{font-size:.8rem;line-height:1.6;overflow-wrap:anywhere}
+.skill-progress-tile progress{width:100%;height:8px;accent-color:var(--re-accent,#4058b0)}
+.skill-progress-tile summary{font-size:.8rem;cursor:pointer}
+.skill-progress{overflow-wrap:anywhere;background:var(--re-surface,#fff);border:1px solid var(--re-line,#ddd);border-radius:18px;padding:20px;line-height:1.65}.skill-progress>.teacher-eyebrow,.skill-progress .teacher-eyebrow{font-size:.65rem;font-weight:800;letter-spacing:.12em;color:var(--re-muted,#64616e)}
+@media(max-width:500px){.skill-progress-grid{grid-template-columns:1fr}.skill-progress-value{font-size:1.5rem}}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { StudyTool } from "@/lib/types";
 import { fetchProgress, remoteEnabled, type Progress, type Section } from "@/lib/remote";
 import { GearIcon, ExternalIcon, ChevronLeftIcon, ChevronRightIcon, CheckSquareIcon, FileIcon, TargetIcon } from "@/components/Icons";
+import {SharedSkillProgress} from '@/components/SkillProgressPanel';
 import LearningView from "./LearningView";
 import DocumentsView from "./DocumentsView";
 
@@ -73,7 +74,7 @@ export default function ProgressView({
           )}
           <div className="min-w-0">
             <h1 className="display text-2xl text-navy break-words dark:text-cream">
-              {mode === "parent" || mode === "teacher" ? `${displayName}'s progress` : "Feedback"}
+              {mode === "parent" || mode === "teacher" ? `${displayName}'s progress` : "Feedback & progress"}
             </h1>
             <p className="mt-0.5 text-sm text-navy-soft dark:text-navy-mist">
               {mode === "parent"
@@ -96,6 +97,7 @@ export default function ProgressView({
       </header>
 
       <main className="re-screen-main progress-page">
+        <SharedSkillProgress code={fetchCode} teacher={mode==="teacher"}/>
         {mode==="student"&&studentCode&&<nav className="ux-route-grid" aria-label="Related work pages"><Link className="ux-route-card" href={`/s/${studentCode}/homework/`}><CheckSquareIcon/><span><strong>Homework</strong><small>Open your tasks</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${studentCode}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Focus on school tests</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${studentCode}/documents/`}><FileIcon/><span><strong>Documents</strong><small>Find saved work</small></span><ChevronRightIcon/></Link></nav>}
         {state === "loading" && (
           <div className="mt-4 space-y-3">

@@ -8,6 +8,8 @@ import {vocabularyCoverage} from '@/lib/vocabulary-coverage';
 import {readLessonAssessment} from '@/lib/lesson-assessment';
 import {readableDate} from '@/lib/clarity';
 import type {Unit} from '@/lib/types';
+import LearningGoalsPanel from '@/components/LearningGoalsPanel';
+import SkillProgressPanel from '@/components/SkillProgressPanel';
 import LessonAssessmentPanel from '@/components/LessonAssessmentPanel';
 const box='mt-1 w-full rounded-lg border border-black/15 bg-transparent p-2 dark:border-white/20';
 const emptySettings:DashboardSettings={version:1,requirements:{},schoolContext:''};
@@ -22,6 +24,8 @@ export default function TeacherInsights({code,name,unit,onReview,onNotes}:{code:
  const today=viennaDay(),activity=activityMetrics(records,submissions,progress,days,today),items=homeworkMetrics(code,unit,assignments,submissions,records,settings,today),required=items.filter(x=>x.requirement==='required'),received=required.filter(x=>x.received||x.reviewed).length,reviewed=required.filter(x=>x.reviewed).length,unclassified=items.filter(x=>x.requirement==='unclassified').length,lessons=assessedLessons(records),latest=lessons[0],assessment=latest&&readLessonAssessment(latest.body.tutorPrivate?.lessonAssessment),comparisons=lessonComparisons(records),checkpoints=records.filter(r=>r.visibility==='teacher'&&r.kind==='test'&&readCheckpoint(r.body.tutorPrivate?.checkpoint)).sort((a,b)=>b.date.localeCompare(a.date)),teacherScores=assessment?.teaching.filter(t=>t.score!=null)||[];
  return <section className="teacher-insights" aria-label={`${name}’s learning dashboard`}>
   <header className="insight-header"><div><p className="teacher-eyebrow">LEARNING DASHBOARD · PRIVATE TO RORY</p><h2>Practice, learning and your teaching</h2><p>Each result names the task, date and evidence behind it.</p></div><button className="teacher-quiet-button" onClick={()=>void refresh()}>Refresh dashboard</button></header>
+  <LearningGoalsPanel key={`goals-${code}-${records.filter(r=>r.body.tutorPrivate?.goalPlan).map(r=>r.created).join('-')||'new'}`} code={code} records={records} onSaved={refresh}/>
+  <SkillProgressPanel key={code} records={records} teacher unit={unit} code={code} onSaved={refresh}/>
   <div className="insight-metrics">
    <Metric label="Required homework received" value={required.length?`${Math.round(received/required.length*100)}%`:'Not set'} detail={required.length?`${received} of ${required.length} available required tasks received or marked complete; ${reviewed} reviewed.`:`${unclassified} tasks need a required / optional choice.`}/>
    <Metric label="Saved activity days" value={String(activity.activeDays)} detail={`${days?`Last ${days} days`:'All saved history'} · conversations, answers and quiz attempts.`}/>
