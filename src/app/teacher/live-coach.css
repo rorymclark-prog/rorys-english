@@ -88,3 +88,14 @@
 @media(max-width:900px){.lc-grid{grid-template-columns:minmax(245px,1fr) minmax(0,1.4fr);gap:1rem}.lc-panel{padding:1.1rem}.lc-heading{gap:1rem}.lc-feedback-pair{grid-template-columns:1fr;gap:1rem}.lc-heading h1{font-size:1.8rem}.lc-private{display:none}}
 @media(max-width:650px){.live-coach{padding:0 1rem 2rem}.lc-heading{align-items:flex-start;flex-direction:column;padding:1.5rem 0}.lc-grid{grid-template-columns:1fr}.lc-context{position:static}.lc-feedback{min-height:330px}.lc-connection{font-size:.73rem}.lc-heading h1{font-size:1.9rem}.live-coach .teacher-topbar{gap:.25rem}.live-coach .teacher-quiet-button{font-size:.72rem;padding:.5rem}.lc-feedback-pair{grid-template-columns:1fr 1fr}.lc-prompt p{font-size:1rem}}
 @media(prefers-reduced-motion:reduce){.live-coach *{scroll-behavior:auto!important;transition:none!important}}
+.lc-record-state{font-size:.8rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--lc-accent)}
+.lc-saved-lessons{margin-top:1rem;border-top:1px solid var(--lc-border);padding-top:1rem}
+.lc-saved-lessons summary,.lc-lesson-review summary{cursor:pointer;font-size:.82rem;font-weight:700;padding:.4rem 0;min-height:32px}
+.lc-history-item{display:flex;flex-direction:column;gap:.4rem;text-align:left;width:100%;padding:1rem;margin-top:.6rem;border:1px solid var(--lc-border);border-radius:12px;font-size:.8rem;overflow-wrap:anywhere}
+.lc-history-item[aria-pressed=true]{background:var(--lc-wash);border-color:var(--lc-accent)}
+.lc-history-item span{font-size:.78rem;line-height:1.5}.lc-history-item small{color:var(--teacher-muted);font-size:.7rem}
+.lc-lesson-review{margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--lc-border)}
+.lc-lesson-review h3{font-weight:800;font-size:.9rem}.lc-lesson-review audio{width:100%;margin:.8rem 0}
+.lc-saved-turn{font-size:.8rem;line-height:1.7;padding:.8rem 0;border-bottom:1px solid var(--lc-border);white-space:pre-wrap;overflow-wrap:anywhere}
+@media(min-width:1001px){.lc-presenter-grid{grid-template-columns:minmax(0,1.45fr) minmax(330px,1fr)}}
+@media(max-width:1000px){.lc-grid.lc-presenter-grid{grid-template-columns:minmax(0,1fr)}.lc-presenter-grid .lc-slide-presenter{position:static}}
