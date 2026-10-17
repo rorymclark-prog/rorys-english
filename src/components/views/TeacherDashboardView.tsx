@@ -33,13 +33,15 @@ import QuickAppearance from "@/components/QuickAppearance";
 import StudentPreviewButton from "@/components/StudentPreviewButton";
 import {readableDate} from "@/lib/clarity";
 import studentRoster from "../../../content/students.json";
+import LiveTeachingCoach from "./LiveTeachingCoach";
 
 // One-time removal of the old persisted password; only expiring tokens remain.
 const STORAGE_KEY = "re_teacher_secret";
 
 type LoadState = "idle" | "loading" | "ok" | "error";
 
-export default function TeacherDashboardView({initialCalendar=false,activeUnits={}}:{initialCalendar?:boolean;activeUnits?:Record<string,Unit|null>}) {
+export default function TeacherDashboardView({initialCalendar=false,initialLive=false,activeUnits={}}:{initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>}) {
+  const [liveTeaching, setLiveTeaching] = useState(initialLive);
   const [showCalendar,setShowCalendar]=useState(initialCalendar);
   const [testingVoice, setTestingVoice] = useState(false);
   const [ready, setReady] = useState(false);
@@ -121,6 +123,8 @@ export default function TeacherDashboardView({initialCalendar=false,activeUnits=
   if (!ready) return null;
   if (!secret) return <PasswordGate input={input} setInput={setInput} authing={authing} authError={authError} remember={rememberTeacher} setRemember={setRememberTeacher} onSubmit={submitGate} />;
 
+  if (liveTeaching && loadState === "ok") return <LiveTeachingCoach token={secret} learners={(students || []).map(s => ({ code: s.code, name: s.name, unit: activeUnits[s.code]?.title, focusNote: s.focusNote }))} onBack={() => setLiveTeaching(false)}/>;
+
   if (showCalendar && loadState === "ok") return <div className="teacher-workspace"><header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(false)}>← Students & teaching</button><div className="flex items-center gap-2"><QuickAppearance/><AppMenu teacher/></div></header><CalendarView code="__teacher__" name="Rory" teacher students={(students||[]).map(s=>({code:s.code,name:s.name}))}/></div>;
 
   if (testingVoice) return <div className="teacher-workspace">
@@ -164,6 +168,7 @@ export default function TeacherDashboardView({initialCalendar=false,activeUnits=
         <a href="/teacher/" className="teacher-brand"><span aria-hidden>r.</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
         <div className="flex items-center gap-2">
           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
+          <button type="button" disabled={loadState !== "ok"} className="teacher-quiet-button" onClick={() => setLiveTeaching(true)}>Live teaching</button>
           <button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(true)}>Calendar</button><QuickAppearance/><AppMenu teacher/>
         </div>
       </header>
