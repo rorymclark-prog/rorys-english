@@ -23,6 +23,7 @@ const kindForAssignment=(a:Assignment):WorkKind=>/speak|voice|conversation|chat|
 const kindForWeek=(week:HomeworkWeek):WorkKind=>week.tasks.some(t=>t.type==="voice")?"speaking":week.tasks.some(t=>t.type==="written")?"writing":"task";
 const localDate=()=>{const now=new Date();return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;};
 const isDone=(a:Assignment)=>isCompletedAssignment(a.status);
+const isArchived=(a:Assignment)=>/^(archived|superseded|cancelled|withdrawn)$/i.test(a.status.trim());
 
 function SectionHeading({eyebrow,title,count}:{eyebrow:string;title:string;count:number}){
   return <div className="work-section-heading"><div><p className="work-eyebrow">{eyebrow}</p><h2>{title}</h2></div><span className="work-count">{count}</span></div>;
@@ -37,11 +38,11 @@ function WeekCard({week,unitId,code,upcoming,status}:{week:HomeworkWeek;unitId:s
   </Link>;
 }
 
-function AssignedCard({assignment,code,previous=false}:{assignment:Assignment;code:string;previous?:boolean}){
+function AssignedCard({assignment,code,previous=false,archived=false}:{assignment:Assignment;code:string;previous?:boolean;archived?:boolean}){
   const kind=kindForAssignment(assignment),Icon=kindIcon[kind];
   return <details className={`work-card work-${kind} work-assigned ${previous?"work-upcoming":""}`}>
-    <summary><span className="work-icon" aria-hidden="true"><Icon/></span><span className="work-card-main"><span className="work-card-top"><span className="work-kind">{kindLabel[kind]}</span><span className={`work-status ${isDone(assignment)?"is-done":"is-ready"}`}>{isDone(assignment)?"Marked complete":previous?"Previous year":"Assigned by Rory"}</span></span><strong>{assignment.title}</strong><span className="work-description">{assignment.details.trim().split(/\n|\.\s/)[0]||"Open to read the task."}</span><span className="work-meta"><span>{assignment.due?`Due ${readableDate(assignment.due)}`:"No deadline set"}</span></span></span><span className="work-card-action">Read task<ChevronRightIcon/></span></summary>
-    <div className="work-card-detail"><p className="whitespace-pre-wrap">{assignment.details}</p><SubmissionForm code={code} unit="assigned" task={assignment.id} title={assignment.title} fields={[{id:"answer",prompt:previous?"Optional revision or practice notes":"Your answer or practice notes",type:"written"}]}/></div>
+    <summary><span className="work-icon" aria-hidden="true"><Icon/></span><span className="work-card-main"><span className="work-card-top"><span className="work-kind">{kindLabel[kind]}</span><span className={`work-status ${isDone(assignment)?"is-done":"is-ready"}`}>{archived?"Replaced · reference only":isDone(assignment)?"Marked complete":previous?"Previous year":"Assigned by Rory"}</span></span><strong>{assignment.title}</strong><span className="work-description">{assignment.details.trim().split(/\n|\.\s/)[0]||"Open to read the task."}</span><span className="work-meta"><span>{assignment.due?`Due ${readableDate(assignment.due)}`:"No deadline set"}</span></span></span><span className="work-card-action">Read task<ChevronRightIcon/></span></summary>
+    <div className="work-card-detail"><p className="whitespace-pre-wrap">{assignment.details}</p>{!archived&&<SubmissionForm code={code} unit="assigned" task={assignment.id} title={assignment.title} fields={[{id:"answer",prompt:previous?"Optional revision or practice notes":"Your answer or practice notes",type:"written"}]}/>}</div>
   </details>;
 }
 
@@ -50,10 +51,11 @@ export default function HomeworkListView({unit}:{unit:Unit|null}){
   const [assignments,setAssignments]=useState<Assignment[]>([]),[error,setError]=useState(""),[loaded,setLoaded]=useState(false),[submissions,setSubmissions]=useState<Submission[]>([]);
   async function refresh(){setError("");try{const [r,sent]=await Promise.all([fetchAssignments(code),fetchSubmissions(code)]);if(sent.ok)setSubmissions(sent.submissions||[]);else setError(sent.error||"Could not check saved answers.");if(r.ok)setAssignments((r.assignments?.rows||[]).map(rowToAssignment));else setError(r.error||"Could not load homework. Please retry.");}catch{setError("Could not load homework. Please retry.");}finally{setLoaded(true)}}
   useEffect(()=>{void refresh();},[code]);
-  const current=assignments.filter(isCurrentAssignment),readyAssignments=current.filter(a=>!isDone(a)),completedAssignments=current.filter(isDone),previous=assignments.filter(a=>!isCurrentAssignment(a));
+  const currentYear=assignments.filter(isCurrentAssignment),archivedAssignments=currentYear.filter(isArchived),current=currentYear.filter(a=>!isArchived(a)),readyAssignments=current.filter(a=>!isDone(a)),completedAssignments=current.filter(isDone),previous=assignments.filter(a=>!isCurrentAssignment(a));
+  const resetHomework=currentYear.some(a=>a.id.startsWith("homework-reset-"));
   const hasSpeakingHomework=current.some(a=>isFerdiSpeakingHomework(code,a));
   const today=localDate();
-  const weeks=hasSpeakingHomework?[]:unit?.homework||[];
+  const weeks=hasSpeakingHomework||resetHomework?[]:unit?.homework||[];
   const readyWeeks=weeks.filter(h=>!h.availableFrom||h.availableFrom<=today),upcomingWeeks=weeks.filter(h=>h.availableFrom&&h.availableFrom>today);
   const count=readyAssignments.length+readyWeeks.length;
   return <Screen title="Homework" subtitle={unit?.title}>
@@ -66,6 +68,8 @@ export default function HomeworkListView({unit}:{unit:Unit|null}){
       {(count>0||loaded)&&<section className="work-section"><SectionHeading eyebrow="YOUR CURRENT WORK" title="Homework & earlier practice" count={count}/><div className="work-card-list">{readyAssignments.map(a=>isFerdiSpeakingHomework(code,a)?<SpeakingHomeworkCard key={a.id} code={code} assignment={a}/>:<AssignedCard key={a.id} assignment={a} code={code}/>)}{readyWeeks.map(h=><WeekCard key={`${unit!.id}-${h.week}`} week={h} unitId={unit!.id} code={code} upcoming={false} status={loaded?error?"Status unavailable":submissionStatus(submissions,unit!.id,`hw:${h.week}`):"Checking saved work…"}/>)}{loaded&&!error&&count===0&&<div className="work-empty"><BookIcon/><strong>Nothing new to do right now.</strong><p>Your lessons and earlier work are still here when you want to practise.</p></div>}</div></section>}
       {upcomingWeeks.length>0&&<section className="work-section"><SectionHeading eyebrow="PLAN AHEAD" title="Coming up" count={upcomingWeeks.length}/><div className="work-card-list">{upcomingWeeks.map(h=><WeekCard key={`${unit!.id}-${h.week}`} week={h} unitId={unit!.id} code={code} upcoming status="Not available yet"/>)}</div></section>}
       <SavedWriting code={code} name={displayName}/>
+      {archivedAssignments.length>0&&<details className="work-archive"><summary><FileIcon/><span><strong>Replaced homework</strong><small>Reference only · {archivedAssignments.length} earlier tasks</small></span><ChevronRightIcon/></summary><div className="work-card-list">{archivedAssignments.map(a=><AssignedCard key={a.id} assignment={a} code={code} archived/>)}</div></details>}
+      {resetHomework&&!!unit?.homework?.length&&<details className="work-archive"><summary><BookIcon/><span><strong>Earlier lesson practice</strong><small>Reference only · not currently assigned</small></span><ChevronRightIcon/></summary><div className="work-card-list">{unit.homework.map(h=><WeekCard key={`${unit.id}-${h.week}`} week={h} unitId={unit.id} code={code} upcoming={false} status="Optional reference"/>)}</div></details>}
       {completedAssignments.length>0&&<details className="work-archive"><summary><CheckSquareIcon/><span><strong>Completed assignments</strong><small>{completedAssignments.length} saved for reference</small></span><ChevronRightIcon/></summary><div className="work-card-list">{completedAssignments.map(a=><AssignedCard key={a.id} assignment={a} code={code}/>)}</div></details>}
       {previous.length>0&&<details className="work-archive"><summary><FileIcon/><span><strong>Previous-year assignments</strong><small>Optional revision · {previous.length} items</small></span><ChevronRightIcon/></summary><div className="work-card-list">{previous.map(a=><AssignedCard key={a.id} assignment={a} code={code} previous/>)}</div></details>}
       <Link className="work-library-link" href={`/s/${code}/lessons/`}><BookIcon/><span><strong>Find lessons and past material</strong><small>Current unit, practice and approved resources</small></span><ChevronRightIcon/></Link>
