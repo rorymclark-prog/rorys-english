@@ -26,7 +26,7 @@ function readPractice(answer:string){const m=answer.match(/^Practice rings · (W
  if(m[1]==='Writing')return m[5].startsWith('My writing:\n')&&hasWriting(m[5].slice(12))?{...base,kind:'writing' as const}:null;
  const v=m[5].match(/^Word: ([^\n]+)\nMeaning: ([^\n]+)\nMy sentence: ([^\n]+)$/);if(!v)return null;const word={word:v[1],meaning:v[2],sentence:v[3]};return validVocabulary(word)?{...base,kind:'vocabulary' as const,word}:null;
 }
-function inferUnit(text:string,units:RingUnit[]){
+export function inferUnit(text:string,units:RingUnit[]){
  const lower=text.toLocaleLowerCase('en-GB');const exact=units.filter(u=>lower.includes(u.id.toLowerCase()));if(exact.length===1)return exact[0].id;
  const matches=units.filter(u=>{const label=u.title.replace(/^Unit \d+ · /,'').replace(/^.*Unit \d+: /,'').toLowerCase();return label.length>5&&lower.includes(label);});
  if(matches.length===1)return matches[0].id;
@@ -41,7 +41,7 @@ export function ringEvidence(source:EngagementSource,code:string,today:string){
  const lessons=records.filter(r=>lessonPracticeRecord([r]));const lessonIds=new Set(lessons.map(r=>r.id)),byRecord=new Map(records.map(r=>[r.id,r]));
  const items=new Map<string,RingItem>();
  const add=(id:string,kind:RingItem['kind'],title:string,raw:string,unit='',lesson='',minutes=0,word?:VocabularyAttempt,counted=true,week='')=>{const day=eventDay(raw);if(!day||day>today)return;items.set(id,{id,kind,title,day,week:week||ringWeek(day),unit,lesson,minutes,word,counted});};
- const writingDocs=source.documents.filter(d=>d.uploadedBy==='Student'&&!softwareCheck(d.title)&&d.files.length&&!d.files.some(f=>f.type.startsWith('audio/'))&&!/^\[Document role: (task|review)\]$/m.test(d.context)&&!d.analysis?.exerciseAnswers?.length);
+ const writingDocs=source.documents.filter(d=>(d.uploadedBy==='Student'||hasWriting(d.analysis?.writing?.original||''))&&!softwareCheck(d.title)&&d.files.length&&!d.files.some(f=>f.type.startsWith('audio/'))&&!/^\[Document role: (task|review)\]$/m.test(d.context)&&!d.analysis?.exerciseAnswers?.length);
  const docIds=new Set(writingDocs.map(d=>d.id));
  for(const r of records)if(r.kind==='speaking'&&r.author==='Student'){
   const minutes=captionSeconds(r.body.transcript||'');if(minutes===null)continue;

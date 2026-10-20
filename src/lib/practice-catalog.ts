@@ -15,3 +15,10 @@ export function practiceCatalog(code:string):RingUnit[]{
  return units;
 }
 export function practiceCourse(code:string){const plan=plans.find(p=>p.studentId===(code==='ferdi-7h3k'?'ferdi':code==='valentin-q9m2'?'valentin':''));return plan?{title:plan.book,year:plan.schoolYear,provisional:plan.studentId==='valentin'}:null;}
+
+export function ringWritingPath(code:string,unit:RingUnit|undefined,lessonId:string|undefined,today:string){
+ if(lessonId)return `/s/${code}/progress/#write-${lessonId}`;
+ const available=unit?.homework.filter(h=>(!h.availableFrom||h.availableFrom<=today)&&h.tasks.some(t=>t.type==='written'))||[];
+ const task=available.find(h=>/\b(writing|write|email|essay|blog|letter|draft|revision)\b/i.test(h.title))||available.find(h=>!h.tasks.some(t=>t.type==='voice'))||available[0];
+ return task?`/s/${code}/lessons/${unit!.id}/homework/${task.week}/`:`/s/${code}/lessons/`;
+}

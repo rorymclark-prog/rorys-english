@@ -54,7 +54,7 @@ test('malformed receipts, foreign references and incomplete vocabulary never bec
 test('only genuine writing analyses backfill documents; exercise worksheets cannot be linked as essays',()=>{
  const s=source();s.documents=[{id:'writing-document-001',created:'2026-10-06T08:00:00Z',uploadedBy:'Student',title:'Family life',context:'',files:[{type:'image/jpeg'}],analysis:{writing:{original:'I wrote this myself.'}}}];assert.equal(progress(s).writing,1);
  s.documents[0].analysis.exerciseAnswers=[{number:1}];assert.equal(progress(s).writing,0);addLink(s,'document:writing-document-001',{week:'2026-10-05',unit});assert.equal(progress(s).writing,0);
- s.documents[0].analysis.exerciseAnswers=[];s.documents[0].uploadedBy='Rory';assert.equal(progress(s).writing,0);
+ s.documents[0].analysis.exerciseAnswers=[];s.documents[0].uploadedBy='Rory';assert.equal(progress(s).writing,1);s.documents[0].context='[Document role: task]';assert.equal(progress(s).writing,0);s.documents[0].context='';s.documents[0].analysis={};assert.equal(progress(s).writing,0);
 });
 test('holiday weeks remain paused but optional unit practice counts and short weekly targets remain smaller',()=>{
  const s=source();s.records.push(chat('holiday','2026-10-27',30));let p=r.ringProgress(s,code,{kind:'week',id:'2026-10-26'},'2026-10-28');assert.equal(p.paused,true);assert.equal(p.target,0);assert.equal(p.minutes,0);assert.equal(r.ringProgress(s,code,{kind:'unit',id:unit},'2026-10-28').minutes,30);
@@ -76,4 +76,9 @@ test('known historical calendar breaks keep catch-up holiday weeks paused',()=>{
 
 test('new archived-unit conversations retain a readable unit and course title and count in that archive',()=>{
  const s=source();s.records.push({...chat(),title:'Unit practice · 2025–26 · A Fair World'});assert.equal(progress(s,'unit','unit10').minutes,15);assert.equal(progress(s,'course','2026–27').minutes,0);assert.equal(progress(s,'course','2025–26').minutes,15);
+});
+
+test('unit writing links open an actual homework route, shared practice or the available lesson list',()=>{
+ const units=catalog.practiceCatalog(code);assert.match(catalog.ringWritingPath(code,units.find(u=>u.id==='unit10'),undefined,today),/\/lessons\/unit10\/homework\/\d+\/$/);
+ assert.equal(catalog.ringWritingPath(code,units.find(u=>u.id===unit2),undefined,today),`/s/${code}/lessons/`);assert.equal(catalog.ringWritingPath(code,units.find(u=>u.id===unit2),'earlier-shared-plan',today),`/s/${code}/progress/#write-earlier-shared-plan`);
 });

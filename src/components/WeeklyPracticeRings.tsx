@@ -5,8 +5,8 @@ import {replyLearning} from '@/lib/learning';
 import type {EngagementSource} from '@/lib/engagement';
 import {shiftDay} from '@/lib/engagement';
 import {wordKey,validVocabulary,practiceReplyId} from '@/lib/weekly-practice';
-import {ringProgress,ringWeek,ringPracticeAnswer,ringLinkAnswer,claimRingCelebration,type RingScope} from '@/lib/practice-rings';
-import {practiceCourse} from '@/lib/practice-catalog';
+import {ringProgress,inferUnit,ringWeek,ringPracticeAnswer,ringLinkAnswer,claimRingCelebration,type RingScope} from '@/lib/practice-rings';
+import {practiceCourse,ringWritingPath} from '@/lib/practice-catalog';
 import {confettiBurst} from '@/lib/celebrate';
 import {readableDate} from '@/lib/clarity';
 import {isStudentPreview,PREVIEW_NOTICE} from '@/lib/student-preview';
@@ -23,7 +23,8 @@ export default function WeeklyPracticeRings({code,source,anchor,today,breaks,cal
  },[draftStorageKey,teacher,preview]);
  useEffect(()=>{if(teacher||preview||draftKey!==draftStorageKey)return;try{if(word||meaning||sentence||writing||itemId)localStorage.setItem(draftStorageKey,JSON.stringify({word,meaning,sentence,writing,unit:targetUnit,item:itemId,form}));else localStorage.removeItem(draftStorageKey);}catch{/* keep entered work in the form when storage is unavailable */}},[draftKey,draftStorageKey,teacher,preview,word,meaning,sentence,writing,targetUnit,itemId,form]);
  const current=scope.kind==='week'&&scope.id===ringWeek(today),paused=known&&progress.paused;
- const entry=progress.selectedLesson?{record:progress.selectedLesson,practice:progress.selectedLesson.body.lessonPractice!}:progress.entry;
+ const selectedPractice=scope.kind==='unit'?progress.lessons.find(l=>inferUnit(l.title,progress.units)===scope.id):progress.selectedLesson;
+ const entry=selectedPractice?{record:selectedPractice,practice:selectedPractice.body.lessonPractice!}:progress.entry;
  const unit=scope.kind==='unit'?scope.id:scope.kind==='lesson'?progress.items.find(i=>i.lesson===scope.id&&i.unit)?.unit||targetUnit:targetUnit;
  const available=scope.kind!=='course'&&(scope.kind!=='unit'||!!progress.selectedUnit?.available)&&(scope.kind!=='lesson'||!!progress.selectedLesson);
  // A holiday has no weekly debt. Optional unit/lesson practice remains available.
@@ -45,7 +46,7 @@ export default function WeeklyPracticeRings({code,source,anchor,today,breaks,cal
  const from=progress.items.map(i=>i.day).concat(progress.lessons.map(l=>l.date),progress.units.flatMap(u=>u.homework.map(h=>h.availableFrom||'').filter(d=>d&&d<=today)),[today]).sort()[0];
  const weeks:string[]=[];for(let d=ringWeek(today);d>=ringWeek(from)&&weeks.length<156;d=shiftDay(d,-7))weeks.push(d);
  const duplicate=progress.words.some(w=>wordKey(w.word)===wordKey(word));
- const writingUrl=scope.kind==='unit'?`/s/${code}/lessons/${scope.id}/`:entry?`/s/${code}/progress/#write-${entry.record.id}`:`/s/${code}/homework/`;
+ const writingUrl=ringWritingPath(code,scope.kind==='unit'?progress.selectedUnit:undefined,scope.kind==='unit'?selectedPractice?.id:entry?.record.id,today);
  const speakingUrl=scope.kind==='lesson'&&entry?`/s/${code}/speak/?mode=lesson&practice=${encodeURIComponent(entry.record.id)}`:scope.kind==='unit'?`/s/${code}/speak/?unitPractice=${encodeURIComponent(scope.id)}`:`/s/${code}/speak/`;
  return <div className={`weekly-practice-rings ${celebrating?'rings-celebrating':''}`}>
   <div className="ring-scope-controls"><label>Rings for<select aria-label="Rings for" value={scope.kind} onChange={e=>{const kind=e.target.value as RingScope['kind'];changeScope({kind,id:kind==='week'?ringWeek(anchor):kind==='unit'?activeUnits.find(u=>u.active)?.id||activeUnits[0]?.id||'':kind==='lesson'?progress.lessons[0]?.id||'':course?.year||''});}}><option value="week">A week</option><option value="unit">A unit</option><option value="lesson">A lesson</option><option value="course">Entire course</option></select></label>
