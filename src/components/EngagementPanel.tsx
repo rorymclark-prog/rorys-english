@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from 'react';
+import {ringDocuments} from '@/lib/ring-documents';
 import WeeklyPracticeRings from '@/components/WeeklyPracticeRings';
 import {getLearning} from '@/lib/learning';
 import {documentRequest} from '@/lib/documents';
@@ -12,11 +13,11 @@ const periods:{id:EngagementPeriod;label:string}[]=[{id:'day',label:'Day'},{id:'
 const dateLabel=(date:string)=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Vienna'}).format(new Date(date+'T12:00:00Z'));
 const minutes=(value:number)=>value===0?'0':value<1?'<1':String(Math.round(value*10)/10);
 export default function EngagementPanel({code,teacher=false,source,sourceError='',compact=false,onRefresh}:{code:string;teacher?:boolean;source?:EngagementSource;sourceError?:string;compact?:boolean;onRefresh?:()=>Promise<void>}){
- const [data,setData]=useState<EngagementSource|null>(source||null),[breaks,setBreaks]=useState<{from:string;to:string}[]>([]),[loading,setLoading]=useState(!source),[error,setError]=useState(''),[calendarError,setCalendarError]=useState(''),[calendarReady,setCalendarReady]=useState(false),[period,setPeriod]=useState<EngagementPeriod>('week'),[anchor,setAnchor]=useState(viennaDay()),[retry,setRetry]=useState(0);
- useEffect(()=>{let live=true;setError('');setCalendarReady(false);setLoading(!source);if(source)setData(source);
+ const [data,setData]=useState<EngagementSource|null>(source||null),[breaks,setBreaks]=useState<{from:string;to:string}[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[calendarError,setCalendarError]=useState(''),[calendarReady,setCalendarReady]=useState(false),[period,setPeriod]=useState<EngagementPeriod>('week'),[anchor,setAnchor]=useState(viennaDay()),[retry,setRetry]=useState(0);
+ useEffect(()=>{let live=true;setError('');setCalendarReady(false);setLoading(true);
   const read=<T extends {ok:boolean;error?:string}>(action:string)=>teacher?request<T>({action,code,session:savedSession('__teacher__')?.token||''}):authed<T>(code,{action});
-  const load=async()=>{try{if(!source){const [l,d,s,p]=await Promise.all([getLearning(code,teacher),documentRequest(code,teacher,{action:'documents'}),read<Submissions>('submissions'),read<Progress>('progress')]);if(!l.ok||!d.ok||!s.ok||!p.ok)throw Error('Some saved activity could not be loaded. Try again.');if(live)setData({records:l.records||[],documents:d.documents||[],submissions:s.submissions||[],replies:l.replies||[],progress:p});}
-   const c=await read<CalendarData>('calendarLessons');if(live){setCalendarReady(c.ok);setBreaks(c.ok?c.breaks||[]:[]);setCalendarError(c.ok?'':'Your additional calendar breaks could not be checked. The weekly targets are unavailable.');}
+  const load=async()=>{try{let next=source;if(!next){const [l,d,s,p]=await Promise.all([getLearning(code,teacher),documentRequest(code,teacher,{action:'documents'}),read<Submissions>('submissions'),read<Progress>('progress')]);if(!l.ok||!d.ok||!s.ok||!p.ok)throw Error('Some saved activity could not be loaded. Try again.');next={records:l.records||[],documents:d.documents||[],submissions:s.submissions||[],replies:l.replies||[],progress:p};}
+   const [c,documents]=await Promise.all([read<CalendarData>('calendarLessons'),ringDocuments(next.documents,id=>documentRequest(code,teacher,{action:'document',id}))]);if(live){setData({...next,documents});setCalendarReady(c.ok);setBreaks(c.ok?c.breaks||[]:[]);setCalendarError(c.ok?'':'Your additional calendar breaks could not be checked. The weekly targets are unavailable.');}
   }catch(e){if(live)setError(e instanceof Error?e.message:'Could not load saved activity.');}finally{if(live)setLoading(false);}};
   void load();const refresh=()=>setRetry(n=>n+1);window.addEventListener('focus',refresh);return()=>{live=false;window.removeEventListener('focus',refresh);};
  },[code,teacher,source,retry]);
