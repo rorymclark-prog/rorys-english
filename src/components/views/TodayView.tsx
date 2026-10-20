@@ -15,6 +15,7 @@ import NextLesson from "@/components/NextLesson";
 import MomentumStrip from "@/components/MomentumStrip";
 import YearPlanNotice from "@/components/YearPlanNotice";
 import UnitCover from "@/components/UnitCover";
+import EngagementPanel from "@/components/EngagementPanel";
 
 function WeekLink({h,unit,base,status}:{h:HomeworkWeek;unit:Unit;base:string;status:string}){
   const speaking=h.tasks.some(t=>t.type==="voice"),Icon=speaking?MicrophoneIcon:PencilIcon;
@@ -31,6 +32,7 @@ export default function TodayView({unit}:{unit:Unit|null}){
   const ready=(assignments.some(a=>isFerdiSpeakingHomework(code,a))?[]:unit?.homework||[]).filter(h=>!h.availableFrom||h.availableFrom<=today);
   return <main className="re-home today-page">
     <header className="re-page-heading"><p className="re-eyebrow">YOUR LEARNING SPACE</p><h1>Hi, {displayName}. Here’s your next step.</h1><p>Pick one task, practise it, and come back for feedback.</p></header>
+    <EngagementPanel code={code} compact/>
     <YearPlanNotice code={code} note={note} loading={!loaded}/>
     <LatestLessonPractice code={code}/>
     <div className="today-layout"><div className="today-primary">
