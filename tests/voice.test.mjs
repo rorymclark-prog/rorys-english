@@ -108,3 +108,9 @@ test('the teacher route validates the backend role before any paid request and n
   allowed=true;assert.equal((await route.POST(request())).status,201);assert.equal(paidCalls,1);
   assert.equal(checks[0].action,'teacherDashboard');assert.equal(checks[0].session,'teacher-test-token');
 });
+
+test('archived unit practice selects only a published unit in the authenticated learner catalog',()=>{
+ const units=[{id:'current-unit',active:true,title:'Current'},{id:'old-unit',active:false,title:'Old',voiceVocabulary:['relative']}];
+ assert.equal(exports.selectVoiceUnit(undefined,units).id,'current-unit');assert.equal(exports.selectVoiceUnit('old-unit',units).title,'Old');
+ for(const id of ['other-student-unit','future-unpublished',{},null])assert.throws(()=>exports.selectVoiceUnit(id,units));
+});

@@ -2,7 +2,7 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { createHash } from "node:crypto";
 import type { Account } from "@/lib/server/account-service";
-import { authorizeVoice, voiceConfiguration } from "@/lib/server/voice-session";
+import { authorizeVoice, voiceConfiguration, selectVoiceUnit } from "@/lib/server/voice-session";
 import { postProgress, ProgressTransportError } from "@/lib/server/progress-transport";
 import {buildLearningMemory,memoryInput} from "@/lib/learning-memory";
 import {lessonPracticeRecord} from "@/lib/lesson-practice";
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     const practiceCode = body.teacherTest === true ? body.practiceStudent : body.code;
     const student = typeof practiceCode === "string" && Object.hasOwn(roster, practiceCode) ? studentContent.find(s => s.code === practiceCode) : null;
     const units = student?.id === "ferdi" ? ferdiUnits : student?.id === "valentin" ? valentinUnits : [];
-    const unit = units.find(u => u.active);
+    const unit = selectVoiceUnit(body.unitPracticeId,units);
     let lessonPractice=null,learningMemory=null;
     if(student){
       const session=body.teacherTest===true?body.token:await backendSession(practiceCode,body.token);

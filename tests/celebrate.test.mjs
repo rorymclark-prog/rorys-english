@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';
+const code=ts.transpileModule(fs.readFileSync('src/lib/celebrate.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+test('ring celebration honours reduced motion without creating moving confetti',()=>{let created=0;const exports={};vm.runInNewContext(code,{exports,window:{matchMedia:()=>({matches:true})},document:{createElement:()=>{created++;throw Error('Should not animate')}}});exports.confettiBurst();assert.equal(created,0);});
+test('celebration helpers are safe outside the browser',()=>{const exports={};vm.runInNewContext(code,{exports});assert.doesNotThrow(()=>exports.confettiBurst());assert.doesNotThrow(()=>exports.haptic());});

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useStudent } from "@/components/StudentContext";
+import {practiceCatalog} from '@/lib/practice-catalog';
 import { markEffort } from "@/lib/momentum";
 import { WEEKLY_MINUTES, CALL_MINUTES, CALL_SECONDS, MIN_CALL_SECONDS, secondsLeft, recordSeconds } from "@/lib/speaking-budget";
 import { isStudentPreview } from "@/lib/student-preview";
@@ -66,6 +67,8 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
   const [lessonEntry,setLessonEntry]=useState<{id:string;practice:LessonPractice}|null>(null),[lessonLoading,setLessonLoading]=useState(true),[lessonError,setLessonError]=useState("");
   const practiceRef=useRef<{id:string;practice:LessonPractice}|null>(null);
   const sessionPractice=useRef<{id:string;practice:LessonPractice}|null>(null);
+  const [ringUnitId,setRingUnitId]=useState('');
+  const ringUnit=practiceCatalog(code).find(u=>u.id===ringUnitId&&u.available);
   const [guided,setGuided]=useState<GuidedSpeaking|null>(null);
   const guidedRef=useRef<GuidedSpeaking|null>(null);
   const [saveState,setSaveState]=useState("");
@@ -105,7 +108,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     try {
       const text=formatConversationTranscript(fragmentsRef.current).slice(0,24000);
       setSaveState('Saving your conversation…');
-      const title=sessionPractice.current?`Lesson practice · ${sessionPractice.current.practice.lessonDate} · ${sessionPractice.current.practice.title}`:guidedRef.current?.savedTitle||topics[topicRef.current].title;
+      const title=sessionPractice.current?`Lesson practice · ${sessionPractice.current.practice.lessonDate} · ${sessionPractice.current.practice.title}`:guidedRef.current?.savedTitle||(ringUnit&&topics[topicRef.current].id==='unit'?`Unit practice · ${ringUnit.year} · ${ringUnit.title}`:topics[topicRef.current].title);
       const result=await saveSpeaking(code,id,title.slice(0,150),text,reflectionRef.current);
       if(!result.ok){savedId.current='';setSaveState('Could not confirm the save. Keep this page open and choose Retry save.');return;}
       setSaveState('Conversation saved. Preparing Conversation feedback…');
@@ -152,7 +155,9 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
   }, [endpoint,code]);
   useEffect(()=>{
     if(teacherTest)return;
-    const choice=new URLSearchParams(window.location.search).get("guided");
+    const params=new URLSearchParams(window.location.search),unitId=params.get("unitPractice");
+    if(practiceCatalog(code).some(u=>u.id===unitId&&u.available)){setRingUnitId(unitId!);setTopic(topics.findIndex(t=>t.id==='unit'));}
+    const choice=params.get("guided");
     const chat=guidedSpeaking(code,choice);
     setGuided(chat);guidedRef.current=chat;
     if(chat)setTopic(topics.findIndex(topic=>topic.id===chat.topic));
@@ -236,7 +241,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
       });
       check(); controller.current = new AbortController();
       timeout.current = setTimeout(() => finish("The voice connection timed out. Please try again."), 55000);
-      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.current.signal, body: JSON.stringify({ code, token, teacherTest, preview, topic: topics[topic].id, grammar, voice, homeworkFocus: guidedRef.current?.id, lessonPracticeId: sessionPractice.current?.id, practiceStudent: teacherTest ? practiceStudent : undefined, sdp: connection.localDescription?.sdp }) });
+      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.current.signal, body: JSON.stringify({ code, token, teacherTest, preview, topic: topics[topic].id, grammar, voice, homeworkFocus: guidedRef.current?.id, lessonPracticeId: sessionPractice.current?.id, unitPracticeId: topics[topic].id==='unit'?ringUnit?.id:undefined, practiceStudent: teacherTest ? practiceStudent : undefined, sdp: connection.localDescription?.sdp }) });
       const result = await response.json(); check(); if (!response.ok) throw new Error(result.error || "Live voice could not connect.");
       await connection.setRemoteDescription({ type: "answer", sdp: result.transport.sdp }); check();
     } catch (error) { if (run === generation.current) finish(error instanceof Error && error.name === "NotAllowedError" ? "Microphone access was declined. Allow it in your browser to try again." : error instanceof Error ? error.message : "Could not connect."); }
@@ -269,7 +274,7 @@ export function VoiceStudio({ code, studentId, lines, teacherTest = false, unitT
     <div className="re-speaking-grid"><section><div className="re-card">{guided?<><p className="re-eyebrow">YOUR FOCUS</p><p>{guided.focus}</p></>:<><p className="re-eyebrow">1 · CHOOSE A CONVERSATION</p><div className="re-topic-options">{topics.map((t, i) => <button key={t.id} disabled={busy || recording || recordBusy} aria-pressed={topic === i} onClick={() => setTopic(i)}><strong>{t.title}</strong><small>{t.target}</small></button>)}</div></>}
       {topics[topic].id === "grammar" && <label className="re-voice-choice">Choose a grammar focus<select value={grammar} onChange={e => setGrammar(e.target.value)} disabled={busy || recording || recordBusy}>{grammarTargets.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}</select></label>}
       {teacherTest && ["unit","lesson"].includes(topics[topic].id) && <label className="re-voice-choice">Test this student&apos;s practice<select value={practiceStudent} onChange={e => setPracticeStudent(e.target.value)} disabled={busy || recording || recordBusy}>{practiceOptions.map(p => <option key={p.code} value={p.code}>{p.name}{p.unit ? ` · ${p.unit}` : ""}</option>)}</select></label>}
-      {!teacherTest && !guided && topics[topic].id === "unit" && <p className="re-small-copy">{unitTitle ? `Current unit: ${unitTitle}` : "Tell the partner your current school topic and a few words you want to practise."}</p>}
+      {!teacherTest && !guided && topics[topic].id === "unit" && <p className="re-small-copy">{ringUnit ? `Selected unit: ${ringUnit.title}` : unitTitle ? `Current unit: ${unitTitle}` : "Tell the partner your current school topic and a few words you want to practise."}</p>}
       {topics[topic].id==="lesson"&&<div className="mt-4 rounded-xl border border-indigo-200 p-3 text-sm" aria-label="Lesson practice brief">{lessonLoading?<p>Opening your lesson practice…</p>:lessonEntry?<><strong>{lessonEntry.practice.title} · {readableDate(lessonEntry.practice.lessonDate)}</strong><p className="mt-2">{lessonEntry.practice.recap}</p><ul className="mt-2 ml-5 list-disc">{lessonEntry.practice.focus.map(x=><li key={x}>{x}</li>)}</ul><p className="mt-2">{lessonEntry.practice.speakingPrompt}</p><p className="mt-2">About {lessonEntry.practice.speakingMinutes} minutes. Try once, get a little help, then use it in a different example.</p>{!teacherTest&&<Link className="re-text-link" href={`/s/${code}/progress/#review-${lessonEntry.id}`}>Open the short written task →</Link>}</>:<p>{lessonError||"No lesson practice is ready yet. Ask Rory, or choose another conversation mode."}</p>}</div>}
       <label className="re-voice-choice">Conversation voice<select value={voice} onChange={e=>{const next=e.target.value;setVoice(next);try{localStorage.setItem(`re_voice_${code}`,next);}catch{/* storage unavailable */}}} disabled={busy || recording || recordBusy}>{voices.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}</select></label>
       <p className="re-small-copy">Choose before starting. A voice change starts with your next conversation.</p>

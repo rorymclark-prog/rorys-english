@@ -1,7 +1,7 @@
 import type { Account, Identity } from "./account-service";
 import {lessonPracticeInstructions,type LessonPractice} from "../lesson-practice";
 import {guidedSpeaking} from "../guided-speaking";
-export type VoiceRequest = { code?: unknown; token?: unknown; sdp?: unknown; topic?: unknown; grammar?: unknown; voice?: unknown; homeworkFocus?: unknown; lessonPracticeId?:unknown; practiceStudent?: unknown; preview?: unknown; teacherTest?: unknown };
+export type VoiceRequest = { code?: unknown; token?: unknown; sdp?: unknown; topic?: unknown; grammar?: unknown; voice?: unknown; homeworkFocus?: unknown; lessonPracticeId?:unknown; unitPracticeId?:unknown; practiceStudent?: unknown; preview?: unknown; teacherTest?: unknown };
 export const voiceOptions = {
   vesper: "Vesper",
   willow: "Willow",
@@ -63,4 +63,10 @@ export function voiceConfiguration(body: VoiceRequest, unit?: { title: string; v
     },
     transport: { type: "webrtc", sdp: body.sdp },
   };
+}
+
+export function selectVoiceUnit(id:unknown,units:{id:string;active:boolean;title:string;voiceVocabulary?:string[]}[]){
+ if(id===undefined)return units.find(u=>u.active);
+ if(typeof id!=="string"||!units.some(u=>u.id===id))throw new Error("This unit is not available in this learner's course.");
+ return units.find(u=>u.id===id);
 }
