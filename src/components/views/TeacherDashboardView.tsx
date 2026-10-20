@@ -31,7 +31,6 @@ import AppMenu from "@/components/AppMenu";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import QuickAppearance from "@/components/QuickAppearance";
 import StudentPreviewButton from "@/components/StudentPreviewButton";
-import {readableDate} from "@/lib/clarity";
 import studentRoster from "../../../content/students.json";
 
 // One-time removal of the old persisted password; only expiring tokens remain.
@@ -251,13 +250,11 @@ function PasswordGate({
 }
 
 function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () => void }) {
-  const s = student.summary;
   const unit = studentRoster.find(entry=>entry.code===student.code)?.units.find(unit=>unit.active);
   return <button type="button" onClick={onOpen} className={`teacher-student-card ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`} aria-label={`Open ${student.name}’s teaching workspace`}>
     <div className="teacher-card-heading"><ProfileAvatar code={student.code} name={student.name} className="teacher-avatar"/><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
-    <div className="teacher-card-data"><div className="teacher-saved-label"><BookIcon/><span>Saved work</span></div><div className="teacher-card-counts"><div><CheckSquareIcon/><span><strong>{s?.homeworkDone ?? "—"}</strong> homework recorded</span></div><div><BookIcon/><span><strong>{s?.writingSamples ?? "—"}</strong> writing samples</span></div><div><ChartIcon/><span><strong>{s?.quizRounds ?? "—"}</strong> quiz rounds</span></div></div></div>
     <div className="teacher-focus"><span>{student.focusNote ? "CURRENT FOCUS" : "NEXT STEP"}</span><p>{student.focusNote || "Open their workspace to review answers or assign a little practice."}</p></div>
-    <div className="teacher-card-footer"><span>{s?.lastUpdated ? `Homework / quiz log: ${readableDate(s.lastUpdated)}` : "No activity recorded yet"}</span><strong>Open learning dashboard <span aria-hidden>↗</span></strong></div>
+    <div className="teacher-card-footer"><span>Saved work, practice & feedback</span><strong>Open learning dashboard <span aria-hidden>↗</span></strong></div>
   </button>;
 }
 
@@ -339,7 +336,7 @@ function TeacherStudentPanel({
       </header>
       <main>
         <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`}>
-          <div className="teacher-banner-name"><ProfileAvatar code={student.code} name={student.name} editable className="teacher-avatar"/><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>{s?.lastUpdated ? `Homework / quiz log: ${readableDate(s.lastUpdated)}` : "Ready for the first step"}</p></div></div>
+          <div className="teacher-banner-name"><ProfileAvatar code={student.code} name={student.name} editable className="teacher-avatar"/><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>Homework, practice & feedback</p></div></div>
           <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ChartIcon/><span>Saved progress & feedback <span aria-hidden>↗</span></span></button>
         </section>
         <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>

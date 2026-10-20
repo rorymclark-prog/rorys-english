@@ -15,6 +15,7 @@ const reply=(id,answer,created='2026-10-20T09:00:00Z',extra={})=>({id,reviewId:p
 const word=(word='relative')=>({word,meaning:'someone in your family',sentence:'My relative lives nearby.'});
 const progress=(s,kind='week',id='2026-10-05')=>r.ringProgress(s,code,{kind,id},today);
 const addLink=(s,item,scope,id='link-one',created='2026-10-20T09:00:00Z')=>s.replies.push(reply(id,r.ringLinkAnswer({item,week:'',unit:'',lesson:'',...scope}),created));
+const attribute=(s,entries,retainedWriting=[])=>s.records.push({...structuredClone(plan),id:'audited-credits',created:'2026-10-20T12:00:00Z',body:{practiceAttributions:{version:1,entries,retainedWriting}}});
 
 test('catalog retains both learners’ own available archives and the entire planned course',()=>{
  const ferdi=catalog.practiceCatalog(code),valentin=catalog.practiceCatalog('valentin-q9m2');assert.equal(ferdi.filter(u=>u.year==='2026–27').length,14);assert.equal(valentin.filter(u=>u.year==='2026–27').length,8);assert.ok(ferdi.find(u=>u.id==='unit10').available);assert.ok(valentin.find(u=>u.id==='unit05').available);assert.ok(!ferdi.some(u=>u.id==='unit05'));assert.ok(!ferdi.find(u=>u.id.includes('unit03')).available);assert.equal(catalog.practiceCatalog('unknown').length,0);
@@ -81,4 +82,37 @@ test('new archived-unit conversations retain a readable unit and course title an
 test('unit writing links open an actual homework route, shared practice or the available lesson list',()=>{
  const units=catalog.practiceCatalog(code);assert.match(catalog.ringWritingPath(code,units.find(u=>u.id==='unit10'),undefined,today),/\/lessons\/unit10\/homework\/\d+\/$/);
  assert.equal(catalog.ringWritingPath(code,units.find(u=>u.id===unit2),undefined,today),`/s/${code}/lessons/`);assert.equal(catalog.ringWritingPath(code,units.find(u=>u.id===unit2),'earlier-shared-plan',today),`/s/${code}/progress/#write-earlier-shared-plan`);
+});
+
+test('generic school context and unpublished IDs cannot misattribute writing to future units',()=>{
+ const units=catalog.practiceCatalog(code);for(const text of ['School homework — set by the school','School-life balance homework','english-in-context5-unit03-2026'])assert.equal(r.inferUnit(text,units),'');
+ assert.equal(r.inferUnit('Family life',units),unit);assert.equal(r.inferUnit('An unrelated family lifestyle story',units),'');
+});
+test('audited source links backfill both units and capped course totals without altering dated originals',()=>{
+ const s=source();s.records.push({...chat(),title:'My current unit'});s.documents=[{id:'earlier-work',created:'2026-10-06T09:00:00Z',uploadedBy:'Student',title:'School work',context:'[Work source: School homework — set by the school]',files:[{type:'image/jpeg'}],analysis:{writing:{original:'My own school writing.'}}}];
+ attribute(s,[{item:'conversation:first-chat',unit,sourceDay:'2026-10-06',note:'The saved conversation explicitly discusses family life.'},{item:'document:earlier-work',unit:unit2,sourceDay:'2026-10-06',note:'Verified friendship task.'}]);const before=JSON.stringify(s),p=progress(s,'course','2026–27');
+ assert.equal(p.minutes,15);assert.equal(p.writing,1);assert.equal(progress(s,'unit',unit).minutes,15);assert.equal(progress(s,'unit',unit2).writing,1);assert.equal(progress(s,'unit','english-in-context5-unit03-2026').writing,0);
+ assert.equal(p.writing,p.courseUnits.reduce((n,u)=>n+u.writing,0));assert.equal(p.minutes,p.courseUnits.reduce((n,u)=>n+Math.min(30,u.minutes),0));assert.equal(JSON.stringify(s),before);
+ addLink(s,'document:earlier-work',{unit});assert.equal(progress(s,'unit',unit).writing,1);assert.equal(progress(s,'unit',unit2).writing,0);
+});
+test('legacy linked shared writing counts under the original document only, never from private or held reviews',()=>{
+ const s=source();s.documents=[{id:'legacy-document',created:'2026-09-23T09:00:00Z',uploadedBy:'Rory',title:'School essay',context:'[Document role: answer]\n[Learning review: old-review]',files:[{type:'image/jpeg'}],analysis:{transcription:'Legacy essay'}}];s.records.push({id:'old-review',date:'2026-09-23',created:'2026-09-23T10:00:00Z',title:'Earlier writing review',kind:'homework',author:'Rory',visibility:'shared',body:{writing:{original:'This is the original learner essay.'}}});
+ assert.equal(progress(s,'week','2026-09-21').writing,1);assert.deepEqual(Array.from(progress(s).items.filter(i=>i.kind==='writing').map(i=>i.id)),['document:legacy-document']);
+ s.records.at(-1).reviewPending=true;assert.equal(progress(s,'week','2026-09-21').writing,0);s.records.at(-1).reviewPending=false;s.records.at(-1).visibility='teacher';assert.equal(progress(s,'week','2026-09-21').writing,0);
+});
+test('existing school sentences can receive audited vocabulary credit only from exact learner originals',()=>{
+ const s=source();s.documents=[{id:'vocabulary-document',created:'2026-10-06T09:00:00Z',uploadedBy:'Student',title:'School sentences',context:'[Document role: answer]',files:[{type:'image/jpeg'}],analysis:{writing:{original:'I enjoy working with my peers in school.\nI do not talk to strangers.'}}}];
+ attribute(s,[{item:'document:vocabulary-document',unit:unit2,sourceDay:'2026-10-06',note:'The school task asks for sentences illustrating meaning.',vocabulary:[{word:'peers',sentence:'I enjoy working with my peers in school.',meaningEvidence:'Meaning illustrated in the original school sentence.'},{word:'strangers',sentence:'I do not talk to strangers.',meaningEvidence:'Meaning illustrated in the original school sentence.'},{word:'invented',sentence:'This sentence was never submitted.',meaningEvidence:'Not valid.'}]}]);
+ const p=progress(s,'unit',unit2);assert.equal(p.writing,1);assert.equal(p.vocabulary,2);assert.equal(progress(s).vocabulary,2);assert.equal(p.words.some(w=>w.word==='invented'),false);
+ s.documents[0].analysis.exerciseAnswers=[{number:1}];assert.equal(progress(s,'unit',unit2).vocabulary,0);
+});
+test('completed recognition worksheets are acknowledged without pretending they are original writing or word use',()=>{
+ const s=source();s.documents=[{id:'matching-sheet',status:'ready',created:'2026-10-06T09:00:00Z',uploadedBy:'Student',title:'Matching worksheet',context:'[Document role: answer]',files:[{type:'image/jpeg'}],analysis:{writing:{original:''},transcription:'Completed matching exercise'}}];attribute(s,[{item:'document:matching-sheet',unit,sourceDay:'2026-10-06',note:'Matching already completed; no need to repeat it.'}]);const p=progress(s,'unit',unit);assert.equal(p.completedPractice.length,1);assert.equal(p.writing,0);assert.equal(p.vocabulary,0);
+});
+test('stale, student-authored, unknown and unavailable attribution cannot move credit',()=>{
+ const s=source();s.records.push({...chat(),title:'My current unit'});attribute(s,[{item:'conversation:first-chat',unit,sourceDay:'2026-10-07',note:'Wrong source date.'},{item:'conversation:missing',unit,sourceDay:'2026-10-06',note:'Missing original.'},{item:'conversation:first-chat',unit:'unit05',sourceDay:'2026-10-06',note:'Other learner archive.'},{item:'conversation:first-chat',unit:'english-in-context5-unit03-2026',sourceDay:'2026-10-06',note:'Not available.'}]);assert.equal(progress(s,'course','2026–27').minutes,0);
+ s.records.at(-1).body.practiceAttributions.entries=[{item:'conversation:first-chat',unit,sourceDay:'2026-10-06',note:'Correct date.'}];s.records.at(-1).author='Student';assert.equal(progress(s,'course','2026–27').minutes,0);
+});
+test('retained originals with uncertain performance dates close unit writing without inventing a weekly submission',()=>{
+ const s=source();attribute(s,[],[{id:'retained:earlier-original',unit:'unit10',availableBy:'2026-05-10',title:'Earlier original writing',sourceRef:'retained-original:verified',note:'Available by this date; actual writing date and help unknown.'}]);const p=progress(s,'unit','unit10');assert.equal(p.writing,1);assert.equal(p.selected[0].availableBy,true);assert.equal(progress(s,'week','2026-05-04').writing,0);assert.equal(progress(s,'course','2025–26').writing,1);assert.equal(progress(s,'course','2026–27').writing,0);addLink(s,'retained:earlier-original',{week:'2026-05-04'});assert.equal(progress(s,'week','2026-05-04').writing,0);
 });
