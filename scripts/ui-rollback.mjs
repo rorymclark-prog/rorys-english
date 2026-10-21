@@ -25,9 +25,10 @@ const descriptions={
   teacher:"Teacher dashboard and student sections",
   settings:"Settings page headings",
   header:"Shared page heading layout",
+  simplicity:"21 Oct one-job-per-page student screens",
 };
 const features=Object.keys(descriptions);
-const unstyled=new Set(["settings","speaking-budget"]);
+const unstyled=new Set(["settings","speaking-budget","simplicity"]);
 const styledFeatures=features.filter(name=>!unstyled.has(name));
 const [command,...args]=process.argv.slice(2);
 

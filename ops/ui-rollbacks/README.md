@@ -7,3 +7,5 @@ Run `npm run ui:rollbacks` to see the available areas. To roll back one area, ru
 The script requires a clean checkout and rejects a patch if later edits overlap it. This prevents a rollback from silently discarding newer work. A full release rollback is separately available through Vercel deployment history, but it affects all areas at once. These switches cover the visual redesign; they do not turn off the separate functional features added to the app afterward.
 
 The areas are `entry`, `navigation`, `today`, `homework`, `lessons`, `practice`, `resources`, `writing-help`, `speaking`, `feedback`, `test-prep`, `documents`, `teacher`, `settings` and `header`.
+
+`simplicity` (21 October 2026) is a separate area: it returns the student screens, sign-in and year plan to their 20 October presentation without disabling a stylesheet. It is generated from the branch diff, so regenerate it (`git diff -R <base> -- <student files>`) if those files change again before release.

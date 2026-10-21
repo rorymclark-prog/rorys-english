@@ -4,7 +4,7 @@
 :root{--re-ember:#c2410c;--re-emberdeep:#9a3412;--re-embersoft:#fde8d8}
 .dark{--re-ember:#f59d6e;--re-emberdeep:#f59d6e;--re-embersoft:#3a2318}
 
-.momentum-strip{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:15px 19px;margin:0 0 22px;border:1px solid var(--re-line);border-radius:17px;background:var(--re-surface)}
+.momentum-strip{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:15px 19px;margin:0 0 22px;border:1px solid var(--re-line);border-radius:16px;background:var(--re-surface)}
 .momentum-strip.is-placeholder{min-height:74px}
 .momentum-count{display:flex;align-items:baseline;gap:7px;flex-shrink:0}
 .momentum-count strong{font-size:1.85rem;font-weight:800;line-height:1;letter-spacing:-.04em;color:var(--re-ember)}

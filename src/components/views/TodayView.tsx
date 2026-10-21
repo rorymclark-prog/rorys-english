@@ -14,11 +14,13 @@ import NextLesson from "@/components/NextLesson";
 import YearPlanNotice from "@/components/YearPlanNotice";
 import EngagementPanel from "@/components/EngagementPanel";
 import StatusRow from "@/components/StatusRow";
+import MomentumStrip from "@/components/MomentumStrip";
+import {isStudentPreview} from "@/lib/student-preview";
 
 type NextStep={label:string;title:string;meta:string;href:string};
 
 export default function TodayView({unit}:{unit:Unit|null}){
-  const {code,displayName}=useStudent(),base=`/s/${code}`;
+  const {code,displayName,studentId}=useStudent(),base=`/s/${code}`;
   const [note,setNote]=useState(""),[assignments,setAssignments]=useState<Assignment[]>([]),[error,setError]=useState(""),[loaded,setLoaded]=useState(false),[submissions,setSubmissions]=useState<Submission[]>([]);
   async function refresh(){setError("");try{const [n,a,sent]=await Promise.all([fetchNote(code),fetchAssignments(code),fetchSubmissions(code)]);if(sent.ok)setSubmissions(sent.submissions||[]);if(n.ok)setNote(n.note||"");if(a.ok)setAssignments((a.assignments?.rows||[]).map(rowToAssignment).filter(x=>isCurrentAssignment(x)));if(!n.ok||!a.ok||!sent.ok)setError(n.error||a.error||sent.error||"Could not load your latest update.");}catch{setError("Could not load your latest update.");}finally{setLoaded(true)}}
   useEffect(()=>{void refresh();},[code]);
@@ -47,6 +49,7 @@ export default function TodayView({unit}:{unit:Unit|null}){
       <Link className="today-row" href={`${base}/speak/`}><MicrophoneIcon/><span><strong>Speak</strong><small>A short conversation, saved for Rory</small></span><ChevronRightIcon/></Link>
       <Link className="today-row" href={`${base}/progress/`}><MessageIcon/><span><strong>Feedback</strong><small>What worked and what to try next</small></span><ChevronRightIcon/></Link>
     </div>
+    {!isStudentPreview(code)&&<MomentumStrip studentId={studentId}/>}
     <EngagementPanel code={code} compact/>
     <YearPlanNotice code={code} note={note}/>
   </main>;
