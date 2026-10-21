@@ -1,4 +1,5 @@
 "use client";
+import StatusRow from "@/components/StatusRow";
 import {useEffect,useState} from 'react';
 import {getLearning,type LearningRecord} from '@/lib/learning';
 import {readableDate} from '@/lib/clarity';
@@ -16,6 +17,6 @@ export default function RecordedLessonLinks({students,onOpen}:{students:{code:st
   },[students,retry]);
   return <section className="re-card mb-6" aria-labelledby="recorded-lessons-title"><p className="teacher-eyebrow">LESSON RECORDING FEEDBACK</p><h2 id="recorded-lessons-title" className="mt-1 text-xl font-bold">Recorded lesson assessments</h2><p className="mt-2 text-sm">Open the latest lesson review for each student. These drafts are private and await your review.</p>
     {loading?<p className="mt-3 text-sm" role="status">Finding your lesson reviews…</p>:<><div className="mt-4 grid gap-3 sm:grid-cols-2">{entries.map(({code,name,record})=><button key={code} type="button" className="re-button re-secondary text-left" onClick={()=>onOpen(code,record.id)}><strong className="block">{name} · {readableDate(record.date)}</strong><span className="block mt-1">Open recorded lesson feedback →</span></button>)}</div>{!entries.length&&!error&&<p className="mt-3 text-sm">No recorded lesson reviews yet.</p>}</>}
-    {error&&<p className="mt-3 text-sm" role="alert">Some lesson reviews could not be loaded. <button type="button" className="underline" onClick={()=>setRetry(x=>x+1)}>Try again</button></p>}
+    {error&&<StatusRow kind="error" className="mt-3" onRetry={()=>setRetry(x=>x+1)}>Some lesson reviews could not be loaded.</StatusRow>}
   </section>;
 }

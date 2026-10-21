@@ -1,4 +1,5 @@
 "use client";
+import StatusRow from "@/components/StatusRow";
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {getLearning,type LearningRecord} from '@/lib/learning';
@@ -21,7 +22,7 @@ export default function LearningMemoryPanel({code,teacher=false,records}:{code:s
  return <details className="re-card mt-4" aria-label="Learning memory"><summary className="cursor-pointer font-bold">{teacher?'Learning memory · what the AI can use':'What your AI remembers'}</summary>
   <p className="mt-3 text-sm">Each new conversation checks your recent saved lesson recap and practice feedback. It uses a short learning summary. Old AI hints are suggestions to check again, not permanent weaknesses.</p>
   {!snapshot&&!error&&<p role="status" className="mt-2 text-sm">Opening learning memory…</p>}
-  {error&&<p role="alert" className="mt-2 text-sm">{error} <button className="underline" onClick={()=>setRetry(x=>x+1)}>Try again</button></p>}
+  {error&&<StatusRow kind="error" className="mt-2" onRetry={()=>setRetry(x=>x+1)}>{error}</StatusRow>}
   {snapshot&&<><label className="mt-3 flex gap-2 text-sm"><input type="checkbox" checked={settings.enabled} disabled={busy||preview} onChange={e=>{const value={...settings,enabled:e.target.checked};setSettings(value);if(!teacher)void save(value);}}/>Use recent practice in my next AI conversation</label>
    {teacher&&<div className="mt-3 space-y-3 text-sm"><label className="block">Rory’s current focus · up to two short targets<textarea className="mt-1 w-full rounded-xl border border-black/15 bg-transparent p-3" rows={3} maxLength={501} value={settings.focus.join('\n')} onChange={e=>setSettings({...settings,focus:e.target.value.split('\n').slice(0,2)})}/></label><label className="block">Use records from this date<input type="date" className="ml-2 rounded-lg border bg-transparent p-2" value={settings.since} onChange={e=>setSettings({...settings,since:e.target.value})}/></label><p className="text-xs">Blank means the most recent 90 days. A later date starts fresh without deleting saved work.</p></div>}
    {!snapshot.enabled?<p className="mt-3 text-sm">Past practice is switched off. A selected lesson task still supplies its own brief.</p>:<>

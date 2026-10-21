@@ -23,7 +23,7 @@
 .signin-verify{margin-top:18px;padding:17px;border:1px solid var(--re-line);border-radius:17px;background:var(--re-surface)}
 .signin-verify p{font-size:.84rem;line-height:1.6;margin-bottom:8px}
 .signin-message:not(:empty){margin-top:18px;padding:13px 15px;border-radius:13px;background:var(--re-soft);color:var(--re-ink);font-size:.85rem;line-height:1.6}
-.signin-switch{margin-top:26px;min-height:44px;color:var(--re-muted);font-size:.8rem;text-decoration:underline;text-underline-offset:3px}
+.signin-doors{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0 8px}.signin-doors button{min-height:48px;border:1px solid var(--re-line);border-radius:999px;background:var(--re-surface);color:var(--re-ink);font-size:14px;font-weight:700}.signin-doors button[aria-pressed=true]{background:var(--re-accent);border-color:var(--re-accent);color:var(--re-onaccent)}.signin-help{margin-top:20px;color:var(--re-muted);font-size:14px;line-height:1.6}.signin-help>summary{min-height:44px;display:flex;align-items:center;color:var(--re-accent);font-weight:700;cursor:pointer}.signin-help p{margin:6px 0}
 /* Opening state: the shape of the screen that is about to arrive, not a spinner. */
 .signin-skeleton{display:flex;flex-direction:column;gap:14px;padding:48px 24px;max-width:28rem;margin:0 auto}
 .signin-skeleton span{display:block;border-radius:11px;background:var(--re-surface2);animation:signin-pulse 1.4s var(--re-ease,cubic-bezier(.16,1,.3,1)) infinite}

@@ -19,7 +19,8 @@ export default function ServiceWorkerRegister() {
     // only treat it as an update if a controller already existed.
     const hadController = !!navigator.serviceWorker.controller;
     const onControllerChange = () => {
-      if (hadController) {setUpdated(true);setDismissed(false);}
+      // Never over the sign-in screen: nothing there is worth interrupting.
+      if (hadController && !document.querySelector(".signin")) {setUpdated(true);setDismissed(false);}
     };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 

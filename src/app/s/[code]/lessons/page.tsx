@@ -6,7 +6,7 @@ import UnitCover from "@/components/UnitCover";
 import {getBundle} from "@/lib/content";
 import type {Unit} from "@/lib/types";
 import Screen from "@/components/Screen";
-import {BookIcon,ChevronRightIcon,ClockIcon,FolderIcon,PencilIcon,TargetIcon} from "@/components/Icons";
+import {BookIcon,ChevronRightIcon,FolderIcon,PencilIcon} from "@/components/Icons";
 import {MicrophoneIcon,RepeatIcon} from "@/components/LearningVisuals";
 
 function UnitCard({unit,code}:{unit:Unit;code:string}){
@@ -26,9 +26,10 @@ function UnitCard({unit,code}:{unit:Unit;code:string}){
 export default async function LessonsPage({params}:{params:Promise<{code:string}>}){
   const {code}=await params,bundle=getBundle(code)!;
   const units=[...bundle.units].sort((a,b)=>Number(b.status==="tutoring")-Number(a.status==="tutoring")||Number(b.active)-Number(a.active));
-  return <Screen title="Lessons & files" subtitle="Your lesson with Rory, current school unit and earlier material.">
+  const current=units.filter(u=>u.active||u.status==="tutoring"),archive=units.filter(u=>!(u.active||u.status==="tutoring"));
+  return <Screen title="Lessons" subtitle="Your lesson with Rory and your current school unit.">
     <LatestLessonPractice code={code} showFiles={false}/>
-    <nav className="ux-route-grid" aria-label="More ways to learn"><Link className="ux-route-card" href={`/s/${code}/study/`}><RepeatIcon/><span><strong>Practice tools</strong><small>Study tools and quizzes</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${code}/resources/`}><FolderIcon/><span><strong>All lesson files</strong><small>Slides, audio and files</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${code}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Reviews and next steps</small></span><ChevronRightIcon/></Link></nav>
-    <div className="lesson-unit-list">{units.map(unit=><UnitCard key={unit.id} unit={unit} code={code}/>)}</div>
+    <div className="lesson-unit-list">{current.map(unit=><UnitCard key={unit.id} unit={unit} code={code}/>)}</div>
+    {archive.length>0&&<details className="re-fold"><summary>Earlier material <span>{archive.length}</span></summary><div className="lesson-unit-list">{archive.map(unit=><UnitCard key={unit.id} unit={unit} code={code}/>)}</div></details>}
   </Screen>;
 }

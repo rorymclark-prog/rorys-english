@@ -6,12 +6,13 @@ import Link from "next/link";
 import type {HomeworkWeek,Unit} from "@/lib/types";
 import {useStudent} from "@/components/StudentContext";
 import Screen from "@/components/Screen";
+import StatusRow from "@/components/StatusRow";
 import SavedWriting from "@/components/SavedWriting";
 import SubmissionForm from "@/components/SubmissionForm";
 import SpeakingHomeworkCard from "@/components/views/SpeakingHomeworkCard";
 import {isFerdiSpeakingHomework} from "@/lib/speaking-homework";
 import {fetchAssignments,fetchSubmissions,type Submission,rowToAssignment,isCurrentAssignment,type Assignment} from "@/lib/remote";
-import {BookIcon,ChevronRightIcon,CheckSquareIcon,ClockIcon,FileIcon,MessageIcon,PencilIcon,TargetIcon,UploadIcon} from "@/components/Icons";
+import {BookIcon,ChevronRightIcon,CheckSquareIcon,ClockIcon,FileIcon,PencilIcon} from "@/components/Icons";
 import {MicrophoneIcon} from "@/components/LearningVisuals";
 
 import {readableDate,submissionStatus,isCompletedAssignment} from "@/lib/clarity";
@@ -60,10 +61,9 @@ export default function HomeworkListView({unit}:{unit:Unit|null}){
   const count=readyAssignments.length+readyWeeks.length;
   return <Screen title="Homework" subtitle={unit?.title}>
     <div className="work-page">
-      <p className="work-intro">Open a task or return to an earlier attempt. The status tells you whether Rory has received or reviewed your answer.</p>
-      <nav className="work-quick-links" aria-label="Related work"><Link href={`/s/${code}/test-prep/`}><TargetIcon/>Test prep<ChevronRightIcon/></Link><Link href={`/s/${code}/documents/`}><UploadIcon/>Upload work<ChevronRightIcon/></Link><Link href={`/s/${code}/progress/`}><MessageIcon/>Feedback<ChevronRightIcon/></Link></nav>
-      {error&&<div role="alert" className="work-alert">{error}<button onClick={()=>void refresh()}>Try again</button></div>}
-      {!loaded&&<p role="status" className="work-loading">Checking Rory’s assignments…</p>}
+      <p className="work-intro">Open a task, or return to an earlier attempt.</p>
+      {error&&<StatusRow kind="error" onRetry={()=>void refresh()}>{error}</StatusRow>}
+      {!loaded&&<StatusRow kind="loading">Checking Rory’s assignments…</StatusRow>}
       <LatestLessonPractice code={code}/>
       {(count>0||loaded)&&<section className="work-section"><SectionHeading eyebrow="YOUR CURRENT WORK" title="Homework & earlier practice" count={count}/><div className="work-card-list">{readyAssignments.map(a=>isFerdiSpeakingHomework(code,a)?<SpeakingHomeworkCard key={a.id} code={code} assignment={a}/>:<AssignedCard key={a.id} assignment={a} code={code}/>)}{readyWeeks.map(h=><WeekCard key={`${unit!.id}-${h.week}`} week={h} unitId={unit!.id} code={code} upcoming={false} status={loaded?error?"Status unavailable":submissionStatus(submissions,unit!.id,`hw:${h.week}`):"Checking saved work…"}/>)}{loaded&&!error&&count===0&&<div className="work-empty"><BookIcon/><strong>Nothing new to do right now.</strong><p>Your lessons and earlier work are still here when you want to practise.</p></div>}</div></section>}
       {upcomingWeeks.length>0&&<section className="work-section"><SectionHeading eyebrow="PLAN AHEAD" title="Coming up" count={upcomingWeeks.length}/><div className="work-card-list">{upcomingWeeks.map(h=><WeekCard key={`${unit!.id}-${h.week}`} week={h} unitId={unit!.id} code={code} upcoming status="Not available yet"/>)}</div></section>}

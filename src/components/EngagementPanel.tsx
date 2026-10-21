@@ -1,4 +1,5 @@
 "use client";
+import StatusRow from "@/components/StatusRow";
 import {useEffect,useState} from 'react';
 import {ringDocuments} from '@/lib/ring-documents';
 import WeeklyPracticeRings from '@/components/WeeklyPracticeRings';
@@ -24,7 +25,7 @@ export default function EngagementPanel({code,teacher=false,source,sourceError='
  },[code,teacher,source,retry]);
  const today=viennaDay();
  if(loading)return <section className="engagement-panel engagement-loading" role="status" aria-busy="true"><h2>{teacher?'Practice overview':'Your practice'}</h2><p>Checking your saved work…</p><div className="engagement-skeleton" aria-hidden="true"><span/><div><i/><i/><i/></div></div><p className="engagement-note">Including earlier uploads and conversations.</p></section>;
- if(error||sourceError||!data)return <section className="engagement-panel" role="alert"><h2>Saved activity</h2><p>{error||sourceError||'Activity is unavailable.'}</p><button className="re-button re-secondary" onClick={()=>{if(onRefresh)void onRefresh();else setRetry(n=>n+1);}}>Try again</button></section>;
+ if(error||sourceError||!data)return <StatusRow kind="error" onRetry={()=>{if(onRefresh)void onRefresh();else setRetry(n=>n+1);}}>{error||sourceError||'Activity is unavailable.'}</StatusRow>;
  const events=engagementEvents(data,today),range=periodRange(period,anchor),total=engagementTotals(events,range.from,range.to);
  const buckets:{from:string;to:string}[]=[];const step=period==='year'||period==='semester'?7:1;for(let day=range.from;day<=range.to&&day<=today;day=shiftDay(day,step))buckets.push({from:day,to:[shiftDay(day,step-1),range.to,today].sort()[0]});
  const bars=buckets.map(b=>({...b,...engagementTotals(events,b.from,b.to)})),max=Math.max(1,...bars.map(b=>b.actions));

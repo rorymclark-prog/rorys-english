@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {isStudentPreview} from "@/lib/student-preview";
 import { fetchAi, remoteEnabled } from "@/lib/remote";
 import Link from "next/link";
-import {BookIcon,ChevronRightIcon,MessageIcon,PencilIcon,TargetIcon} from "@/components/Icons";
 
 const WRITING_MAX = 4000; // POST body now — full short essays fit
 const TUTOR_MAX = 1000;
@@ -148,7 +147,6 @@ export default function AiCoachView({ code }: { code: string }) {
           Keep it about English — please don&apos;t share personal or private information here.
         </p>
       </header>
-      <nav className="ux-route-grid" aria-label="Related learning pages"><Link className="ux-route-card" href={`/s/${code}/lessons/`}><BookIcon/><span><strong>Lessons</strong><small>See your current unit</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${code}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Use Rory’s reviews</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${code}/homework/`}><PencilIcon/><span><strong>Homework</strong><small>Return to your task</small></span><ChevronRightIcon/></Link></nav>
 
       {/* Mode toggle */}
       <div className="coach-mode-grid">
