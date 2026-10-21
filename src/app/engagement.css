@@ -72,3 +72,15 @@
 
 .engagement-loading h2{font-size:1.35rem;font-weight:750;letter-spacing:-.03em}.engagement-loading>p{margin-top:8px;font-size:.85rem;color:var(--re-muted,#5b6668)}
 .engagement-skeleton{display:flex;align-items:center;gap:28px;margin:24px 0}.engagement-skeleton>span{width:130px;height:130px;border:24px solid var(--re-surface2,#edf0ee);border-radius:50%;flex:none}.engagement-skeleton>div{width:min(100%,350px)}.engagement-skeleton i{display:block;height:13px;margin:15px 0;border-radius:8px;background:var(--re-surface2,#edf0ee)}.engagement-skeleton i:last-child{width:65%}
+
+.ring-next-plan{margin:24px 0;padding:22px 24px;border-radius:18px;background:var(--re-surface2,#f1f3f2);border:1px solid var(--re-line,#e0e5e2)}
+.ring-next-plan .ring-context-label{font-size:.65rem;letter-spacing:.12em;font-weight:800;color:var(--re-accent,#176e66)}
+.ring-next-plan h4{font-size:1.2rem;font-weight:750;letter-spacing:-.025em;line-height:1.4;margin:7px 0}
+.ring-next-plan p:not(.ring-context-label){font-size:.83rem;line-height:1.65;color:var(--re-muted,#5b6668);max-width:70ch}
+.ring-next-plan .re-button{display:inline-flex;align-items:center;min-height:46px;margin-top:14px;font-size:.84rem}
+.ring-next-plan .ring-next-action{font-weight:700;color:var(--re-ink,#203134);margin-top:8px}
+.ring-next-plan .ring-existing-work{font-size:.76rem;margin-top:13px}
+.ring-next-plan.is-optional{background:var(--re-surface,#fff);border-style:dashed}
+.course-ring-units .course-unit-checks{margin-top:10px}
+.course-ring-units .course-unit-checks span{font-size:.75rem;line-height:1.5;margin:4px 0;color:var(--re-muted,#5b6668)}
+@media(max-width:600px){.ring-next-plan{padding:18px;margin:20px 0}.ring-next-plan h4{font-size:1.05rem}.ring-next-plan .re-button{width:100%;text-align:center;justify-content:center}}

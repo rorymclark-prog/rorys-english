@@ -1,5 +1,11 @@
 # Saved practice and engagement
 
+## Clear next steps — 21 October 2026
+
+Each ring view now has a single next-step panel derived from the same saved progress. A partly filled ring is suggested first; tied empty rings start with writing. Course views open an available unfinished unit, preferring the current shared homework unit, and never suggest unpublished units. If all available units are complete, the view says the learner is up to date while future units remain coming later. The course outline and capped totals are unchanged.
+
+Earlier weeks, earlier lesson practice, units outside the current shared homework and earlier-course archives visibly say Optional catch-up, with no new deadline. Holiday weeks show a pause and no next action. Future units offer no completion action. Completed goal headings, course-unit components and saved-work receipts show ticks; completed goal cards no longer prompt another submission. Standalone original writing remains completed separately. Existing equivalent schoolwork can still be linked without repeating or re-uploading it. Recommendations are read-only presentation: they create no assignments, deadlines, marks, messages or changes to credit, original work or monitoring ledgers.
+
 20 October 2026: Student Today and teacher Learning dashboards include day, week, month, Vienna semester and school-year activity history, plus three practice rings at week, unit, shared lesson and course level.
 
 ## Goals and scope

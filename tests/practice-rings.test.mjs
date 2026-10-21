@@ -16,6 +16,27 @@ const word=(word='relative')=>({word,meaning:'someone in your family',sentence:'
 const progress=(s,kind='week',id='2026-10-05')=>r.ringProgress(s,code,{kind,id},today);
 const addLink=(s,item,scope,id='link-one',created='2026-10-20T09:00:00Z')=>s.replies.push(reply(id,r.ringLinkAnswer({item,week:'',unit:'',lesson:'',...scope}),created));
 const attribute=(s,entries,retainedWriting=[])=>s.records.push({...structuredClone(plan),id:'audited-credits',created:'2026-10-20T12:00:00Z',body:{practiceAttributions:{version:1,entries,retainedWriting}}});
+const nextSteps=load('src/lib/ring-next-steps.ts',{'./practice-rings':r});
+
+test('next step honours saved credit, finishes a partly filled ring and never rounds a missing fraction to done',()=>{
+ const steps=nextSteps.ringSteps({minutes:20.4966667,target:30,writing:0,writingTarget:1,vocabulary:0,vocabularyTarget:2});
+ assert.equal(nextSteps.nextRingStep(steps).action,'Save 9.6 more minutes of speaking');
+ const completed=nextSteps.ringSteps({minutes:0,target:30,writing:1,writingTarget:1,vocabulary:2,vocabularyTarget:2});
+ assert.equal(nextSteps.nextRingStep(completed).id,'speaking');assert.equal(completed.filter(s=>s.done).length,2);
+ assert.equal(nextSteps.remainingMinutes(.004),.1);assert.equal(nextSteps.remainingMinutes(-1),0);
+});
+test('earlier weeks, units, lessons and courses are optional; course next steps exclude future plans',()=>{
+ const s=source(),scope={kind:'course',id:'2026–27'};s.records.push(chat());
+ const plan=nextSteps.ringNextPlan(r.ringProgress(s,code,scope,today),scope,today,'2026–27');
+ assert.equal(plan.nextUnit.unit.id,unit);assert.equal(plan.nextUnit.unit.available,true);assert.equal(plan.optional,false);
+ for(const scope of [{kind:'week',id:'2026-10-05'},{kind:'unit',id:'unit10'},{kind:'lesson',id:'older-lesson'},{kind:'course',id:'2025–26'}]){
+  assert.equal(nextSteps.ringNextPlan(r.ringProgress(s,code,scope,today),scope,today,'2026–27').optional,true);
+ }
+ const current={kind:'unit',id:unit};assert.equal(nextSteps.ringNextPlan(r.ringProgress(s,code,current,today),current,today,'2026–27').optional,false);
+ // Complete the available units: no task from an unpublished unit is proposed.
+ for(const id of [unit,unit2]){s.records.push({...chat(id,'2026-10-06',30),title:id});s.replies.push(reply('writing-'+id,r.ringPracticeAnswer('writing','2026-10-05',id,'','My own complete writing attempt.')));for(const w of ['first','second'])s.replies.push(reply(id+w,r.ringPracticeAnswer('vocabulary','2026-10-05',id,'',word(w))));}
+ const ready=nextSteps.ringNextPlan(r.ringProgress(s,code,scope,today),scope,today,'2026–27');assert.equal(ready.next,undefined);assert.equal(ready.nextUnit,undefined);
+});
 
 test('catalog retains both learners’ own available archives and the entire planned course',()=>{
  const ferdi=catalog.practiceCatalog(code),valentin=catalog.practiceCatalog('valentin-q9m2');assert.equal(ferdi.filter(u=>u.year==='2026–27').length,14);assert.equal(valentin.filter(u=>u.year==='2026–27').length,8);assert.ok(ferdi.find(u=>u.id==='unit10').available);assert.ok(valentin.find(u=>u.id==='unit05').available);assert.ok(!ferdi.some(u=>u.id==='unit05'));assert.ok(!ferdi.find(u=>u.id.includes('unit03')).available);assert.equal(catalog.practiceCatalog('unknown').length,0);
