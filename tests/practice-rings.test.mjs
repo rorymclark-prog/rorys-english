@@ -116,3 +116,19 @@ test('stale, student-authored, unknown and unavailable attribution cannot move c
 test('retained originals with uncertain performance dates close unit writing without inventing a weekly submission',()=>{
  const s=source();attribute(s,[],[{id:'retained:earlier-original',unit:'unit10',availableBy:'2026-05-10',title:'Earlier original writing',sourceRef:'retained-original:verified',note:'Available by this date; actual writing date and help unknown.'}]);const p=progress(s,'unit','unit10');assert.equal(p.writing,1);assert.equal(p.selected[0].availableBy,true);assert.equal(progress(s,'week','2026-05-04').writing,0);assert.equal(progress(s,'course','2025–26').writing,1);assert.equal(progress(s,'course','2026–27').writing,0);addLink(s,'retained:earlier-original',{week:'2026-05-04'});assert.equal(progress(s,'week','2026-05-04').writing,0);
 });
+
+test('verified older units receive their own retained writing credit while current courses stay unchanged',()=>{
+ const s=source();attribute(s,[],[{id:'retained:animal-description',unit:'more4-unit07-2025',availableBy:'2026-02-26',performedOn:'2026-02-26',title:'Animal description',sourceRef:'verified:original',note:'Original workbook task verified.'}]);
+ assert.equal(progress(s,'unit','more4-unit07-2025').writing,1);assert.equal(progress(s,'course','2025–26').writing,1);assert.equal(progress(s,'course','2026–27').writing,0);assert.equal(progress(s,'week','2026-02-23').writing,1);
+ const v=source();attribute(v,[],[{id:'retained:flat-sharing',unit:'way2go7-unit03-2025',availableBy:'2026-05-10',title:'Flat-sharing email',sourceRef:'verified:original',note:'Equivalent housing writing practice.'}]);
+ assert.equal(r.ringProgress(v,'valentin-q9m2',{kind:'unit',id:'way2go7-unit03-2025'},today).writing,1);assert.equal(r.ringProgress(v,code,{kind:'unit',id:'way2go7-unit03-2025'},today).writing,0);
+ assert.equal(catalog.practiceCatalog(code).find(u=>u.id==='more4-unit07-2025').year,'2025–26');assert.equal(catalog.practiceCatalog('valentin-q9m2').find(u=>u.id==='way2go7-unit03-2025').year,'2025–26');
+});
+test('standalone originals count as completed writing without borrowing a textbook unit or a performance date',()=>{
+ const s=source();attribute(s,[],[{id:'retained:diagnostic',unit:'',independent:true,availableBy:'2026-02-19',performedOn:'2026-02-19',title:'Earlier diagnostic',sourceRef:'verified:original',note:'Separate task, not a textbook exercise.'},{id:'retained:holiday-recount',unit:'',independent:true,availableBy:'2026-04-10',title:'Holiday recount',sourceRef:'verified:recount',note:'Writing date unknown.'}]);
+ assert.equal(progress(s).items.filter(i=>i.counted&&i.independent&&!i.unit).length,2);assert.equal(progress(s,'course','2025–26').writing,0);assert.equal(progress(s,'course','2026–27').writing,0);assert.equal(progress(s,'week','2026-02-16').writing,1);assert.equal(progress(s,'week','2026-04-06').writing,0);
+ addLink(s,'retained:diagnostic',{unit:'unit10'});assert.equal(progress(s,'unit','unit10').writing,1);assert.equal(progress(s).items.filter(i=>i.independent).length,1);
+});
+test('invalid or impossible retained performance dates cannot invent weekly credit',()=>{
+ for(const performedOn of ['2026-02-30','2026-13-01','2026-05-11','not-a-date']){const s=source();attribute(s,[],[{id:'retained:original',unit:'unit10',availableBy:'2026-05-10',performedOn,title:'Original writing',sourceRef:'verified:original',note:'Keep uncertainty.'}]);const p=progress(s,'unit','unit10');assert.equal(p.writing,1);assert.equal(p.selected[0].availableBy,true);assert.equal(p.selected[0].week,'');}
+});

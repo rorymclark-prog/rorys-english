@@ -51,3 +51,12 @@ The three rings are manageable practice prompts, not a validated model of Englis
 - Council of Europe (2020), [CEFR Companion Volume](https://www.coe.int/en/web/common-european-framework-reference-languages/cefr-companion-volume-and-its-language-versions): communicative reception, production, interaction and mediation describe a broader proficiency profile than participation counters.
 
 Recommended assessment pattern: purposeful assignments incorporating existing school work; brief formative recall/feedback checks inside the current workload; occasional independent unit/semester checks and later comparable retention. These are recommendations, not new assignments, test dates or approved grades. No new quiz engine was added by this repair.
+
+
+## Older writing attribution — 21 October 2026
+
+The retained kangaroo description is now assigned to MORE! 4 Unit 7, Travelling Down Under, using Rory’s original 26 February homework reference W/B59/13B1 and the verified Australian-animal/unit context. The flat-sharing email counts as equivalent writing practice under way2go! 7 Unit 3, Coming home, whose living-arrangement, shared-cost and housework objectives match its reasons, difficulties and rules. Its newspaper-based prompt is not claimed to be an exact textbook exercise. These two earlier units are available as optional archives, with no new assigned tasks or deadlines. Current course unit counts are unchanged.
+
+Ferdi’s Easter recount and Valentin’s standalone February diagnostic receive explicit Other writing completed receipts rather than being forced into an unrelated book unit. Original identities deduplicate them. This is completed writing practice, not a new formal mark or a claim of unit mastery. Existing originals and all previous record versions are retained. New versions only change the four retained-writing credit receipts on the existing shared practice records.
+
+An optional verified performedOn date gives weekly credit only for a real, exact day no later than the available-by receipt. The kangaroo’s 26 February and diagnostic’s 19 February dates are explicitly evidenced. Unknown performance dates remain available-by only and cannot become weekly submissions. No sensitive diagnostic text is published; its private assessment is unchanged. A subsequent valid student unit link can move the same original into a confirmed unit and removes its independent-only label. Tests cover archive/current-course separation, learner separation, standalone credit, uncertain dates and invalid performance dates.

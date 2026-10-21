@@ -24,6 +24,12 @@
         "id": "unit10",
         "title": "A Fair World",
         "active": false
+      },
+      {
+        "id": "more4-unit07-2025",
+        "title": "Travelling Down Under · Unit 7",
+        "active": false,
+        "schoolYear": "2025–26"
       }
     ]
   },
@@ -51,6 +57,12 @@
       {
         "id": "unit05",
         "title": "Trends & Choices",
+        "active": false,
+        "schoolYear": "2025–26"
+      },
+      {
+        "id": "way2go7-unit03-2025",
+        "title": "Coming home · Unit 3",
         "active": false,
         "schoolYear": "2025–26"
       }

@@ -7,12 +7,13 @@ import {handwritingParts} from './handwritten-answer';
 import {readVocabularyAnswer,validVocabulary,wordKey,type VocabularyAttempt} from './weekly-practice';
 import {practiceCatalog,type RingUnit} from './practice-catalog';
 export type RingScope={kind:'week'|'unit'|'lesson'|'course';id:string};
-export type RingItem={id:string;kind:'speaking'|'writing'|'vocabulary';title:string;day:string;week:string;unit:string;lesson:string;minutes:number;word?:VocabularyAttempt;counted:boolean;creditId?:string;note?:string;availableBy?:boolean};
-export type PracticeAttributions={version:1;entries:{item:string;unit:string;sourceDay:string;note:string;vocabulary?:{word:string;sentence:string;meaningEvidence:string}[]}[];retainedWriting?:{id:string;unit:string;availableBy:string;title:string;sourceRef:string;note:string}[]};
+export type RingItem={id:string;kind:'speaking'|'writing'|'vocabulary';title:string;day:string;week:string;unit:string;lesson:string;minutes:number;word?:VocabularyAttempt;counted:boolean;creditId?:string;note?:string;availableBy?:boolean;independent?:boolean};
+export type PracticeAttributions={version:1;entries:{item:string;unit:string;sourceDay:string;note:string;vocabulary?:{word:string;sentence:string;meaningEvidence:string}[]}[];retainedWriting?:{id:string;unit:string;availableBy:string;performedOn?:string;independent?:boolean;title:string;sourceRef:string;note:string}[]};
 export type RingLink={item:string;week:string;unit:string;lesson:string};
 const prefix='Practice rings · ';
 const clean=(s:string)=>s.replace(/[\r\n]+/g,' ').trim();
 const hasWriting=(s:string)=>(s.match(/[\p{L}\p{N}]+/gu)||[]).length>=3;
+const exactDay=(s:unknown):s is string=>typeof s==='string'&&/^20\d\d-\d\d-\d\d$/.test(s)&&!Number.isNaN(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;
 export function ringWeek(day:string){return periodRange('week',day).from;}
 export function validRingWeek(value:string,today:string){return /^20\d\d-\d\d-\d\d$/.test(value)&&!Number.isNaN(Date.parse(value+'T12:00:00Z'))&&new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value&&ringWeek(value)===value&&value<=today;}
 export function ringLinkAnswer(link:RingLink){return `${prefix}Link saved work\nWork: ${link.item}\nWeek: ${link.week||'-'}\nUnit: ${link.unit||'-'}\nLesson: ${link.lesson||'-'}`;}
@@ -93,14 +94,17 @@ export function ringEvidence(source:EngagementSource,code:string,today:string){
    }else if(doc&&doc.status==='ready'&&eventDay(doc.created)===credit.sourceDay&&!/^\[Document role: (task|review)\]$/m.test(doc.context)&&doc.analysis&&!hasWriting(originals.get(doc.id)||''))completedPractice.push({id:credit.item,unit:credit.unit,title:doc.title,day:credit.sourceDay,note:credit.note});
   }
   for(const credit of (Array.isArray(credits.retainedWriting)?credits.retainedWriting:[]).slice(0,30)){if(!credit||typeof credit.id!=='string'||!/^retained:[A-Za-z0-9_-]{1,100}$/.test(credit.id)||credit.unit!==''&&!units.some(u=>u.id===credit.unit&&u.available)||!eventDay(credit.availableBy)||credit.availableBy>today||![credit.title,credit.sourceRef,credit.note].every(v=>typeof v==='string'&&v.trim()))continue;
-   add(credit.id,'writing',credit.title,credit.availableBy,credit.unit);const item=items.get(credit.id)!;item.week='';item.availableBy=true;item.note=credit.note;
+   // A verified performance day can receive weekly credit; an available-by
+   // receipt alone must never invent when the learner did the work.
+   const performed=exactDay(credit.performedOn)&&credit.performedOn<=credit.availableBy?credit.performedOn:'';
+   add(credit.id,'writing',credit.title,performed||credit.availableBy,credit.unit);const item=items.get(credit.id)!;item.week=performed?ringWeek(performed):'';item.availableBy=!performed;item.independent=credit.independent===true&&!credit.unit;item.note=credit.note;
   }
  }
  // Attribution is append-only. The latest valid link moves one original's ring
  // credit, while the source's real submission date and file stay untouched.
  for(const r of [...source.replies].sort((a,b)=>a.created.localeCompare(b.created)||a.id.localeCompare(b.id))){if(r.author!=='Student'||!byRecord.has(r.reviewId)||!eventDay(r.created)||eventDay(r.created)!>today)continue;const link=readRingLink(r.answer),item=link&&items.get(link.item);if(!link||!item)continue;
   if(link.week&&!validRingWeek(link.week,today)||link.unit&&!units.some(u=>u.id===link.unit&&u.available)||link.lesson&&!lessonIds.has(link.lesson))continue;
-  if(link.week&&!item.availableBy)item.week=link.week;if(link.unit)item.unit=link.unit;if(link.lesson)item.lesson=link.lesson;item.counted=true;item.creditId=r.id;
+  if(link.week&&!item.availableBy)item.week=link.week;if(link.unit){item.unit=link.unit;item.independent=false;}if(link.lesson)item.lesson=link.lesson;item.counted=true;item.creditId=r.id;
  }
  return {items:[...items.values()],lessons,units,completedPractice,entry:lessonPracticeRecord(records)};
 }
