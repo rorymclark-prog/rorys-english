@@ -93,7 +93,7 @@ export function nativeCoachEvent(request: NativeCoachRequest) {
       metadata: { coach_request_id: request.requestId, source_turn_id: turn.id },
       instructions: `${coachInstructions(turn.context)}
 Assess only the one referenced audio item. The teacher selected its speaker as ${speaker}; later speech belongs to other turns and is not evidence for this answer. ${turn.role === "learner" ? "" : "This is not confirmed learner speech. Return no learner correction or assessment; give only a short context note and teacher follow-up."}
-The accompanying machine caption is an independent fallible transcript. Quote it faithfully when audio agrees. If the audio and caption disagree, disclose uncertainty and omit corrections, rather than inventing an error. Return a plain JSON object without parentheses or Markdown.`,
+The accompanying machine caption is an independent fallible transcript. Quote it faithfully when audio agrees. If the audio and caption disagree, disclose uncertainty and omit corrections, rather than inventing an error. Return a plain JSON object without parentheses or Markdown. Include the opening and closing braces. Fill all seven string values in this exact shape: {"heard":"","strength":"","focus":"","correction":"","prompt":"","next":"","uncertainty":""}`,
       input: [
         { type: "item_reference", id: turn.id },
         { type: "message", role: "user", content: [

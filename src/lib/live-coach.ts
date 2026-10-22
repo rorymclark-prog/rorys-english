@@ -34,6 +34,23 @@ export function parseCoachFeedback(text: string): CoachFeedback {
   // Native text output can wrap its one JSON object in parentheses. Unwrap
   // once, then let JSON.parse reject extra objects, prose or executable text.
   if (source.startsWith("(") && source.endsWith(")")) source = source.slice(1, -1).trim();
+  if (source.startsWith('"')) {
+    // Native output can omit only the outer braces. Accept a complete body of
+    // the seven known string fields, with no duplicate keys or other content.
+    const pair = /\s*("(?:\\["\\/bfnrt]|\\u[0-9a-fA-F]{4}|[^"\\\u0000-\u001f])*")\s*:\s*("(?:\\["\\/bfnrt]|\\u[0-9a-fA-F]{4}|[^"\\\u0000-\u001f])*")\s*(?:,|$)/y;
+    const keys = new Set<string>();
+    let cursor = 0;
+    while (cursor < source.length) {
+      pair.lastIndex = cursor;
+      const match = pair.exec(source);
+      if (!match) throw new Error("Feedback was incomplete. Try the answer again.");
+      const key: string = JSON.parse(match[1]);
+      if (!Object.hasOwn(emptyFeedback, key) || keys.has(key)) throw new Error("Feedback was incomplete. Try the answer again.");
+      keys.add(key); cursor = pair.lastIndex;
+    }
+    if (keys.size !== Object.keys(emptyFeedback).length) throw new Error("Feedback was incomplete. Try the answer again.");
+    source = `{${source}}`;
+  }
   const value = JSON.parse(source);
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Feedback was incomplete. Try the answer again.");
   const result = { ...emptyFeedback };

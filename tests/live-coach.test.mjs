@@ -50,6 +50,15 @@ test('feedback parsing rejects prose extraction, multiple objects, nested wrappe
   const json=JSON.stringify(shared.coachRehearsal[0]);
   for(const text of ['[]','null','{"heard":"hello"}','not json','Here is the result: '+json,json+'\n'+json,'(('+json+'))','```json\n'+json,'```json\n'+json+'\n``` trailing','('+json+'); alert(1)',JSON.stringify({...shared.coachRehearsal[0],correction:null})])assert.throws(()=>shared.parseCoachFeedback(text));
 });
+test('native object-body output accepts exactly seven known string fields without inventing grammar',()=>{
+  const body='"heard":"I\'m Ella. I arrived at the party.","strength":"Good use of arrived.","focus":"No correction needed; add a reason.","correction":"","prompt":"Why did Zoe look annoyed?","next":"Add one sentence with because.","uncertainty":""';
+  const parsed=shared.parseCoachFeedback(body);
+  assert.equal(parsed.heard,"I'm Ella. I arrived at the party.");assert.equal(parsed.correction,'');assert.equal(parsed.prompt,'Why did Zoe look annoyed?');
+  const escaped={...shared.coachRehearsal[0],heard:'I said "hello", then I go.\nA new line.'};
+  assert.equal(shared.parseCoachFeedback(JSON.stringify(escaped).slice(1,-1)).heard,escaped.heard);
+  assert.equal(shared.parseCoachFeedback('('+body+')').heard,parsed.heard);
+  for(const invalid of [body+',"extra":"prose"',body+',"heard":"duplicate"',body.replace('"strength":','"heard":'),body.replace('"strength":"Good use of arrived."','"strength":{}'),body.replace(',"uncertainty":""',''),body+',',body+' trailing prose','Here is the result: '+body,body+'\n'+body])assert.throws(()=>shared.parseCoachFeedback(invalid));
+});
 test('native feedback cannot invent an arrival error by changing an ASR final quote',()=>{
   const falseCorrection={heard:'When I arrive home, Zoe looked annoyed.',strength:'A clear past-time story.',focus:'Use arrived rather than arrive for the past.',correction:'When I arrived home, Zoe looked annoyed.',prompt:'What was the reason Zoe looked annoyed?',next:'Practise the past form arrived.',uncertainty:''};
   const caption='When I arrived home, Zoe looked annoyed.';
