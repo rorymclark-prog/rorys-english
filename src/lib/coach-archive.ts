@@ -1,6 +1,6 @@
 import type { CoachContext, CoachEntry } from "./live-coach";
 
-export type CoachTurn = { id: string; at: string; role: "learner" | "teacher" | "ai" | "unknown"; text: string; rehearsal?: boolean };
+export type CoachTurn = { id: string; at: string; role: "learner" | "teacher" | "ai" | "unknown"; text: string; rehearsal?: boolean; sourceTurnId?: string };
 export type LessonSnapshot = { context: CoachContext; turns: CoachTurn[]; entries: CoachEntry[] };
 export type ArchivedLesson = LessonSnapshot & {
   id: string; learnerCode: string; startedAt: string; updatedAt: string;

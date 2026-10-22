@@ -6,6 +6,7 @@ import type { StudyTool } from "@/lib/types";
 import { fetchProgress, remoteEnabled, type Progress, type Section } from "@/lib/remote";
 import { GearIcon, ExternalIcon, ChevronLeftIcon } from "@/components/Icons";
 import { buildProgressSummary } from "@/lib/storage";
+import { isStudentPreview } from "@/lib/student-preview";
 import {SharedSkillProgress} from '@/components/SkillProgressPanel';
 import LearningView from "./LearningView";
 import DocumentsView from "./DocumentsView";
@@ -37,8 +38,9 @@ export default function ProgressView({
   const [data, setData] = useState<Progress | null>(null);
   const [retry,setRetry]=useState(0);
   const [shareNote,setShareNote]=useState<{text:string;ok:boolean}|null>(null);
+  const preview=isStudentPreview(studentCode);
   const shareProgress=async()=>{
-    if(!studentId)return;
+    if(preview||!studentId)return;
     const text=buildProgressSummary(studentId,displayName);
     try{
       if(navigator.share){await navigator.share({title:"My progress",text});return;}
@@ -179,7 +181,7 @@ export default function ProgressView({
             </ul>
           </section>
         )}
-        {mode==="student"&&studentId&&<div className="mt-8"><button type="button" onClick={()=>void shareProgress()} className="re-button w-full">Send my progress to Rory</button>{shareNote&&<p role="status" className={`mt-2 text-center text-sm ${shareNote.ok?"text-good dark:text-good-bright":"text-bad dark:text-bad-bright"}`}>{shareNote.text}</p>}</div>}
+        {mode==="student"&&studentId&&<div className="mt-8"><button type="button" disabled={preview} onClick={()=>void shareProgress()} className="re-button w-full">Send my progress to Rory</button>{shareNote&&<p role="status" className={`mt-2 text-center text-sm ${shareNote.ok?"text-good dark:text-good-bright":"text-bad dark:text-bad-bright"}`}>{shareNote.text}</p>}</div>}
       </main>
     </>
   );

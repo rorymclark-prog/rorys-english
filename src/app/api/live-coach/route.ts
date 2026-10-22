@@ -9,7 +9,21 @@ export const maxDuration = 120;
 const headers = { "Cache-Control": "no-store, private" };
 const attempts = new Map<string, { at: number; count: number }>();
 const available = () => process.env.LIVE_COACH_ENABLED === "true" && !!process.env.OPENAI_API_KEY;
+let checkedAccess: { until: number; signature: string } | undefined;
 function reply(data: unknown, status = 200) { return Response.json(data, { status, headers }); }
+
+async function verifyModelAccess() {
+  const models = [process.env.LIVE_COACH_MODEL || "gpt-realtime-2.1", process.env.LIVE_COACH_TEXT_MODEL || "gpt-6-sol"];
+  const signature = createHash("sha256").update(`${process.env.OPENAI_API_KEY}:${models.join(":")}`).digest("hex");
+  if (checkedAccess?.signature === signature && checkedAccess.until > Date.now()) return;
+  const checks = await Promise.all(models.map(model => fetch(`https://api.openai.com/v1/models/${encodeURIComponent(model)}`, {
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` }, signal: AbortSignal.timeout(15000), cache: "no-store",
+  })));
+  if (checks.some(response => response.status === 401)) throw new Error("The AI credential could not be verified. Check the private hosting configuration before starting a lesson.");
+  if (checks.some(response => response.status === 403 || response.status === 404)) throw new Error("The AI project cannot access one of the configured coaching models. Check the model configuration.");
+  if (checks.some(response => !response.ok)) throw new Error("The AI connection check is unavailable. Try again later; no audio was sent.");
+  checkedAccess = { until: Date.now() + 60000, signature };
+}
 
 export async function POST(request: Request) {
   if (request.headers.get("origin") !== new URL(request.url).origin) return reply({ error: "Origin not allowed" }, 403);
@@ -30,7 +44,11 @@ export async function POST(request: Request) {
       return result.ok === true && Array.isArray(result.students);
     });
   } catch { return reply({ error: "Sign in to the teacher dashboard again before using live coaching." }, 403); }
-  if (body.action === "status") return reply({ available: available(), model: process.env.LIVE_COACH_MODEL || "gpt-realtime-2.1" });
+  if (body.action === "status") {
+    if (!available()) return reply({ available: false });
+    try { await verifyModelAccess(); return reply({ available: true, model: process.env.LIVE_COACH_MODEL || "gpt-realtime-2.1" }); }
+    catch (error) { return reply({ error: error instanceof Error ? error.message : "The AI connection could not be checked." }, 503); }
+  }
   if (body.action === "import") {
     try {
       if (typeof body.data !== "string" || body.data.length > 4_000_000 || !/^[A-Za-z0-9+/]*={0,2}$/.test(body.data)) throw new Error("Choose a PowerPoint smaller than 3 MB.");

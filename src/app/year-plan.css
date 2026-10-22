@@ -1,7 +1,7 @@
 .year-plan-page .today-rows{margin-top:0;margin-bottom:20px}
 .year-plan-page .today-row.is-static{cursor:default}
 .year-plan-page .today-row.is-static:hover{background:var(--re-surface)}
-.plan-row{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--re-line);font-size:14px;line-height:1.5}
-.plan-row strong{display:block;font-size:16px;font-weight:700;color:var(--re-ink)}
-.plan-row small{display:block;font-size:14px;color:var(--re-muted);margin-top:2px}
+.plan-row{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--re-line);font-size:.875rem;line-height:1.5}
+.plan-row strong{display:block;font-size:1rem;font-weight:700;color:var(--re-ink)}
+.plan-row small{display:block;font-size:.875rem;color:var(--re-muted);margin-top:2px}
 .year-plan-page .re-fold a{font-weight:700;text-decoration:underline;text-underline-offset:3px}

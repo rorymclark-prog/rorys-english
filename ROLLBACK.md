@@ -1,3 +1,20 @@
+# Current release recovery — 22 October 2026
+
+The student simplification has a scoped `simplicity` patch, documented in
+`ops/ui-rollbacks/README.md`. It retains the separate teacher coach and the
+practice-ring improvements already published at `a669938`. Apply it only in
+a clean checkout, then run tests, type checking and a production build before
+publishing. It never changes learner records or the Apps Script backend.
+
+For a complete deployment rollback, select the preceding production deployment
+in the existing `rorys-english` Vercel project. Disabling the separate
+`LIVE_COACH_ENABLED` flag and redeploying also turns off paid teacher coaching;
+local recordings and prepared rehearsals remain available. Do not replace or
+rotate the existing credential as part of a visual rollback.
+
+The following is the historical 24 September audit record, not a statement of
+the current deployment or backend state.
+
 # Rollback — 2026-09-24 audit pass
 
 Three levels, smallest first. Pick the smallest one that solves the problem.

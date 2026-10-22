@@ -3,16 +3,28 @@
 .work-eyebrow{font-size:.64rem;font-weight:850;letter-spacing:.15em;color:var(--re-accent)}
 .work-section-heading h2{font-size:1.45rem;font-weight:800;letter-spacing:-.035em;line-height:1.25;margin-top:4px}
 .work-count{min-width:33px;height:33px;display:grid;place-items:center;border-radius:11px;background:var(--re-soft);color:var(--re-accent);font-size:.79rem;font-weight:800}
+/* Homework and Test prep still use these shared cards. */
+.work-empty{display:grid;justify-items:start;gap:8px;border-radius:16px;padding:18px;background:var(--re-surface);border:1px dashed var(--re-line);font-size:.875rem;line-height:1.6}
+.work-empty svg{width:28px;color:var(--re-accent)}
+.work-empty strong{font-size:1rem}
+.work-empty p{color:var(--re-muted)}
+.ux-route-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:5px 0 24px}
+.ux-route-card{display:flex;align-items:center;gap:12px;min-width:0;min-height:75px;padding:15px;border:1px solid var(--re-line);border-radius:16px;background:var(--re-surface);color:var(--re-ink)}
+.ux-route-card:hover,.ux-route-card:focus-visible{border-color:var(--re-accent);background:var(--re-soft)}
+.ux-route-card>svg:first-child{width:24px;height:24px;flex-shrink:0;color:var(--re-accent)}
+.ux-route-card>svg:last-child{width:17px;height:17px;margin-left:auto;flex-shrink:0;color:var(--re-muted)}
+.ux-route-card strong{display:block;font-size:.875rem;line-height:1.3}
+.ux-route-card small{display:block;font-size:.75rem;color:var(--re-muted);line-height:1.4;margin-top:3px}
 /* The one loading / error / empty presentation (StatusRow). */
-.status-row{display:flex;align-items:center;gap:10px;min-height:48px;padding:10px 14px;border-radius:10px;background:var(--re-surface2);color:var(--re-muted);font-size:14px;line-height:1.45}
+.status-row{display:flex;align-items:center;gap:10px;min-height:48px;padding:10px 14px;border-radius:10px;background:var(--re-surface2);color:var(--re-muted);font-size:.875rem;line-height:1.45}
 .status-row-icon{display:grid;place-items:center;flex-shrink:0;width:20px;height:20px}
 .status-row-icon svg{width:20px;height:20px}
 .status-row.is-loading .status-row-icon svg{animation:status-spin 1s linear infinite}
 .status-row.is-error{color:var(--re-ink)}
 .status-row.is-error .status-row-icon{color:var(--re-warmtext)}
 .status-row-text{flex:1;min-width:0}
-.status-row-retry{flex-shrink:0;min-height:36px;padding:0 12px;border:1px solid var(--re-line);border-radius:999px;background:var(--re-surface);color:var(--re-accent);font-size:14px;font-weight:700}
-.re-fold{background:var(--re-surface);border:1px solid var(--re-line);border-radius:16px;padding:0 16px;margin:0 0 12px;box-shadow:var(--re-shadow)}.re-fold>summary{min-height:56px;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:var(--re-ink);cursor:pointer;list-style:none}.re-fold>summary::-webkit-details-marker{display:none}.re-fold>summary span{font-weight:600;color:var(--re-muted);font-size:14px}.re-fold>summary::after{content:"+";margin-left:auto;color:var(--re-muted);font-size:20px;font-weight:500}.re-fold[open]>summary::after{content:"–"}.re-fold>p{margin:12px 0;font-size:14px;line-height:1.6;color:var(--re-muted)}.re-fold>:last-child{padding-bottom:16px}.re-fold>.lesson-unit-list{padding-bottom:16px}
+.status-row-retry{flex-shrink:0;min-height:36px;padding:0 12px;border:1px solid var(--re-line);border-radius:999px;background:var(--re-surface);color:var(--re-accent);font-size:.875rem;font-weight:700}
+.re-fold{background:var(--re-surface);border:1px solid var(--re-line);border-radius:16px;padding:0 16px;margin:0 0 12px;box-shadow:var(--re-shadow)}.re-fold>summary{min-height:56px;display:flex;align-items:center;gap:8px;font-size:1rem;font-weight:800;color:var(--re-ink);cursor:pointer;list-style:none}.re-fold>summary::-webkit-details-marker{display:none}.re-fold>summary span{font-weight:600;color:var(--re-muted);font-size:.875rem}.re-fold>summary::after{content:"+";margin-left:auto;color:var(--re-muted);font-size:1.25rem;font-weight:500}.re-fold[open]>summary::after{content:"–"}.re-fold>p{margin:12px 0;font-size:.875rem;line-height:1.6;color:var(--re-muted)}.re-fold>:last-child{padding-bottom:16px}.re-fold>.lesson-unit-list{padding-bottom:16px}
 @keyframes status-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.status-row.is-loading .status-row-icon svg{animation:none}}
 .ux-panel{background:var(--re-surface);border:1px solid var(--re-line);border-radius:18px;padding:20px;box-shadow:0 6px 20px #1720330a}
@@ -25,4 +37,7 @@
 .ux-link-row:hover,.ux-link-row:focus-visible{background:var(--re-soft)}
 .ux-link-row>svg:first-child{width:20px;height:20px;flex-shrink:0}
 .ux-link-row>svg:last-child{width:17px;height:17px;margin-left:auto}
-@media(max-width:700px){.work-section-heading h2{font-size:1.25rem}}
+@media(max-width:850px){.ux-route-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.work-section-heading h2{font-size:1.25rem}.ux-route-grid{gap:9px}.ux-route-card{padding:11px;min-height:70px}.ux-route-card>svg:last-child{display:none}}
+@media(max-width:380px){.ux-route-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.ux-route-card{transition:none!important}}

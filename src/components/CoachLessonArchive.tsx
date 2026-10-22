@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { releaseLessonAudio } from "@/lib/lesson-audio";
 import {
   archivedAudio, audioChunkWriter, deleteArchivedLesson, lessonNotes, listArchivedLessons,
   makeArchivedLesson, realLessonEvidence, saveArchivedLesson, saveAudioChunk,
@@ -20,8 +21,10 @@ function filename(lesson: ArchivedLesson) {
   return `lesson-${lesson.learnerCode.replace(/[^a-z0-9-]/gi, "")}-${lesson.startedAt.slice(0, 19).replace(/[T:]/g, "-")}`;
 }
 
-export default function CoachLessonArchive({ learnerCode, snapshot, onBusy, onFocus }: {
+export default function CoachLessonArchive({ learnerCode, snapshot, onBusy, onFocus, acquireAudio, evidenceRevision = 0 }: {
   learnerCode: string; snapshot: LessonSnapshot; onBusy: (busy: boolean) => void; onFocus: (note: string) => void;
+  acquireAudio?: () => Promise<MediaStream>;
+  evidenceRevision?: number;
 }) {
   const [phase, setPhase] = useState<"idle" | "starting" | "recording" | "paused" | "saving">("idle");
   const [allowed, setAllowed] = useState(false);
@@ -76,7 +79,7 @@ export default function CoachLessonArchive({ learnerCode, snapshot, onBusy, onFo
       mounted.current = false; attempt.current++;
       window.removeEventListener("beforeunload", unload);
       if (recorder.current?.state !== "inactive") recorder.current?.stop();
-      microphone.current?.getTracks().forEach(track => track.stop());
+      releaseLessonAudio(microphone.current);
       if (playbackRef.current) URL.revokeObjectURL(playbackRef.current);
     };
   }, []);
@@ -103,31 +106,43 @@ export default function CoachLessonArchive({ learnerCode, snapshot, onBusy, onFo
     if (selectedId && !noteDirty) setTeacherNote(lessons.find(lesson => lesson.id === selectedId)?.teacherNote || "");
   }, [selectedId, lessons, noteDirty]);
 
+  useEffect(() => {
+    const lesson = active.current;
+    if (!lesson) return;
+    const updated = { ...lesson, ...realLessonEvidence(snapshotRef.current), updatedAt: new Date().toISOString() };
+    active.current = updated;
+    void saveArchivedLesson(updated).then(() => {
+      if (mounted.current) setLessons(previous => [updated, ...previous.filter(item => item.id !== updated.id)]);
+    }).catch(() => {
+      if (mounted.current) setError("Corrected lesson notes could not be saved. Keep this page open and use Save lesson notes to retry.");
+    });
+  }, [evidenceRevision]);
+
   function finish() {
     const current = recorder.current;
     if (!current || current.state === "inactive") return;
     recordedMs.current = elapsedMs(); segmentStarted.current = 0;
     phaseRef.current = "saving"; setPhase("saving");
     current.stop();
-    microphone.current?.getTracks().forEach(track => track.stop());
+    releaseLessonAudio(microphone.current);
   }
 
   async function startRecording() {
-    if (!allowed || phaseRef.current !== "idle" || !learnerCode) return;
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+    if (!allowed || phaseRef.current !== "idle" || !learnerCode || recoveryPending || pendingChunks.current.size) return;
+    if ((!acquireAudio && !navigator.mediaDevices?.getUserMedia) || typeof MediaRecorder === "undefined") {
       setError("Audio recording needs a secure browser with microphone and MediaRecorder support."); return;
     }
     const currentAttempt = ++attempt.current;
     phaseRef.current = "starting"; setPhase("starting"); setError(""); setMessage("");
     try {
       const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find(type => MediaRecorder.isTypeSupported(type)) || "";
-      const mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
-      if (!mounted.current || currentAttempt !== attempt.current) { mic.getTracks().forEach(track => track.stop()); return; }
+      const mic = acquireAudio ? await acquireAudio() : await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
+      if (!mounted.current || currentAttempt !== attempt.current) { releaseLessonAudio(mic); return; }
       microphone.current = mic;
       const media = mimeType ? new MediaRecorder(mic, { mimeType, audioBitsPerSecond: 64000 }) : new MediaRecorder(mic);
       const lesson = makeArchivedLesson(learnerCode, snapshotRef.current, media.mimeType || mimeType || "audio/webm");
       await saveArchivedLesson(lesson);
-      if (!mounted.current || currentAttempt !== attempt.current) { mic.getTracks().forEach(track => track.stop()); return; }
+      if (!mounted.current || currentAttempt !== attempt.current) { releaseLessonAudio(mic); return; }
       active.current = lesson; pendingChunks.current.clear(); pendingSequence.current = 0;
       recordedMs.current = 0; segmentStarted.current = Date.now(); setElapsed(0);
       writer.current = audioChunkWriter(async (sequence, blob) => {
@@ -150,7 +165,9 @@ export default function CoachLessonArchive({ learnerCode, snapshot, onBusy, onFo
         if (media.state !== "inactive") finish();
       };
       media.onstop = () => {
-        microphone.current?.getTracks().forEach(track => track.stop()); microphone.current = null;
+        phaseRef.current = "saving";
+        if (mounted.current) setPhase("saving");
+        releaseLessonAudio(microphone.current); microphone.current = null;
         const ms = elapsedMs(); recordedMs.current = ms; segmentStarted.current = 0;
         void (async () => {
           let complete = true;
@@ -159,15 +176,26 @@ export default function CoachLessonArchive({ learnerCode, snapshot, onBusy, onFo
           if (current) {
             const updated: ArchivedLesson = { ...current, ...realLessonEvidence(snapshotRef.current), durationMs: ms, state: complete ? "complete" : "interrupted", updatedAt: new Date().toISOString() };
             active.current = updated;
-            try { await saveArchivedLesson(updated); } catch { complete = false; }
+            try { await saveArchivedLesson(updated); } catch {
+              complete = false;
+              updated.state = "interrupted";
+            }
             if (mounted.current) {
               setLessons(previous => [updated, ...previous.filter(item => item.id !== updated.id)]);
               setSelectedId(updated.id); setNoteDirty(false);
               setMessage(complete ? "Lesson audio and notes saved on this device. Download a copy to keep elsewhere." : "Storage was interrupted. Keep this page open and download the available audio now.");
             }
           }
-          if (mounted.current) { phaseRef.current = "idle"; setPhase("idle"); await refresh().catch(e => setError(e.message)); }
-          if (mounted.current && pendingChunks.current.size) setRecoveryPending(true);
+          if (mounted.current) {
+            // Protect the in-memory suffix before releasing the recorder or
+            // parent navigation. Refreshing history may take an arbitrary time.
+            setRecoveryPending(pendingChunks.current.size > 0);
+            setRecoveryDownloaded(false);
+            phaseRef.current = "idle"; setPhase("idle");
+            const finalLesson = active.current;
+            await refresh().catch(e => setError(e.message));
+            if (mounted.current && finalLesson) setLessons(previous => [finalLesson, ...previous.filter(item => item.id !== finalLesson.id)]);
+          }
         })();
       };
       mic.getAudioTracks().forEach(track => { track.onended = () => { if (media.state !== "inactive") finish(); }; });
@@ -176,7 +204,7 @@ export default function CoachLessonArchive({ learnerCode, snapshot, onBusy, onFo
       setMessage("Recording this lesson. Audio is saved in small parts on this device; live AI has separate controls.");
       await refresh().catch(e => { if (mounted.current) setError(e.message); });
     } catch (e) {
-      microphone.current?.getTracks().forEach(track => track.stop()); microphone.current = null;
+      releaseLessonAudio(microphone.current); microphone.current = null;
       if (mounted.current) { phaseRef.current = "idle"; setPhase("idle"); setError(e instanceof Error ? e.message : "The lesson could not be recorded."); }
     }
   }
@@ -248,7 +276,7 @@ export default function CoachLessonArchive({ learnerCode, snapshot, onBusy, onFo
         <label>My review & next lesson focus<textarea rows={3} maxLength={700} value={teacherNote} onChange={e => { setTeacherNote(e.target.value); setNoteDirty(true); }}/></label>
         <div className="lc-actions"><button type="button" className="teacher-primary" disabled={!noteDirty} onClick={() => { const updated = { ...selected, teacherNote, updatedAt: new Date().toISOString() }; void saveArchivedLesson(updated).then(async () => { if (active.current?.id === updated.id) active.current = updated; setNoteDirty(false); await refresh(); setMessage("Teacher review saved."); }).catch(e => setError(e.message)); }}>Save my review</button><button type="button" className="teacher-quiet-button" disabled={!teacherNote.trim() || noteDirty} onClick={() => onFocus(teacherNote)}>Use as next lesson focus</button></div>
         <details><summary>Saved conversation · {selected.turns.length} entries</summary>{selected.turns.map(turn => <p className="lc-saved-turn" key={turn.id}><strong>{turn.role === "learner" ? selected.context.learner : turn.role === "teacher" ? "Rory" : turn.role === "ai" ? "AI suggestion" : "Speaker unclear"}</strong> · {new Date(turn.at).toLocaleTimeString()}<br/>{turn.text}</p>)}</details>
-        {removeId === selected.id ? <div className="lc-actions"><p className="lc-hint">Delete this lesson’s saved audio, notes and review from this browser?</p><button type="button" className="teacher-quiet-button" onClick={() => { void deleteArchivedLesson(selected.id).then(async () => { if (active.current?.id === selected.id) active.current = null; if (playback?.id === selected.id) { URL.revokeObjectURL(playbackRef.current); playbackRef.current = ""; setPlayback(null); } setSelectedId(""); setRemoveId(""); await refresh(); }).catch(e => setError(e.message)); }}>Delete lesson</button><button type="button" className="teacher-quiet-button" onClick={() => setRemoveId("")}>Keep lesson</button></div> : <button type="button" className="lc-link" onClick={() => setRemoveId(selected.id)}>Delete saved lesson…</button>}
+        {removeId === selected.id ? <div className="lc-actions"><p className="lc-hint">Delete this lesson’s saved audio, notes and review from this browser?</p><button type="button" className="teacher-quiet-button" disabled={recoveryPending} onClick={() => { if (pendingChunks.current.size) return; void deleteArchivedLesson(selected.id).then(async () => { if (active.current?.id === selected.id) active.current = null; if (playback?.id === selected.id) { URL.revokeObjectURL(playbackRef.current); playbackRef.current = ""; setPlayback(null); } setSelectedId(""); setRemoveId(""); await refresh(); }).catch(e => setError(e.message)); }}>Delete lesson</button><button type="button" className="teacher-quiet-button" onClick={() => setRemoveId("")}>Keep lesson</button></div> : <button type="button" className="lc-link" disabled={recoveryPending} onClick={() => setRemoveId(selected.id)}>Delete saved lesson…</button>}
       </article>}
     </details>
   </section>;

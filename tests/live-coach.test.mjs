@@ -81,7 +81,7 @@ test('PowerPoint importer rejects corrupt archives, oversized inputs and decompr
   assert.throws(()=>material.readCoachPptx(forged));
 });
 test('private coaching route rejects student tokens and cross-origin requests before paid calls',async()=>{
-  let payments=0,verifications=0;
+  let payments=0,verifications=0,modelChecks=0;
   const {createHash}=await import('node:crypto');
   const route=load('src/app/api/live-coach/route.ts',{
     'node:crypto':{createHash},
@@ -89,15 +89,33 @@ test('private coaching route rejects student tokens and cross-origin requests be
     '@/lib/server/google-http':{googleHttp:()=>{}},
     '@/lib/server/live-coach-service':service,
     '@/lib/server/coach-material':material,
-  },{process:{env:{APPS_SCRIPT_URL:'https://example.test/progress',LIVE_COACH_ENABLED:'true',OPENAI_API_KEY:'synthetic-key'}},fetch:async()=>{payments++;return new Response('v=0\r\n');}});
+  },{process:{env:{APPS_SCRIPT_URL:'https://example.test/progress',LIVE_COACH_ENABLED:'true',OPENAI_API_KEY:'synthetic-key'}},fetch:async url=>{if(String(url).includes('/v1/models/')){modelChecks++;return Response.json({id:'synthetic-model'});}payments++;return new Response('v=0\r\n');}});
   const req=(origin,payload)=>new Request('https://example.test/api/live-coach/',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(payload)});
   assert.equal((await route.POST(req('https://other.test',{...body,action:'connect'}))).status,403);
   assert.equal((await route.POST(req('https://example.test',{...body,code:'student',action:'connect'}))).status,403);
   assert.equal((await route.POST(req('https://example.test',{...body,token:'expired',action:'connect'}))).status,403);
   assert.equal(verifications,1);assert.equal(payments,0);
   const status=await route.POST(req('https://example.test',{...body,action:'status'}));
-  assert.equal((await status.json()).available,true);assert.equal(payments,0);
+  assert.equal((await status.json()).available,true);assert.equal(payments,0);assert.equal(modelChecks,2);
+  await route.POST(req('https://example.test',{...body,action:'status'}));assert.equal(modelChecks,2);
   const connected=await route.POST(req('https://example.test',{...body,action:'connect'}));
   assert.equal(connected.status,201);assert.equal(payments,1);
   const publicResult=JSON.stringify(await connected.json());assert.ok(!publicResult.includes('synthetic-key'));assert.match(publicResult,/v=0/);
+});
+
+test('failed model-access checks keep the coach unavailable without sending audio or exposing credentials',async()=>{
+  const {createHash}=await import('node:crypto');
+  for(const status of [401,403,404,429]){
+    let paidCalls=0;
+    const route=load('src/app/api/live-coach/route.ts',{
+      'node:crypto':{createHash},
+      '@/lib/server/progress-transport':{postProgress:async()=>({ok:true,students:[]})},
+      '@/lib/server/google-http':{googleHttp:()=>{}},
+      '@/lib/server/live-coach-service':service,
+      '@/lib/server/coach-material':material,
+    },{process:{env:{APPS_SCRIPT_URL:'https://example.test/progress',LIVE_COACH_ENABLED:'true',OPENAI_API_KEY:'synthetic-key'}},fetch:async url=>{if(!String(url).includes('/v1/models/'))paidCalls++;return Response.json({error:{code:'synthetic'}},{status});}});
+    const request=new Request('https://example.test/api/live-coach/',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json'},body:JSON.stringify({...body,action:'status'})});
+    const result=await route.POST(request),json=await result.json();
+    assert.equal(result.status,503);assert.ok(!json.available);assert.equal(paidCalls,0);assert.ok(!JSON.stringify(json).includes('synthetic-key'));
+  }
 });
