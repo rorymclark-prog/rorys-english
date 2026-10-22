@@ -373,8 +373,8 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
         <div className="lc-stage">
           {pdfFile&&<CoachSlidePresenter file={pdfFile} page={slideIndex+1} onLoaded={pdfLoaded} onContext={pdfContext} onPage={page=>setSlideIndex(page-1)}/>}
           {view==="presenter"&&!pdfFile&&<div className="lc-panel lc-no-slide"><p className="teacher-eyebrow">PRESENTER VIEW</p><h2>Bring your slides into the lesson.</h2><p>Open a PDF exported from PowerPoint to keep the original layout. Slide images and text become context for your AI commentary and questions.</p><button type="button" className="teacher-primary" onClick={()=>setView("setup")}>Open lesson material</button>{source&&<pre>{source}</pre>}</div>}
-        <aside className={`lc-context lc-panel ${view==="presenter"?"lc-context-collapsed":""}`}>
-          <div className="lc-section-title"><h2>Lesson context</h2></div>
+        <details className={`lc-context lc-panel lc-context-settings ${view==="presenter"?"lc-context-collapsed":""}`} open={!live}>
+          <summary>Lesson context</summary>
           <label>Learner<select value={learner} onChange={e => changeLearner(e.target.value)} disabled={live || working || importing || asking || recordingBusy}>{learners.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}</select></label>
           <p className="lc-unit">{selected?.unit || "Original speaking practice"}</p>
           {selected?.focusNote && <p className="lc-hint">Saved teacher focus: {selected.focusNote}</p>}
@@ -385,7 +385,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
           {!!slides.length && !pdfFile && <label>Current slide<select value={slideIndex} onChange={e => { const index = Number(e.target.value); setSlideIndex(index); setSource(slides[index]?.text || ""); }}>{slides.map((s, i) => <option key={s.number} value={i}>Slide {s.number} · {s.text.slice(0, 55) || "No readable text"}</option>)}</select></label>}
           <label>Current slide / source text<textarea rows={7} value={source} maxLength={12000} onChange={e => setSource(e.target.value)} placeholder="Paste the current exercise, vocabulary or source passage. This text and the selected PDF slide image provide lesson context."/></label>
           {pdfUrl && <a className="lc-link" href={pdfUrl} target="_blank" rel="noreferrer">Open original PDF reference ↗</a>}
-        </aside></div>
+        </details></div>
         <section className="lc-main">
           <div className="lc-panel lc-controls"><div className="lc-section-title"><h2>Listen, then guide</h2></div>
             <details className="lc-listening-settings" open={!live}><summary>Listening settings</summary>

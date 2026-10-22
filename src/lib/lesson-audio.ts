@@ -48,7 +48,16 @@ export class LessonAudioInput {
   async connectCall(onEnded: () => void) {
     if (!navigator.mediaDevices?.getDisplayMedia) throw new Error("This browser cannot capture call audio. Use a browser with tab-audio sharing, or record an in-person lesson with the microphone.");
     const generation = this.generation;
-    const call = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    let call: MediaStream;
+    try {
+      call = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    } catch (error) {
+      const name = error && typeof error === "object" && "name" in error ? error.name : "";
+      if (name === "InvalidStateError") throw new Error("Bring this lesson page to the front, then click Connect call audio again. Your browser needs a direct click on the page to open audio sharing.");
+      if (name === "NotAllowedError") throw new Error("Call audio sharing was cancelled or not allowed. Check your browser's sharing permission, then click Connect call audio again and choose your call tab with Share tab audio ticked.");
+      if (name === "NotReadableError") throw new Error("Your device could not start call audio capture. Check the browser's screen-recording permission in system settings and any other active screen sharing, then click Connect call audio again.");
+      throw error;
+    }
     if (generation !== this.generation) { call.getTracks().forEach(track => track.stop()); return false; }
     if (!call.getAudioTracks().some(track => track.readyState === "live")) {
       call.getTracks().forEach(track => track.stop());

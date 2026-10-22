@@ -90,6 +90,44 @@ test('closing while the share picker is pending discards the late selection', as
   assert.ok(shared.getTracks().every(track => track.readyState === 'ended'));
 });
 
+test('call sharing gives actionable errors for focus, declined permission and device capture failures, and remains retryable', async () => {
+  for (const [name, expected] of [
+    ['InvalidStateError', /Bring this lesson page to the front.*direct click/],
+    ['NotAllowedError', /cancelled or not allowed.*browser's sharing permission.*Share tab audio/],
+    ['NotReadableError', /device could not start.*system settings.*Connect call audio again/],
+  ]) {
+    let fail = true;
+    const shared = new Stream([new Track(), new Track('video')]);
+    const h = audioHarness({ display: async () => {
+      if (fail) { const error = new Error('Browser internal detail'); error.name = name; throw error; }
+      return shared;
+    } }), input = new h.LessonAudioInput();
+    await assert.rejects(input.connectCall(() => {}), expected);
+    assert.equal(input.hasCallAudio(), false);
+    assert.equal(h.microphones.length, 0, 'a failed picker does not open the microphone');
+    assert.equal(h.contexts.length, 0);
+    fail = false;
+    assert.equal(await input.connectCall(() => {}), true);
+    assert.equal(input.hasCallAudio(), true);
+    input.close();
+  }
+});
+
+test('an unknown sharing failure is preserved and does not end an existing capture', async () => {
+  let fail = false;
+  const shared = new Stream([new Track(), new Track('video')]);
+  const unexpected = new Error('An unexpected browser failure');
+  const h = audioHarness({ display: async () => { if (fail) throw unexpected; return shared; } });
+  const input = new h.LessonAudioInput();
+  await input.connectCall(() => {});
+  const recording = await input.acquire('online');
+  fail = true;
+  await assert.rejects(input.connectCall(() => {}), error => error === unexpected);
+  assert.equal(input.hasCallAudio(), true);
+  assert.equal(recording.getAudioTracks()[0].readyState, 'live');
+  input.close();
+});
+
 test('disconnecting while microphone permission is pending releases the late microphone and refuses the acquisition', async () => {
   const permission = deferred(), microphone = new Stream();
   const h = audioHarness({ microphone: () => permission.promise }), input = new h.LessonAudioInput();
