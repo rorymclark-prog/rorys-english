@@ -1,4 +1,4 @@
-export type CoachContext = { learner: string; unit: string; task: string; objective: string; source: string; slide: string };
+export type CoachContext = { learner: string; unit: string; task: string; objective: string; source: string; slide: string; audioMode?: "room" | "online" };
 export type CoachFeedback = { heard: string; strength: string; focus: string; correction: string; prompt: string; next: string; uncertainty: string };
 export type CoachEntry = { id: string; at: string; context: CoachContext; feedback: CoachFeedback; rehearsal?: boolean; sourceTurnId?: string };
 export const COACH_MINUTES = 15;
@@ -7,11 +7,15 @@ export const emptyFeedback: CoachFeedback = { heard: "", strength: "", focus: ""
 export function coachContext(input: unknown): CoachContext {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Choose a lesson context.");
   const value = input as Record<string, unknown>;
-  const limits: Record<keyof CoachContext, number> = { learner: 100, unit: 200, task: 500, objective: 700, source: 12000, slide: 160 };
+  const limits = { learner: 100, unit: 200, task: 500, objective: 700, source: 12000, slide: 160 };
   const result = {} as CoachContext;
-  for (const key of Object.keys(limits) as (keyof CoachContext)[]) {
+  for (const key of Object.keys(limits) as (keyof typeof limits)[]) {
     if (typeof value[key] !== "string" || value[key].length > limits[key]) throw new Error("The lesson context is too long or incomplete.");
     result[key] = value[key].trim();
+  }
+  if (value.audioMode !== undefined) {
+    if (value.audioMode !== "room" && value.audioMode !== "online") throw new Error("Choose in-person or online lesson audio.");
+    result.audioMode = value.audioMode;
   }
   return result;
 }
@@ -71,7 +75,12 @@ function neutralFollowUp(prompt: string): boolean {
   // discard correction prompts whose premise depends on the mismatched quote.
   return /^(?:what|why|how|where|when|who|which)\b/i.test(prompt.trim()) && /\?\s*$/.test(prompt)
     && !/["\u201c\u201d\u2018\u2019]/.test(prompt)
-    && !/\b(?:correct(?:ion)?|grammar|tense|verbs?|conjugat\w*|past|present|future|articles?|prepositions?|pronouns?|spell\w*|pronounc\w*|sounds?|words?|phrases?|sentences?|forms?|mistakes?|errors?|wrong|right|improv\w*|replac\w*|rewrit\w*|rephras\w*|revis\w*|instead|say|repeat|change|fix|should|ought|better|again|try)\b/i.test(prompt);
+    && !/\b(?:correct(?:ion)?|grammar|tense|verbs?|conjugat\w*|past|present|future|articles?|prepositions?|pronouns?|spell\w*|pronounc\w*|fluenc\w*|accura\w*|progress|score\w*|grade\w*|cefr|assess\w*|master\w*|weak\w*|strength\w*|sounds?|words?|phrases?|sentences?|forms?|mistakes?|errors?|wrong|right|improv\w*|replac\w*|rewrit\w*|rephras\w*|revis\w*|instead|say|repeat|change|fix|should|ought|better|again|try)\b/i.test(prompt);
+}
+
+function neutralConversationStep(step: string): boolean {
+  return /^(?:ask|invite|follow|listen|give|let|pause|check|wait|keep|explore|clarify|encourage|offer|use)\b/i.test(step.trim())
+    && !/\b(?:gramma\w*|tense|verbs?|conjugat\w*|articles?|prepositions?|pronouns?|spell\w*|pronounc\w*|fluenc\w*|accura\w*|mistakes?|errors?|wrong|correct\w*|improv\w*|progress|master\w*|weak\w*|strength\w*|assess\w*|score\w*|grade\w*|cefr)\b/i.test(step);
 }
 
 /** A caption is a consistency check on a quote, never proof of pronunciation. */
@@ -89,6 +98,25 @@ export function boundCoachFeedback(feedback: CoachFeedback, caption: string): Co
     uncertainty: evidence
       ? "The AI quote did not match the machine caption. Either may have misheard; check the audio before correcting grammar."
       : "No final machine caption was available to check the AI quote. Check the audio before using this feedback.",
+  };
+}
+
+/** A mixed call is conversation context, not evidence of who spoke. Keep one
+ * usable content prompt, but never turn either person's speech into an assessed
+ * learner attempt merely because the call and microphone share one stream. */
+export function conversationCoachFeedback(feedback: CoachFeedback, caption: string): CoachFeedback {
+  const bounded = boundCoachFeedback(feedback, caption);
+  const quote = captionWords(feedback.heard), evidence = captionWords(caption);
+  const matches = !!quote && !!evidence && ` ${evidence} `.includes(` ${quote} `);
+  const sharedUncertainty = "Microphone and call audio are mixed. Speaker identity is unconfirmed; this is conversation support, not a learner assessment.";
+  return {
+    heard: bounded.heard,
+    strength: "",
+    focus: "Follow the conversation with one useful question.",
+    correction: "",
+    prompt: neutralFollowUp(bounded.prompt) ? bounded.prompt : "What happened next, and why?",
+    next: neutralConversationStep(bounded.next) ? bounded.next : "Invite one more detail or reason, then listen to the answer.",
+    uncertainty: matches ? sharedUncertainty + (feedback.uncertainty ? " Check unclear speech before using the suggestion." : "") : `${sharedUncertainty} ${bounded.uncertainty}`,
   };
 }
 

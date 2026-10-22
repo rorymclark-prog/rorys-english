@@ -100,3 +100,55 @@ test('failed transcription and stopped sessions cannot block or contaminate the 
   queue.clear();
   assert.equal(queue.completed(identity(request)), null); assert.equal(queue.next(), null);
 });
+
+test('a later answer retains accepted earlier suggestions and spoken retries without claiming Rory used the suggestions', () => {
+  const queue = new CoachTurnQueue();
+  queue.committed('attempt', context, 'learner'); queue.transcribed('attempt', 'Yesterday I go to the park.', 'learner');
+  const first = queue.next(); queue.completed(identity(first));
+  queue.rememberFeedback('attempt', { ...shared.coachRehearsal[0], prompt: 'Yesterday I …? What is the past of go?' });
+  queue.committed('retry', context, 'learner'); queue.transcribed('retry', 'Yesterday I went to the park because it was sunny.', 'learner');
+  const retry = queue.next();
+  assert.match(retry.evidence, /Yesterday I go to the park/);
+  assert.match(retry.guidance, /What is the past of go/);
+  const event = nativeCoachEvent(retry);
+  assert.match(event.response.input[1].content[0].text, /not necessarily used by Rory/);
+  assert.match(event.response.instructions, /already answered/);
+  assert.match(event.response.instructions, /resolved a language point/);
+  assert.equal(event.response.input[0].id, 'retry', 'grammar feedback still references only the fresh native answer');
+});
+
+test('corrected speaker labels remove associated prior coaching from future request context', () => {
+  const queue = new CoachTurnQueue();
+  queue.committed('mislabelled', context, 'learner'); queue.transcribed('mislabelled', 'Explain the past of go.', 'learner');
+  const first = queue.next(); queue.completed(identity(first)); queue.rememberFeedback('mislabelled', shared.coachRehearsal[0]);
+  queue.correctSpeaker('mislabelled', 'teacher');
+  queue.rememberFeedback('mislabelled', shared.coachRehearsal[0]);
+  queue.committed('next', context, 'learner'); queue.transcribed('next', 'I went home.', 'learner');
+  const request = queue.next();
+  assert.equal(request.guidance, '');
+  assert.match(request.evidence, /teacher: Explain the past of go/);
+  assert.doesNotMatch(request.evidence, /learner: Explain/);
+});
+
+test('unassigned and teacher turns request neutral useful prompts without learner assessment or inferred identity', () => {
+  for (const role of ['unknown', 'teacher']) {
+    const queue = new CoachTurnQueue();
+    queue.committed('conversation', context, role); queue.transcribed('conversation', 'We went to the park because it was sunny.', role);
+    const event = nativeCoachEvent(queue.next());
+    assert.match(event.response.instructions, /neutral content follow-up/);
+    assert.match(event.response.instructions, /Keep strength and correction empty/);
+    assert.match(event.response.instructions, /Do not guess which person said a sentence/);
+    assert.match(event.response.instructions, /If speech overlaps/);
+  }
+});
+
+test('online mixed audio is explicitly shared conversation, while confirmed single-speaker turns retain their role', () => {
+  for (const role of ['unknown', 'learner', 'teacher']) {
+    const queue = new CoachTurnQueue();
+    queue.committed('online', { ...context, audioMode: 'online' }, role);
+    queue.transcribed('online', 'We ate lunch, and then we played a game.', role);
+    const event = nativeCoachEvent(queue.next());
+    assert.equal(event.response.instructions.includes('one item may contain both voices'), role === 'unknown');
+    if(role === 'unknown')assert.match(event.response.instructions, /Never infer identity from voice/);
+  }
+});

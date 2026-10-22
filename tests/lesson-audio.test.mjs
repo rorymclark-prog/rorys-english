@@ -22,9 +22,13 @@ function audioHarness({ display, microphone, resume } = {}) {
   const exports = {}, microphones = [], contexts = [];
   const call = new Stream([new Track('audio'), new Track('video')]);
   class Context {
-    constructor() { this.sources = []; this.closed = false; this.destination = { stream: new Stream() }; contexts.push(this); }
+    constructor() { this.sources = []; this.analysers = []; this.closed = false; this.destination = { stream: new Stream() }; contexts.push(this); }
     createMediaStreamDestination() { return this.destination; }
-    createMediaStreamSource(stream) { const node = { stream, connect: destination => { node.destination = destination; } }; this.sources.push(node); return node; }
+    createMediaStreamSource(stream) { const node = { stream, connections: [], connect: destination => { node.destination ||= destination; node.connections.push(destination); } }; this.sources.push(node); return node; }
+    createAnalyser() {
+      const node = { fftSize: 2048, samples: [], getFloatTimeDomainData: destination => { destination.fill(0); destination.set(node.samples.slice(0, destination.length)); } };
+      this.analysers.push(node); return node;
+    }
     async resume() { if (resume) await resume(); this.resumed = true; }
     async close() { this.closed = true; }
   }
@@ -132,4 +136,40 @@ test('a mixer that cannot start releases every partially created audio resource'
   assert.equal(h.contexts[0].destination.stream.getAudioTracks()[0].readyState, 'ended');
   assert.equal(input.hasCallAudio(), true, 'the user can retry without selecting the call again');
   input.close();
+});
+
+test('online meters independently observe the microphone and call without changing either audio route or opening another device', async () => {
+  const h = audioHarness(), input = new h.LessonAudioInput();
+  assert.equal(input.levels().microphone, 0); assert.equal(input.levels().call, 0);
+  assert.equal(h.microphones.length, 0); assert.equal(h.contexts.length, 0);
+  await input.connectCall(() => {});
+  assert.equal(input.levels().call, 0, 'selecting the call alone does not start a monitor');
+  const stream = await input.acquire('online'), context = h.contexts[0];
+  assert.equal(h.microphones.length, 1); assert.equal(context.sources.length, 2);
+  context.analysers[0].samples = [0.125, -0.5, 0.25];
+  context.analysers[1].samples = [-0.25, 0.125];
+  assert.equal(input.levels().microphone, 0.5);
+  assert.equal(input.levels().call, 0.25);
+  assert.deepEqual(context.sources[0].connections, [context.destination, context.analysers[0]]);
+  assert.deepEqual(context.sources[1].connections, [context.destination, context.analysers[1]]);
+  context.analysers[0].samples = [0]; context.analysers[1].samples = [-1.25];
+  assert.equal(input.levels().microphone, 0); assert.equal(input.levels().call, 1, 'the meter is bounded even if a source clips');
+  h.releaseLessonAudio(stream);
+  assert.equal(input.levels().microphone, 0); assert.equal(input.levels().call, 0);
+  input.close();
+});
+
+test('meters follow the latest live consumer, fall back when it ends, and clear when call capture ends', async () => {
+  const h = audioHarness(), input = new h.LessonAudioInput();
+  await input.connectCall(() => {});
+  const recorder = await input.acquire('online'), coach = await input.acquire('online');
+  h.contexts[0].analysers[0].samples = [0.25]; h.contexts[0].analysers[1].samples = [0.5];
+  h.contexts[1].analysers[0].samples = [0.75]; h.contexts[1].analysers[1].samples = [0.125];
+  assert.equal(input.levels().microphone, 0.75); assert.equal(input.levels().call, 0.125);
+  h.releaseLessonAudio(coach);
+  assert.equal(input.levels().microphone, 0.25); assert.equal(input.levels().call, 0.5);
+  assert.equal(recorder.getAudioTracks()[0].readyState, 'live');
+  h.call.getAudioTracks()[0].end();
+  assert.equal(input.levels().microphone, 0); assert.equal(input.levels().call, 0);
+  assert.ok(h.contexts.every(context => context.closed));
 });

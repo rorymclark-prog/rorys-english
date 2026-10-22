@@ -1,6 +1,21 @@
 export type LessonAudioMode = "room" | "online";
 
 const releases = new WeakMap<MediaStream, (notify: boolean) => void>();
+type SignalMeters = { microphone: () => number; call: () => number };
+
+/** Observe an existing source without changing its gain or capturing more audio. */
+function signalMeter(context: AudioContext, source: MediaStreamAudioSourceNode) {
+  const analyser = context.createAnalyser();
+  analyser.fftSize = 1024;
+  source.connect(analyser);
+  const samples = new Float32Array(analyser.fftSize);
+  return () => {
+    analyser.getFloatTimeDomainData(samples);
+    let peak = 0;
+    for (const sample of samples) peak = Math.max(peak, Math.abs(sample));
+    return Math.min(1, peak);
+  };
+}
 
 /** Each recorder/listener owns its stream. Releasing one never stops the other. */
 export function releaseLessonAudio(stream: MediaStream | null | undefined, notify = false) {
@@ -15,9 +30,20 @@ export class LessonAudioInput {
   private call: MediaStream | null = null;
   private removeCallListeners: (() => void) | null = null;
   private clients = new Set<MediaStream>();
+  private meters = new Map<MediaStream, SignalMeters>();
   private generation = 0;
 
   hasCallAudio() { return !!this.call?.getAudioTracks().some(track => track.readyState === "live"); }
+
+  /** Raw 0–1 input peaks, not a speaker detector. Never opens a device. */
+  levels() {
+    for (const [stream, meters] of [...this.meters].reverse()) {
+      if (stream.getAudioTracks().some(track => track.readyState === "live")) {
+        return { microphone: meters.microphone(), call: meters.call() };
+      }
+    }
+    return { microphone: 0, call: 0 };
+  }
 
   async connectCall(onEnded: () => void) {
     if (!navigator.mediaDevices?.getDisplayMedia) throw new Error("This browser cannot capture call audio. Use a browser with tab-audio sharing, or record an in-person lesson with the microphone.");
@@ -47,6 +73,7 @@ export class LessonAudioInput {
     }
     let context: AudioContext | undefined;
     let remote: MediaStream | undefined;
+    let meters: SignalMeters | undefined;
     let output = microphone;
     try {
       if (mode === "online") {
@@ -54,8 +81,11 @@ export class LessonAudioInput {
         const destination = context.createMediaStreamDestination();
         output = destination.stream;
         remote = new MediaStream(selectedCall!.getAudioTracks().map(track => track.clone()));
-        context.createMediaStreamSource(microphone).connect(destination);
-        context.createMediaStreamSource(remote).connect(destination);
+        const microphoneSource = context.createMediaStreamSource(microphone);
+        const callSource = context.createMediaStreamSource(remote);
+        microphoneSource.connect(destination);
+        callSource.connect(destination);
+        meters = { microphone: signalMeter(context, microphoneSource), call: signalMeter(context, callSource) };
         await context.resume();
         if (generation !== this.generation || selectedCall !== this.call || !this.hasCallAudio()) throw new Error("Call audio sharing ended. Connect the call tab again.");
       }
@@ -64,7 +94,7 @@ export class LessonAudioInput {
       const ended = () => releaseLessonAudio(result, true);
       microphone.getAudioTracks().forEach(track => track.addEventListener("ended", ended));
       releases.set(result, notify => {
-        if (closed) return; closed = true; this.clients.delete(result);
+        if (closed) return; closed = true; this.clients.delete(result); this.meters.delete(result);
         microphone.getAudioTracks().forEach(track => track.removeEventListener("ended", ended));
         for (const track of new Set([...microphone.getTracks(), ...(remote?.getTracks() || []), ...result.getTracks()])) track.stop();
         void context?.close().catch(() => {});
@@ -73,6 +103,7 @@ export class LessonAudioInput {
         if (notify) result.getAudioTracks().forEach(track => track.dispatchEvent(new Event("ended")));
       });
       this.clients.add(result);
+      if (meters) this.meters.set(result, meters);
       return result;
     } catch (error) {
       microphone.getTracks().forEach(track => track.stop());

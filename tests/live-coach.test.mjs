@@ -16,6 +16,14 @@ const material=load('src/lib/server/coach-material.ts',{'node:zlib':{inflateRawS
 const context={learner:'Demo learner',unit:'Original practice',task:'Tell a story',objective:'Past simple',source:'Ask about yesterday.',slide:'Slide 1'};
 const body={code:'__teacher__',token:'teacher-session',context,sdp:'v=0\r\n'};
 
+test('lesson context preserves valid audio modes and rejects ambiguous source modes without breaking older saved contexts',()=>{
+  assert.equal(shared.coachContext(context).audioMode,undefined);
+  for(const audioMode of ['room','online'])assert.equal(shared.coachContext({...context,audioMode}).audioMode,audioMode);
+  for(const audioMode of [null,'mixed','ONLINE',false,{},[]])assert.throws(()=>shared.coachContext({...context,audioMode}));
+  const native=service.coachSession({...body,context:{...context,audioMode:'online'}});
+  assert.match(native.instructions,/"audioMode":"online"/);
+});
+
 test('only a verified teacher session can reach paid coaching or private imports',async()=>{
   let verifications=0;
   const verify=async token=>{verifications++;return token==='teacher-session';};
@@ -89,6 +97,35 @@ test('a corrected retry cannot inherit the preceding answer’s false error or c
   const success={...shared.coachRehearsal[1],heard:'We played football and then we went home because it was raining.'};
   assert.equal(shared.boundCoachFeedback(success,success.heard).focus,success.focus);
   assert.equal(shared.boundCoachFeedback(success,success.heard).correction,'');
+});
+test('shared online conversation retains useful content prompts without assessing either speaker as the learner',()=>{
+  const caption='We went to the park because it was sunny.';
+  const feedback={heard:caption,strength:'Correct past tense.',focus:'The learner improved.',correction:'We had gone to the park.',prompt:'What did you enjoy most at the park?',next:'Invite one detail about the game.',uncertainty:'The learner has poor pronunciation.'};
+  const sharedFeedback=shared.conversationCoachFeedback(feedback,caption);
+  assert.equal(sharedFeedback.heard,caption);assert.equal(sharedFeedback.strength,'');assert.equal(sharedFeedback.correction,'');
+  assert.equal(sharedFeedback.prompt,feedback.prompt);assert.equal(sharedFeedback.next,feedback.next);
+  assert.match(sharedFeedback.uncertainty,/Speaker identity is unconfirmed/);
+  assert.doesNotMatch(sharedFeedback.uncertainty,/poor pronunciation/);
+  assert.doesNotMatch(sharedFeedback.focus,/improved|tense|learner/i);
+});
+test('shared conversation rejects correction questions and assessment steps even when their quote matches',()=>{
+  const caption='Yesterday I go to the park.';
+  for(const [prompt,next] of [
+    ['What is the past of go?','Ask for a correct past tense.'],
+    ['Which sentence is correct?','Listen for accurate pronunciation.'],
+    ['How can you fix the verb?','The learner has improved significantly.'],
+    ['Say it again.','Invite a CEFR score for this attempt.'],
+  ]){
+    const feedback=shared.conversationCoachFeedback({...shared.coachRehearsal[0],heard:caption,prompt,next},caption);
+    assert.equal(feedback.correction,'');assert.equal(feedback.strength,'');
+    assert.equal(feedback.prompt,'What happened next, and why?');
+    assert.equal(feedback.next,'Invite one more detail or reason, then listen to the answer.');
+  }
+});
+test('shared conversation still flags conflicting quotations and never turns them into grammar evidence',()=>{
+  const feedback=shared.conversationCoachFeedback({...shared.coachRehearsal[0],heard:'Yesterday I go to the park.'},'Yesterday I went to the park.');
+  assert.equal(feedback.heard,'Yesterday I went to the park.');assert.equal(feedback.correction,'');
+  assert.match(feedback.uncertainty,/Either may have misheard/);
 });
 test('private teacher questions retain slide context and reject invalid images and oversized questions',()=>{
   const question=service.coachQuestion({...body,question:'How can I explain this?',image:'data:image/jpeg;base64,YWJj',evidence:'learner: Yesterday I go.'});

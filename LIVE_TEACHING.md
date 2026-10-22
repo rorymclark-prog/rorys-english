@@ -15,6 +15,8 @@ This is a full-screen teacher presenter workspace in the existing app. Open Teac
 
 ## AI configuration and integration
 
+Online lessons default to **Shared conversation · useful follow-ups**. The coach hears both mixed sources and offers a content question without guessing who spoke or treating mixed speech as learner assessment. Confirm a named speaker only for a turn you can identify. Separate microphone and call signal meters show real input activity while recording or listening; they do not identify speakers. The latest accepted coaching is included with subsequent native requests to avoid repeating questions that have already been answered. Speaker corrections remove linked prompts and their remembered guidance. The redesigned workspace puts the next question first, uses distinct coloured panels, and collapses listening settings while active without hiding Pause or End.
+
 The teacher-only `/api/live-coach/` route verifies the existing teacher session against the progress backend before status, imports, or paid requests. When enabled, status checks model access through read-only model metadata and briefly caches a successful result; that verifies configuration, not available credit or live response quality. It enforces same-origin requests, bounded payloads, server-selected models and per-instance request limits. No secret reaches the browser. Realtime uses native audio input and text-only output; it does not create a speaking partner or mute a generated voice. The dedicated feature flag is independent of the student's speaking studio. [Research and design decisions](LIVE_COACH_RESEARCH.md) identify relevant precedents and their limits.
 
 Private environment configuration:

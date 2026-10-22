@@ -53,8 +53,9 @@ test('new archived lessons and downloaded notes retain corrected speakers and ex
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 // Run the component's real event handlers using deterministic browser adapters.
 // Every request, audio stream and WebRTC event below is local to this test.
-function liveHarness({delayTyped=false}={}){
-  const hooks=[],effects=[],downloads=[],requests=[],responseRequests=new Map();let cursor=0,ui,dataChannel,releaseTyped;
+function liveHarness({delayTyped=false,audioMode='room',speaker='learner'}={}){
+  const hooks=[],effects=[],downloads=[],requests=[],audioRequests=[],responseRequests=new Map(),intervals=new Map();let cursor=0,ui,dataChannel,releaseTyped,timerSequence=0;
+  let audioLevels={microphone:0,call:0};
   const same=(a,b)=>a&&b&&a.length===b.length&&a.every((value,index)=>Object.is(value,b[index]));
   const react={
     useState(initial){const index=cursor++,hook=hooks[index]||={value:initial};return [hook.value,value=>{hook.value=typeof value==='function'?value(hook.value):value;}];},
@@ -77,13 +78,13 @@ function liveHarness({delayTyped=false}={}){
     '@/components/CoachSlidePresenter':{default:()=>null},'@/components/CoachLessonArchive':{default:Archive},
     '@/lib/coach-evidence':{correctCoachSpeaker},
     '@/lib/coach-turns':coachTurns,
-    '@/lib/lesson-audio':{LessonAudioInput:class{async acquire(){return microphone;}close(){}},releaseLessonAudio(){}},
+    '@/lib/lesson-audio':{LessonAudioInput:class{async acquire(mode){audioRequests.push(mode);return microphone;}async connectCall(){return true;}levels(){return audioLevels;}close(){}disconnectCall(){}},releaseLessonAudio(){}},
   },{
     navigator:{mediaDevices:{getUserMedia:async()=>microphone}},RTCPeerConnection:Peer,
     window:{RTCPeerConnection:Peer,addEventListener(){},removeEventListener(){}},
     document:{addEventListener(){},removeEventListener(){},createElement:()=>({click(){}})},
     URL:{createObjectURL:blob=>{downloads.push(blob);return 'blob:notes';},revokeObjectURL(){}},
-    setInterval:()=>1,clearInterval(){},setTimeout:()=>1,clearTimeout(){},
+    setInterval(fn,ms){const id=++timerSequence;intervals.set(id,{fn,ms});return id;},clearInterval(id){intervals.delete(id);},setTimeout:()=>1,clearTimeout(){},
     fetch:async(_url,options)=>{
       const body=JSON.parse(options.body);requests.push(body);
       if(body.action==='analyse'&&delayTyped)await new Promise(resolve=>{releaseTyped=resolve;});
@@ -96,7 +97,15 @@ function liveHarness({delayTyped=false}={}){
   const snapshot=()=>find(node=>node.type===Archive).props.snapshot;
   async function settle(){await tick();render();}
   async function prepare(){render();await settle();find(node=>node.type==='input'&&node.props.type==='checkbox').props.onChange({target:{checked:true}});render();}
-  async function start(){await prepare();find(node=>node.type==='select'&&node.props.value==='unknown').props.onChange({target:{value:'learner'}});render();button('Start listening').props.onClick();await settle();}
+  async function start(){
+    await prepare();
+    if(audioMode==='online'){
+      find(node=>node.type==='select'&&node.props.value==='room').props.onChange({target:{value:'online'}});render();
+      assert.equal(button('Start listening').props.disabled,true,'online capture cannot start before the call tab is connected');
+      button('Connect call audio').props.onClick();await settle();
+    }
+    find(node=>node.type==='select'&&node.props.value==='unknown').props.onChange({target:{value:speaker}});render();button('Start listening').props.onClick();await settle();
+  }
   const event=value=>{dataChannel.onmessage({data:JSON.stringify(value)});render();};
   function responseStarted(responseId,turnId){
     const request=dataChannel.sent.findLast(item=>item.type==='response.create'&&item.response.metadata.source_turn_id===turnId);
@@ -104,13 +113,14 @@ function liveHarness({delayTyped=false}={}){
     event({type:'response.created',response:{id:responseId,metadata:request.response.metadata}});
   }
   function caption(id,text,responseId){event({type:'input_audio_buffer.speech_started',item_id:id});event({type:'input_audio_buffer.committed',item_id:id});event({type:'conversation.item.input_audio_transcription.completed',item_id:id,transcript:text});if(responseId)responseStarted(responseId,id);}
-  function done(responseId,focus='STALE COACHING'){
+  function done(responseId,focus='STALE COACHING',overrides={}){
     const request=responseRequests.get(responseId);assert.ok(request);
     const source=snapshot().turns.find(item=>item.id===request.response.metadata.source_turn_id);
-    event({type:'response.done',response:{id:responseId,metadata:request.response.metadata,status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({...feedback,heard:source.text,focus})}]}]}});
+    event({type:'response.done',response:{id:responseId,metadata:request.response.metadata,status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({...feedback,heard:source.text,focus,...overrides})}]}]}});
   }
   function relabel(id,role){const original=snapshot().turns.find(item=>item.id===id);const article=find(node=>node.type==='article'&&walk(child=>child.type==='p'&&child.props.children===original.text,node));const select=walk(node=>node.type==='select',article);assert.ok(select);select.props.onChange({target:{value:role}});render();}
-  return {prepare,start,caption,done,responseStarted,event,relabel,snapshot,button,find,render,settle,downloads,requests,sent:()=>dataChannel.sent,releaseTyped:()=>releaseTyped()};
+  const pulse=ms=>{for(const timer of [...intervals.values()])if(timer.ms===ms)timer.fn();render();};
+  return {prepare,start,caption,done,responseStarted,event,relabel,snapshot,button,find,render,settle,downloads,requests,audioRequests,pulse,setAudioLevels:value=>{audioLevels=value;},archiveProps:()=>find(node=>node.type===Archive).props,sent:()=>dataChannel.sent,releaseTyped:()=>releaseTyped()};
 }
 
 test('live captions link both coaching surfaces to their source and correction reaches archive props and exported notes',async()=>{
@@ -196,4 +206,58 @@ test('teacher and unassigned audio cannot display grammar coaching even when the
   assert.equal(unassigned.context.learner,'Speaker unclear');assert.match(unassigned.feedback.focus,/Confirm who spoke/);
   for(const field of ['correction','strength','prompt','next'])assert.equal(unassigned.feedback[field],'');
   assert.ok(!h.snapshot().turns.filter(item=>item.role==='ai').some(item=>item.text.includes('Correct the past tense now')));
+});
+
+test('shared online conversation keeps useful prompts on both surfaces without assigning either voice to the learner',async()=>{
+  const h=liveHarness({audioMode:'online',speaker:'unknown'});await h.start();
+  assert.deepEqual(h.audioRequests,['online']);
+  assert.equal(h.requests.find(request=>request.action==='connect').context.audioMode,'online');
+  h.caption('mixed-one','I arrived with a chocolate cake. Zoe looked annoyed.','mixed-response');
+  h.done('mixed-response','The learner needs a past-tense correction.',{prompt:'Why did Zoe look annoyed?',next:'Invite one detail about what happened before lunch.'});
+  const first=h.snapshot().entries[0],ai=h.snapshot().turns.find(item=>item.role==='ai');
+  assert.equal(first.context.learner,'Shared lesson conversation');assert.equal(first.context.audioMode,'online');
+  assert.equal(first.feedback.heard,'I arrived with a chocolate cake. Zoe looked annoyed.');
+  assert.equal(first.feedback.prompt,'Why did Zoe look annoyed?');assert.equal(first.feedback.next,'Invite one detail about what happened before lunch.');
+  assert.equal(first.feedback.correction,'');assert.equal(first.feedback.strength,'');
+  assert.match(first.feedback.uncertainty,/Speaker identity is unconfirmed/);
+  assert.equal(first.sourceTurnId,'mixed-one');assert.equal(ai.sourceTurnId,'mixed-one');
+  assert.match(ai.text,/Ask: Why did Zoe look annoyed/);assert.doesNotMatch(ai.text,/past-tense correction|Yesterday I went/);
+  assert.equal(h.snapshot().turns.find(item=>item.id==='mixed-one').role,'unknown');
+
+  h.caption('mixed-two','The models were on the kitchen table.','next-mixed-response');
+  const request=h.sent().findLast(item=>item.type==='response.create');
+  assert.match(request.response.input[1].content[0].text,/Why did Zoe look annoyed/,'the next turn sees accepted earlier suggestions to avoid repeating them');
+  h.done('next-mixed-response','Context only',{prompt:'Where could the models go?',next:'Ask about a practical solution.'});
+  h.relabel('mixed-one','teacher');
+  assert.equal(h.snapshot().entries.length,1);assert.equal(h.snapshot().entries[0].sourceTurnId,'mixed-two');
+  h.button('Export notes').props.onClick();const notes=await h.downloads[0].text();
+  assert.match(notes,/Rory\nI arrived with a chocolate cake/);assert.match(notes,/Where could the models go/);
+  assert.doesNotMatch(notes,/Why did Zoe look annoyed/,'speaker correction removes the linked suggestion from exported history');
+});
+
+test('shared online coaching suppresses model grammar assessment and retains quote-conflict warnings',async()=>{
+  const h=liveHarness({audioMode:'online',speaker:'unknown'});await h.start();
+  h.caption('mixed-correct','Yesterday I went to the park.','misheard-response');
+  h.done('misheard-response','Correct the verb.',{heard:'Yesterday I go to the park.',prompt:'What is the past of go?',next:'Ask for a correct verb form.',uncertainty:'The learner lacks fluency.'});
+  const accepted=h.snapshot().entries[0];
+  assert.equal(accepted.feedback.heard,'Yesterday I went to the park.');
+  assert.equal(accepted.feedback.correction,'');assert.equal(accepted.feedback.strength,'');
+  assert.equal(accepted.feedback.prompt,'What happened next, and why?');
+  assert.match(accepted.feedback.next,/Check what was actually said/);
+  assert.match(accepted.feedback.uncertainty,/Either may have misheard/);assert.match(accepted.feedback.uncertainty,/Speaker identity is unconfirmed/);
+  assert.doesNotMatch(JSON.stringify(accepted.feedback),/lacks fluency|Correct the verb|past of go|correct verb/);
+});
+
+test('independent microphone and call signal meters remain available when AI ends but recording continues',async()=>{
+  const h=liveHarness({audioMode:'online',speaker:'unknown'});await h.start();
+  h.setAudioLevels({microphone:.35,call:.72});h.pulse(150);
+  const meter=label=>h.find(node=>node.type==='meter'&&node.props['aria-label']===label);
+  assert.equal(meter('My microphone signal').props.value,.35);assert.equal(meter('Student call audio signal').props.value,.72);
+  h.archiveProps().onBusy(true);h.render();
+  h.button('End listening').props.onClick();h.render();
+  h.setAudioLevels({microphone:.67,call:.18});h.pulse(150);
+  assert.equal(meter('My microphone signal').props.value,.67);assert.equal(meter('Student call audio signal').props.value,.18);
+  h.archiveProps().onBusy(false);h.render();h.render();
+  assert.equal(meter('My microphone signal').props.value,0);assert.equal(meter('Student call audio signal').props.value,0);
+  assert.equal(h.audioRequests.length,1,'meter updates must not acquire additional audio devices');
 });

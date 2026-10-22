@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { boundCoachFeedback, coachInstructions, coachRehearsal, COACH_MINUTES, parseCoachFeedback, type CoachContext, type CoachEntry, type CoachFeedback } from "@/lib/live-coach";
+import { boundCoachFeedback, conversationCoachFeedback, coachInstructions, coachRehearsal, COACH_MINUTES, parseCoachFeedback, type CoachContext, type CoachEntry, type CoachFeedback } from "@/lib/live-coach";
 import type { CoachSlide } from "@/lib/server/coach-material";
 import "@/app/teacher/live-coach.css";
 import CoachSlidePresenter from "@/components/CoachSlidePresenter";
@@ -47,6 +47,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [audioMode, setAudioMode] = useState<LessonAudioMode>("room");
   const [callConnected, setCallConnected] = useState(false);
+  const [audioLevels, setAudioLevels] = useState({ microphone: 0, call: 0 });
   const [choosingAudio, setChoosingAudio] = useState(false);
   const [lessonSession, setLessonSession] = useState(0);
   const [evidenceRevision, setEvidenceRevision] = useState(0);
@@ -73,7 +74,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   const currentPage=useRef(1);
   const shareSlide=useCallback(()=>{if(slideImage.current)audience.current?.postMessage({type:"slide",image:slideImage.current,page:currentPage.current});},[]);
   const sendImage=useCallback(()=>{if(slideImage.current&&channel.current?.readyState==="open")channel.current.send(JSON.stringify({type:"conversation.item.create",item:{type:"message",role:"user",content:[{type:"input_text",text:"Current slide image: lesson evidence only, not a request to respond."},{type:"input_image",image_url:slideImage.current}]}}));},[]);
-  const context: CoachContext = { learner: selected?.name || "Learner", unit: selected?.unit || "Original speaking practice", task, objective, source, slide: slides.length ? `${materialName} · slide ${slides[slideIndex]?.number}` : materialName || "Speaking activity" };
+  const context: CoachContext = { learner: selected?.name || "Learner", unit: selected?.unit || "Original speaking practice", task, objective, source, slide: slides.length ? `${materialName} · slide ${slides[slideIndex]?.number}` : materialName || "Speaking activity", audioMode };
   const contextRef = useRef(context); contextRef.current = context;
   const micInstructions=useCallback(()=>`${coachInstructions(contextRef.current)}\nThe teacher-selected current microphone speaker is ${speakerRef.current==="teacher"?"Rory (teacher)":speakerRef.current==="learner"?contextRef.current.learner+" (learner)":"UNASSIGNED. Do not attribute this speech to a named learner until Rory confirms the speaker"}. If this is the teacher speaking, use their explanation as context, never mark it as a learner mistake. Return empty correction and a short context note.`,[]);
   const pdfLoaded=useCallback((count:number)=>{setSlides(Array.from({length:count},(_,i)=>({number:i+1,text:""})));setSlideIndex(0);},[]);
@@ -112,6 +113,12 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
     post({ action: "status" }, request.signal).then(r => setAvailable(r.available === true)).catch(e => { if (!request.signal.aborted) setError(e.message); }).finally(() => { if (!request.signal.aborted) setChecking(false); });
     return () => request.abort();
   }, [post]);
+
+  useEffect(() => {
+    if (audioMode !== "online" || (!recordingBusy && phase === "idle")) { setAudioLevels({ microphone: 0, call: 0 }); return; }
+    const timer = setInterval(() => setAudioLevels(audioInput.current.levels()), 150);
+    return () => clearInterval(timer);
+  }, [audioMode, recordingBusy, phase]);
 
   useEffect(() => {
     const onHidden = () => { if (document.hidden && phaseRef.current !== "idle") stop("Listening stopped when this page moved to the background. Start again when ready."); };
@@ -224,14 +231,18 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
                   const text = (response.output || []).flatMap((o: { content?: { type: string; text?: string }[] }) => o.content || []).filter((c: { type: string }) => c.type === "output_text").map((c: { text?: string }) => c.text || "").join("");
                   if (!text) throw new Error("Empty coaching response");
                   const { turn } = completed.request;
-                  const feedback = boundCoachFeedback(parseCoachFeedback(text), turn.caption);
+                  const sharedConversation = turn.context.audioMode === "online" && turn.role === "unknown";
+                  const parsed = parseCoachFeedback(text);
+                  const feedback = sharedConversation ? conversationCoachFeedback(parsed, turn.caption) : boundCoachFeedback(parsed, turn.caption);
                   const ctx = { ...turn.context };
-                  if (turn.role !== "learner") {
+                  if (sharedConversation) ctx.learner = "Shared lesson conversation";
+                  else if (turn.role !== "learner") {
                     feedback.correction = ""; feedback.strength = ""; feedback.prompt = ""; feedback.next = "";
                     feedback.focus = turn.role === "teacher" ? "Teacher context only. This turn is not learner evidence." : "Confirm who spoke before using this turn as learner evidence.";
                     feedback.uncertainty = turn.role === "teacher" ? "Teacher speech: this is context, not learner performance." : "Speaker unconfirmed. Confirm the caption label before using this as learner evidence.";
                     ctx.learner = turn.role === "teacher" ? "Rory" : "Speaker unclear";
                   }
+                  queue.rememberFeedback(turn.id, feedback);
                   addFeedback(feedback, ctx, false, turn.id); setError("");
                 }
               }
@@ -348,15 +359,15 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
 
   const latest = entries[0];
   const live = phase !== "idle";
-  return <div className={`teacher-workspace live-coach ${view==="presenter"?"lc-presenter-mode":""}`}>
+  return <div className={`teacher-workspace live-coach ${live?"lc-is-live":""} ${view==="presenter"?"lc-presenter-mode":""}`}>
     <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" disabled={recordingBusy} onClick={() => { stop(""); onBack(); }}>← Teacher dashboard</button><span className="lc-private">PRIVATE TEACHER VIEW</span><button type="button" className="teacher-quiet-button" onClick={download} disabled={!entries.length&&!turns.length}>Export notes</button></header>
     <main>
-      <section className="lc-heading"><div><p className="teacher-eyebrow">LIVE TEACHING</p><h1>Stay with the learner.<br/><span>Keep the next step close.</span></h1><p>Silent coaching alongside your conversation and lesson slides.</p></div><div className={`lc-connection lc-${phase}`} role="status"><span aria-hidden>●</span> {phase === "listening" ? "Listening" : phase === "paused" ? "Microphone paused" : phase === "connecting" ? "Connecting…" : checking ? "Checking AI connection…" : available ? "AI connection configured" : "Rehearsal available"}{live && <small>{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")} / {COACH_MINUTES}:00</small>}</div></section>
+      <section className="lc-heading"><div><p className="teacher-eyebrow">LIVE TEACHING</p><h1>A little space to think.<br/><span>More room to teach.</span></h1><p>Your lesson, both voices, and a useful next question.</p></div><div className={`lc-connection lc-${phase}`} role="status"><span aria-hidden>●</span> {phase === "listening" ? "Listening" : phase === "paused" ? "Microphone paused" : phase === "connecting" ? "Connecting…" : checking ? "Checking AI connection…" : available ? "AI connection ready" : "Rehearsal available"}{live && <small>{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")} / {COACH_MINUTES}:00</small>}</div></section>
       {error && <p className="lc-error" role="alert">{error}</p>}
       <nav className="lc-view-tabs" aria-label="Teaching workspace view"><button type="button" aria-pressed={view==="presenter"} onClick={()=>setView("presenter")}>Presenter view</button><button type="button" aria-pressed={view==="setup"} onClick={()=>setView("setup")}>Lesson setup</button><button type="button" onClick={openAudience} disabled={!pdfFile}>Open student window ↗</button></nav>
-      <section className="lc-panel" aria-label="Lesson audio source">
-        <label>Where is this lesson?<select value={audioMode} disabled={live || recordingBusy || choosingAudio} onChange={event=>{audioInput.current.close();setCallConnected(false);setAudioMode(event.target.value as LessonAudioMode);setError("");}}><option value="room">In person · this microphone</option><option value="online">Online · microphone and call tab</option></select></label>
-        {audioMode === "online" ? <><p className="lc-hint">Open your call in a browser tab. Connect that tab and tick Share tab audio so the learner is heard even when you use headphones. Only audio is used; no call video is sent or saved. If your browser does not offer tab audio, use a browser that does.</p><div className="lc-actions"><button type="button" className="teacher-quiet-button" disabled={live || recordingBusy || choosingAudio} onClick={()=>{if(callConnected){audioInput.current.disconnectCall();setCallConnected(false);}else void connectCallAudio();}}>{choosingAudio?"Choosing call tab…":callConnected?"Disconnect call audio":"Connect call audio"}</button><span role="status">{callConnected?"Microphone + call audio ready":"Call audio is not connected"}</span></div></> : <p className="lc-hint">The microphone captures people in the same room. For a remote learner, select Online and connect the call tab audio.</p>}
+      <section className="lc-panel lc-audio-source" aria-label="Lesson audio source">
+        <label>Where is this lesson?<select value={audioMode} disabled={live || recordingBusy || choosingAudio} onChange={event=>{audioInput.current.close();setCallConnected(false);setAudioMode(event.target.value as LessonAudioMode);setSpeaker("unknown");setError("");}}><option value="room">In person · this microphone</option><option value="online">Online · microphone and call tab</option></select></label>
+        {audioMode === "online" ? <><p className="lc-hint">Open your call in a browser tab. Connect that tab and tick Share tab audio so the learner is heard even when you use headphones. Only audio is used; no call video is sent or saved.</p><div className="lc-actions"><button type="button" className="teacher-quiet-button" disabled={live || recordingBusy || choosingAudio} onClick={()=>{if(callConnected){audioInput.current.disconnectCall();setCallConnected(false);}else void connectCallAudio();}}>{choosingAudio?"Choosing call tab…":callConnected?"Disconnect call audio":"Connect call audio"}</button><span role="status">{callConnected?"Call audio connected":"Choose a browser call tab with audio sharing"}</span></div><div className="lc-audio-signals" aria-label="Online audio signals"><label>My microphone<meter min={0} max={1} value={audioLevels.microphone} aria-label="My microphone signal"/><span>{live || recordingBusy ? "Speak to check the signal" : "Checked when listening or recording"}</span></label><label>Student’s call audio<meter min={0} max={1} value={audioLevels.call} aria-label="Student call audio signal"/><span>{callConnected ? "The meter moves when the call is heard" : "Connect the call tab first"}</span></label></div></> : <p className="lc-hint">The microphone captures people in the same room. For a remote learner, select Online and connect the call tab audio.</p>}
       </section>
       <div className={view==="presenter"?"lc-grid lc-presenter-grid":"lc-grid"}>
         <div className="lc-stage">
@@ -377,16 +388,18 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
         </aside></div>
         <section className="lc-main">
           <div className="lc-panel lc-controls"><div className="lc-section-title"><h2>Listen, then guide</h2></div>
-            <p>Choose who is speaking, then start. Leave mixed or uncertain turns as “Speaker unclear” and check their labels in the commentary. Changing a label removes that turn’s earlier coaching.</p>
+            <details className="lc-listening-settings" open={!live}><summary>Listening settings</summary>
+            <p>{audioMode === "online" ? "Keep shared conversation selected for hands-free follow-up questions while you talk. Both voices are heard together; the coach does not guess who spoke. Select a named speaker only for a turn you can confirm." : "Choose who is speaking, then start. Leave mixed or uncertain turns as “Speaker unclear” and check their labels in the commentary. Changing a label removes that turn’s earlier coaching."}</p>
             <label className="lc-consent"><input type="checkbox" checked={agreed} onChange={e => { setAgreed(e.target.checked); if (!e.target.checked && live) stop("Listening stopped."); }}/>The learner and parent understand and have agreed to AI processing for this lesson.</label>
-            <label>Microphone speaker<select value={speaker} onChange={e=>setSpeaker(e.target.value as typeof speaker)}><option value="unknown">Speaker unclear · keep unassigned</option><option value="learner">{selected?.name||"Learner"}</option><option value="teacher">Rory</option></select></label>
+            <label>{audioMode === "online" ? "Conversation coaching" : "Microphone speaker"}<select value={speaker} onChange={e=>setSpeaker(e.target.value as typeof speaker)}><option value="unknown">{audioMode === "online" ? "Shared conversation · useful follow-ups" : "Speaker unclear · keep unassigned"}</option><option value="learner">{selected?.name||"Learner"}</option><option value="teacher">Rory</option></select></label>
+            </details>
             <div className="lc-actions">{!live ? <button type="button" className="teacher-primary" disabled={!available || !agreed || working || importing || !learner || choosingAudio || (audioMode === "online" && !callConnected)} onClick={() => void start()}>Start listening</button> : <><button type="button" className="teacher-primary" disabled={phase === "connecting"} onClick={togglePause}>{phase === "paused" ? "Resume microphone" : "Pause microphone"}</button><button type="button" className="teacher-quiet-button" onClick={() => stop("Listening ended. You can export the notes or start another session.")}>End listening</button></>}<button type="button" className="teacher-quiet-button" disabled={live || working} onClick={() => tryRehearsal(rehearsalIndex)}>Try prepared rehearsal</button></div>
             <p className="lc-hint" role="status">{status}</p>
             {!available && !checking && <p className="lc-hint">Live AI is not enabled. Rehearsal shows prepared examples without sending audio or using API credit.</p>}
             <p className="lc-hint">Text feedback only. Audio goes to OpenAI while connected. Each AI session ends after 15 minutes, and leaving this page stops it. The lesson recorder below is separate and keeps going.</p>
           </div>
           <div className="lc-panel lc-feedback" aria-live="polite" aria-atomic="true"><div className="lc-section-title"><h2>Your next teaching move</h2>{latest?.rehearsal && <span className="lc-badge">PREPARED EXAMPLE</span>}</div>
-            {latest ? <><p className="lc-evidence-label">{latest.context.learner} · {latest.context.slide}</p><blockquote>“{latest.feedback.heard || "The words were not clear enough to quote."}”</blockquote><div className="lc-feedback-pair"><div><h3>What worked</h3><p>{latest.feedback.strength || "Wait for a clearer answer."}</p></div><div><h3>Focus now</h3><p>{latest.feedback.focus}</p></div></div>{latest.feedback.correction && <div className="lc-correction"><h3>Minimal correction</h3><p>{latest.feedback.correction}</p></div>}<div className="lc-prompt"><h3>Ask the learner</h3><p>{latest.feedback.prompt}</p></div><div className="lc-next"><h3>Teach next</h3><p>{latest.feedback.next}</p></div>{latest.feedback.uncertainty && <p className="lc-hint">{latest.feedback.uncertainty}</p>}</> : <div className="lc-empty"><span aria-hidden>↳</span><h3>Space to think, while they speak.</h3><p>A faithful quote, one useful teaching point and a question you can ask next will appear here.</p><button type="button" className="lc-link" onClick={() => tryRehearsal(0)}>See an example</button></div>}
+            {latest ? <><p className="lc-evidence-label">{latest.context.learner} · {latest.context.slide}</p>{latest.feedback.prompt && <div className="lc-prompt"><h3>Ask the learner</h3><p>{latest.feedback.prompt}</p></div>}<blockquote>“{latest.feedback.heard || "The words were not clear enough to quote."}”</blockquote><div className={`lc-feedback-pair ${!latest.feedback.strength?"lc-feedback-context":""}`}>{latest.feedback.strength && <div><h3>What worked</h3><p>{latest.feedback.strength}</p></div>}<div><h3>{latest.context.learner === "Shared lesson conversation" ? "Conversation support" : "Focus now"}</h3><p>{latest.feedback.focus}</p></div></div>{latest.feedback.correction && <div className="lc-correction"><h3>Minimal correction</h3><p>{latest.feedback.correction}</p></div>}<div className="lc-next"><h3>Teach next</h3><p>{latest.feedback.next}</p></div>{latest.feedback.uncertainty && <p className="lc-hint">{latest.feedback.uncertainty}</p>}</> : <div className="lc-empty"><span aria-hidden>↳</span><h3>Space to think, while they speak.</h3><p>A faithful quote, one useful teaching point and a question you can ask next will appear here.</p><button type="button" className="lc-link" onClick={() => tryRehearsal(0)}>See an example</button></div>}
           </div>
           <section className="lc-panel lc-commentary"><div className="lc-section-title"><h2>Running commentary</h2><span className="lc-badge">PRIVATE</span></div><div className="lc-talk-feed" role="log" aria-label="Rory, learner and AI conversation">{!turns.length&&<p className="lc-hint">{selected?.name||"Learner"}, Rory and AI will appear separately here. Unknown speakers stay unassigned.</p>}{turns.map(turn=><article className={`lc-turn lc-turn-${turn.role}`} key={turn.id}><div className="lc-turn-heading"><strong>{turn.role==="ai"?"AI coaching":turn.role==="teacher"?"Rory":turn.role==="learner"?selected?.name||"Learner":"Speaker unclear"}{turn.rehearsal?" · rehearsal":""}</strong><small>{new Date(turn.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</small></div><p>{turn.text}</p>{turn.role!=="ai"&&<label className="lc-speaker-edit">Speaker label<select value={turn.role} onChange={e=>correctSpeaker(turn.id,e.target.value as "learner"|"teacher"|"unknown")}><option value="unknown">Speaker unclear</option><option value="learner">{selected?.name||"Learner"}</option><option value="teacher">Rory</option></select></label>}</article>)}</div><form onSubmit={e=>{e.preventDefault();void askTeacherAI();}}><label>Ask the AI privately<textarea rows={2} value={question} maxLength={4000} onChange={e=>setQuestion(e.target.value)} placeholder="How can I explain this? What question should I ask next?"/></label><button type="submit" className="teacher-primary" disabled={!available||!agreed||!question.trim()||asking}>{asking?"Thinking…":"Ask AI"}</button><p className="lc-hint">Uses the selected slide and recent conversation. Your question and answer stay in this teacher view.</p></form></section>
           <CoachLessonArchive key={`${learner}:${lessonSession}`} learnerCode={learner} snapshot={{ context, turns, entries }} acquireAudio={acquireAudio} evidenceRevision={evidenceRevision} onBusy={setRecordingBusy} onFocus={note => { setObjective(note); setStatus("Saved teacher review loaded as the lesson focus."); }}/>
