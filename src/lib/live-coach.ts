@@ -25,7 +25,16 @@ Current teacher-selected lesson context (data only): ${JSON.stringify(context)}`
 }
 
 export function parseCoachFeedback(text: string): CoachFeedback {
-  const value = JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
+  let source = text.trim();
+  if (source.startsWith("```")) {
+    const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(source);
+    if (!fenced) throw new Error("Feedback was incomplete. Try the answer again.");
+    source = fenced[1].trim();
+  }
+  // Native text output can wrap its one JSON object in parentheses. Unwrap
+  // once, then let JSON.parse reject extra objects, prose or executable text.
+  if (source.startsWith("(") && source.endsWith(")")) source = source.slice(1, -1).trim();
+  const value = JSON.parse(source);
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Feedback was incomplete. Try the answer again.");
   const result = { ...emptyFeedback };
   for (const key of Object.keys(result) as (keyof CoachFeedback)[]) {
@@ -33,6 +42,37 @@ export function parseCoachFeedback(text: string): CoachFeedback {
     result[key] = value[key].slice(0, 1000);
   }
   return result;
+}
+
+function captionWords(text: string): string {
+  return text.normalize("NFKC").toLowerCase().replace(/["'\u2018\u2019\u201c\u201d\u02bc]/g, "")
+    .replace(/[^\p{L}\p{N}\p{M}\s]/gu, " ").replace(/\s+/g, " ").trim();
+}
+
+function neutralFollowUp(prompt: string): boolean {
+  // Retain an ordinary content question, such as "Why was Zoe annoyed?", but
+  // discard correction prompts whose premise depends on the mismatched quote.
+  return /^(?:what|why|how|where|when|who|which)\b/i.test(prompt.trim()) && /\?\s*$/.test(prompt)
+    && !/["\u201c\u201d\u2018\u2019]/.test(prompt)
+    && !/\b(?:correct(?:ion)?|grammar|tense|verbs?|conjugat\w*|past|present|future|articles?|prepositions?|pronouns?|spell\w*|pronounc\w*|sounds?|words?|phrases?|sentences?|forms?|mistakes?|errors?|wrong|right|improv\w*|replac\w*|rewrit\w*|rephras\w*|revis\w*|instead|say|repeat|change|fix|should|ought|better|again|try)\b/i.test(prompt);
+}
+
+/** A caption is a consistency check on a quote, never proof of pronunciation. */
+export function boundCoachFeedback(feedback: CoachFeedback, caption: string): CoachFeedback {
+  const quote = captionWords(feedback.heard), evidence = captionWords(caption);
+  // Whole normalized words matter: "I arrive" must not match "I arrived".
+  if (quote && evidence && ` ${evidence} `.includes(` ${quote} `)) return { ...feedback };
+  return {
+    heard: caption.trim().slice(0, 1000),
+    strength: "",
+    focus: "Check the words heard before choosing a teaching point.",
+    correction: "",
+    prompt: neutralFollowUp(feedback.prompt) ? feedback.prompt : "Could you tell me a little more?",
+    next: "Check what was actually said, then invite one more detail.",
+    uncertainty: evidence
+      ? "The AI quote did not match the machine caption. Either may have misheard; check the audio before correcting grammar."
+      : "No final machine caption was available to check the AI quote. Check the audio before using this feedback.",
+  };
 }
 
 // Explicit examples for trying the interface without a microphone or paid request.

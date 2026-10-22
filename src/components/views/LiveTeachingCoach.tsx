@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { coachInstructions, coachRehearsal, COACH_MINUTES, parseCoachFeedback, type CoachContext, type CoachEntry, type CoachFeedback } from "@/lib/live-coach";
+import { boundCoachFeedback, coachInstructions, coachRehearsal, COACH_MINUTES, parseCoachFeedback, type CoachContext, type CoachEntry, type CoachFeedback } from "@/lib/live-coach";
 import type { CoachSlide } from "@/lib/server/coach-material";
 import "@/app/teacher/live-coach.css";
 import CoachSlidePresenter from "@/components/CoachSlidePresenter";
@@ -9,6 +9,7 @@ import CoachLessonArchive from "@/components/CoachLessonArchive";
 import type { CoachTurn } from "@/lib/coach-archive";
 import { correctCoachSpeaker } from "@/lib/coach-evidence";
 import { LessonAudioInput, releaseLessonAudio, type LessonAudioMode } from "@/lib/lesson-audio";
+import { CoachTurnQueue, nativeCoachEvent } from "@/lib/coach-turns";
 
 type Learner = { code: string; name: string; unit?: string; focusNote?: string };
 type Phase = "idle" | "connecting" | "listening" | "paused";
@@ -59,15 +60,11 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   const generation = useRef(0);
   const phaseRef = useRef<Phase>("idle");
   const mounted = useRef(true);
-  const pendingContext = useRef(new Map<string, CoachContext>());
-  const responseContexts = useRef(new Map<string, CoachContext>());
-  const seenResponses = useRef(new Set<string>());
+  const liveTurns = useRef<CoachTurnQueue | null>(null);
+  const responseDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transcriptionDeadlines = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const pdfRef = useRef("");
   const speakerRef=useRef(speaker);speakerRef.current=speaker;
-  const turnSpeakers=useRef(new Map<string,"learner"|"teacher"|"unknown">());
-  const pendingSpeakers=useRef(new Map<string,"learner"|"teacher"|"unknown">());
-  const responseSpeakers=useRef(new Map<string,"learner"|"teacher"|"unknown">());
-  const responseTurns=useRef(new Map<string,string>());
   const correctedSpeakers=useRef(new Map<string,"learner"|"teacher"|"unknown">());
   const audioInput=useRef(new LessonAudioInput());
   const slideImage=useRef("");
@@ -94,10 +91,13 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
     controller.current?.abort(); controller.current = null;
     if (interval.current) clearInterval(interval.current);
     if (connectionDeadline.current) clearTimeout(connectionDeadline.current);
+    if (responseDeadline.current) clearTimeout(responseDeadline.current);
+    for (const timer of transcriptionDeadlines.current.values()) clearTimeout(timer);
+    transcriptionDeadlines.current.clear();
     const dc = channel.current; channel.current = null; dc?.close();
     const pc = peer.current; peer.current = null; pc?.close();
     releaseLessonAudio(stream.current); stream.current = null;
-    pendingContext.current.clear(); responseContexts.current.clear(); seenResponses.current.clear();turnSpeakers.current.clear();pendingSpeakers.current.clear();responseSpeakers.current.clear();responseTurns.current.clear();correctedSpeakers.current.clear();
+    liveTurns.current?.clear(); liveTurns.current = null; correctedSpeakers.current.clear();
     phaseRef.current = "idle";
     if (mounted.current) { setPhase("idle"); setStatus(message); }
   }, []);
@@ -151,6 +151,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
     if (phaseRef.current !== "idle" || !available || !agreed || working || choosingAudio || (audioMode === "online" && !callConnected)) return;
     if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) { setError("Live listening needs microphone support in a secure browser window."); return; }
     stop(""); const attempt = generation.current;
+    const queue = new CoachTurnQueue(); liveTurns.current = queue;
     phaseRef.current = "connecting"; setPhase("connecting"); setError(""); setTranscript(""); setSeconds(0);
     setStatus("Connecting the microphone. Feedback will appear here silently.");
     const abort = new AbortController(); controller.current = abort;
@@ -162,6 +163,15 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
       const pc = new RTCPeerConnection(); peer.current = pc;
       mic.getAudioTracks().forEach(track => { pc.addTrack(track, mic); track.onended = () => { if (generation.current === attempt) stop("The microphone disconnected. Start again when ready."); }; });
       const dc = pc.createDataChannel("oai-events"); channel.current = dc;
+      const requestNext = () => {
+        if (generation.current !== attempt || dc.readyState !== "open") return;
+        const request = queue.next();
+        if (!request) return;
+        dc.send(JSON.stringify(nativeCoachEvent(request)));
+        responseDeadline.current = setTimeout(() => {
+          if (generation.current === attempt) stop("AI feedback timed out. Listening stopped; your saved recording and lesson notes are separate. Start again when ready.");
+        }, 45000);
+      };
       dc.onopen = () => {
         if (generation.current !== attempt) return;
         if (connectionDeadline.current) clearTimeout(connectionDeadline.current);
@@ -175,26 +185,57 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
         if (generation.current !== attempt) return;
         try {
           const value = JSON.parse(event.data);
-          if(value.type==="input_audio_buffer.speech_started"&&typeof value.item_id==="string")turnSpeakers.current.set(value.item_id,speakerRef.current);
-          if (value.type === "input_audio_buffer.committed" && typeof value.item_id === "string") {pendingContext.current.set(value.item_id, { ...contextRef.current });if(!turnSpeakers.current.has(value.item_id))turnSpeakers.current.set(value.item_id,speakerRef.current);pendingSpeakers.current.set(value.item_id,turnSpeakers.current.get(value.item_id)||"unknown");}
-          if (value.type === "response.created") {
-            const ctx = pendingContext.current.values().next().value as CoachContext | undefined;
-            if (value.response?.id) responseContexts.current.set(value.response.id, ctx || { ...contextRef.current });
-            const first = pendingContext.current.keys().next().value; if (first) {if(value.response?.id){responseSpeakers.current.set(value.response.id,pendingSpeakers.current.get(first)||"unknown");responseTurns.current.set(value.response.id,first);}pendingSpeakers.current.delete(first);pendingContext.current.delete(first);}
+          if(value.type==="input_audio_buffer.speech_started"&&typeof value.item_id==="string")queue.speechStarted(value.item_id,speakerRef.current);
+          if (value.type === "input_audio_buffer.committed" && typeof value.item_id === "string") {
+            queue.committed(value.item_id, contextRef.current, speakerRef.current, slideImage.current);
+            if (queue.needsTranscript(value.item_id) && !transcriptionDeadlines.current.has(value.item_id)) {
+              const id = value.item_id;
+              transcriptionDeadlines.current.set(id, setTimeout(() => {
+                transcriptionDeadlines.current.delete(id);
+                if (generation.current !== attempt) return;
+                queue.transcriptionFailed(id); setError("One caption timed out. No learner correction was made for that turn."); requestNext();
+              }, 20000));
+            }
+            requestNext();
           }
-          if (value.type === "conversation.item.input_audio_transcription.completed") {const text=String(value.transcript||"");setTranscript(text);setTurns(previous=>[...previous,{id:value.item_id||crypto.randomUUID(),at:new Date().toISOString(),role:turnSpeakers.current.get(value.item_id)||"unknown",text}].slice(-4000));turnSpeakers.current.delete(value.item_id);}
+          if (value.type === "response.created") queue.responseCreated(value.response || {});
+          if (value.type === "conversation.item.input_audio_transcription.completed" && typeof value.item_id === "string") {
+            clearTimeout(transcriptionDeadlines.current.get(value.item_id)); transcriptionDeadlines.current.delete(value.item_id);
+            const turn = queue.transcribed(value.item_id, String(value.transcript || ""), speakerRef.current);
+            if (turn) {
+              setTranscript(turn.caption);
+              setTurns(previous => previous.some(item => item.id === turn.id) ? previous : [...previous, { id: turn.id, at: new Date().toISOString(), role: turn.role, text: turn.caption }].slice(-4000));
+            }
+            requestNext();
+          }
+          if (value.type === "conversation.item.input_audio_transcription.failed" && typeof value.item_id === "string") {
+            clearTimeout(transcriptionDeadlines.current.get(value.item_id)); transcriptionDeadlines.current.delete(value.item_id);
+            queue.transcriptionFailed(value.item_id); setError("One caption could not be transcribed. No learner correction was made for that turn."); requestNext();
+          }
           if (value.type === "response.done") {
             const response = value.response;
-            if (!response?.id || seenResponses.current.has(response.id)) return;
-            seenResponses.current.add(response.id);
-            if (seenResponses.current.size > 200) seenResponses.current.delete(seenResponses.current.values().next().value!);
-            const ctx = responseContexts.current.get(response.id) || { ...contextRef.current }; responseContexts.current.delete(response.id);
-            if (response.status !== "completed") { setError("One feedback response was incomplete. Let the learner finish and try again."); return; }
-            const text = (response.output || []).flatMap((o: { content?: { type: string; text?: string }[] }) => o.content || []).filter((c: { type: string }) => c.type === "output_text").map((c: { text?: string }) => c.text || "").join("");
-            const sourceTurnId=responseTurns.current.get(response.id);responseTurns.current.delete(response.id);
-            const corrected=sourceTurnId?correctedSpeakers.current.has(sourceTurnId):false;
-            const role=(sourceTurnId?correctedSpeakers.current.get(sourceTurnId):undefined)||responseSpeakers.current.get(response.id)||"unknown";responseSpeakers.current.delete(response.id);
-            if (text && !corrected) {const feedback=parseCoachFeedback(text);if(role!=="learner"){feedback.correction="";feedback.uncertainty=role==="teacher"?"Teacher speech: this is context, not learner performance.":"Speaker unconfirmed. Confirm the caption label before using this as learner evidence.";ctx.learner=role==="teacher"?"Rory":"Speaker unclear";}addFeedback(feedback, ctx, false, sourceTurnId); setError(""); }
+            const completed = queue.completed(response || {});
+            if (!completed) return;
+            if (responseDeadline.current) clearTimeout(responseDeadline.current);
+            try {
+              if (!completed.invalidated) {
+                if (response.status !== "completed") setError("One feedback response was incomplete. Continue with the next answer.");
+                else {
+                  const text = (response.output || []).flatMap((o: { content?: { type: string; text?: string }[] }) => o.content || []).filter((c: { type: string }) => c.type === "output_text").map((c: { text?: string }) => c.text || "").join("");
+                  if (!text) throw new Error("Empty coaching response");
+                  const { turn } = completed.request;
+                  const feedback = boundCoachFeedback(parseCoachFeedback(text), turn.caption);
+                  const ctx = { ...turn.context };
+                  if (turn.role !== "learner") {
+                    feedback.correction = ""; feedback.strength = ""; feedback.prompt = ""; feedback.next = "";
+                    feedback.focus = turn.role === "teacher" ? "Teacher context only. This turn is not learner evidence." : "Confirm who spoke before using this turn as learner evidence.";
+                    feedback.uncertainty = turn.role === "teacher" ? "Teacher speech: this is context, not learner performance." : "Speaker unconfirmed. Confirm the caption label before using this as learner evidence.";
+                    ctx.learner = turn.role === "teacher" ? "Rory" : "Speaker unclear";
+                  }
+                  addFeedback(feedback, ctx, false, turn.id); setError("");
+                }
+              }
+            } finally { requestNext(); }
           }
           if (value.type === "error") stop("The AI listening service reported an error. Your feedback remains here; no automatic retry was made.");
         } catch { setError("One feedback response could not be read. Continue with the next answer."); }
@@ -248,6 +289,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
     const turn=turns.find(t=>t.id===id);
     if(!turn||turn.role===role)return;
     correctedSpeakers.current.set(id,role);
+    liveTurns.current?.correctSpeaker(id,role);
     const corrected=correctCoachSpeaker({context:contextRef.current,turns,entries},id,role);
     setTurns(corrected.turns);setEntries(corrected.entries);
     setEvidenceRevision(value=>value+1);

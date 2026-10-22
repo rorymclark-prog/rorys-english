@@ -29,7 +29,7 @@ test('native listening returns text only, caps output, and rejects malformed SDP
   assert.equal(JSON.stringify(config.output_modalities),'["text"]');
   assert.equal(config.max_output_tokens,700);
   assert.equal(config.tools.length,0);
-  assert.equal(config.audio.input.turn_detection.create_response,true);
+  assert.equal(config.audio.input.turn_detection.create_response,false);
   for(const changed of [{sdp:'not SDP'},{sdp:'v=0'+'x'.repeat(50001)},{context:{...context,source:'x'.repeat(12001)}},{context:{...context,learner:[]}}]) assert.throws(()=>service.coachSession({...body,...changed}));
 });
 test('typed coaching cannot receive arbitrary models, tools or oversized learner input',()=>{
@@ -38,12 +38,48 @@ test('typed coaching cannot receive arbitrary models, tools or oversized learner
   assert.match(request.input,/Yesterday I go home\./);
   for(const text of ['', ' ', 'x'.repeat(4001), {}])assert.throws(()=>service.coachAnalysis({...body,text}));
 });
-test('feedback parsing retains original grammar and rejects incomplete or non-object responses',()=>{
+test('feedback parsing accepts one bare, fenced or parenthesized object without repairing grammar',()=>{
   const feedback={...shared.coachRehearsal[0],heard:'Yesterday I go home.'};
   assert.equal(shared.parseCoachFeedback(JSON.stringify(feedback)).heard,'Yesterday I go home.');
   assert.equal(shared.parseCoachFeedback('```json\n'+JSON.stringify(feedback)+'\n```').heard,feedback.heard);
-  for(const text of ['[]','null','{"heard":"hello"}','not json'])assert.throws(()=>shared.parseCoachFeedback(text));
+  assert.equal(shared.parseCoachFeedback('('+JSON.stringify(feedback)+')').heard,feedback.heard);
+  assert.equal(shared.parseCoachFeedback('```json\n('+JSON.stringify(feedback)+')\n```').heard,feedback.heard);
   assert.equal(service.feedbackFromResponse({output:[{content:[{type:'output_text',text:JSON.stringify(feedback)}]}]}).heard,feedback.heard);
+});
+test('feedback parsing rejects prose extraction, multiple objects, nested wrappers and incomplete fields',()=>{
+  const json=JSON.stringify(shared.coachRehearsal[0]);
+  for(const text of ['[]','null','{"heard":"hello"}','not json','Here is the result: '+json,json+'\n'+json,'(('+json+'))','```json\n'+json,'```json\n'+json+'\n``` trailing','('+json+'); alert(1)',JSON.stringify({...shared.coachRehearsal[0],correction:null})])assert.throws(()=>shared.parseCoachFeedback(text));
+});
+test('native feedback cannot invent an arrival error by changing an ASR final quote',()=>{
+  const falseCorrection={heard:'When I arrive home, Zoe looked annoyed.',strength:'A clear past-time story.',focus:'Use arrived rather than arrive for the past.',correction:'When I arrived home, Zoe looked annoyed.',prompt:'What was the reason Zoe looked annoyed?',next:'Practise the past form arrived.',uncertainty:''};
+  const caption='When I arrived home, Zoe looked annoyed.';
+  const bounded=shared.boundCoachFeedback(falseCorrection,caption);
+  assert.equal(bounded.heard,caption);assert.equal(bounded.correction,'');assert.equal(bounded.strength,'');
+  assert.doesNotMatch(bounded.focus,/use arrived|rather than arrive/i);
+  assert.equal(bounded.prompt,falseCorrection.prompt);
+  assert.match(bounded.uncertainty,/AI quote did not match the machine caption/);
+  assert.match(bounded.uncertainty,/Either may have misheard/);
+  assert.equal(falseCorrection.correction,'When I arrived home, Zoe looked annoyed.');
+});
+test('faithful error quotes tolerate punctuation, case, curly quotes and whitespace without grammar changes',()=>{
+  const feedback={...shared.coachRehearsal[0],heard:'“YESTERDAY  I go to the park.”'};
+  const bounded=shared.boundCoachFeedback(feedback,'Well, yesterday I go to the park. Then I come home.');
+  assert.equal(bounded.heard,feedback.heard);assert.equal(bounded.correction,feedback.correction);assert.equal(bounded.strength,feedback.strength);
+  assert.notEqual(bounded,feedback);
+});
+test('a corrected retry cannot inherit the preceding answer’s false error or correction prompt',()=>{
+  const prior={...shared.coachRehearsal[0],heard:'Yesterday I go to the park.',prompt:'What is the past of go?'};
+  const bounded=shared.boundCoachFeedback(prior,'Yesterday I went to the park.');
+  assert.equal(bounded.correction,'');assert.equal(bounded.strength,'');assert.doesNotMatch(bounded.focus,/past simple/);
+  assert.equal(bounded.prompt,'Could you tell me a little more?');
+  for(const prompt of ["What is wrong with 'I go'?",'How can you improve the verb?', 'Which sentence is correct?'])assert.equal(shared.boundCoachFeedback({...prior,prompt},'Yesterday I went to the park.').prompt,'Could you tell me a little more?');
+  for(const [heard,caption] of [['I arrive','I arrived'],['we play','we played'],['...','I went home.'],['I went home.','']]){
+    const result=shared.boundCoachFeedback({...prior,heard},caption);
+    assert.equal(result.correction,'');assert.ok(result.uncertainty);
+  }
+  const success={...shared.coachRehearsal[1],heard:'We played football and then we went home because it was raining.'};
+  assert.equal(shared.boundCoachFeedback(success,success.heard).focus,success.focus);
+  assert.equal(shared.boundCoachFeedback(success,success.heard).correction,'');
 });
 test('private teacher questions retain slide context and reject invalid images and oversized questions',()=>{
   const question=service.coachQuestion({...body,question:'How can I explain this?',image:'data:image/jpeg;base64,YWJj',evidence:'learner: Yesterday I go.'});

@@ -81,6 +81,6 @@ export async function POST(request: Request) {
     }
     const result = await response.json();
     if (body.action === "question") { const answer = textFromResponse(result); if (!answer) throw new Error(); return reply({answer}); }
-    return reply({ feedback: feedbackFromResponse(result) });
+    return reply({ feedback: feedbackFromResponse(result, String(body.text)) });
   } catch { return reply({ error: "Feedback could not be completed. Your current lesson stays open; no automatic retry was made." }, 502); }
 }

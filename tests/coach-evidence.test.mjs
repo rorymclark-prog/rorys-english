@@ -15,6 +15,7 @@ function load(file,dependencies={},globals={}){
 }
 const {correctCoachSpeaker}=load('src/lib/coach-evidence.ts');
 const archive=load('src/lib/coach-archive.ts'),coach=load('src/lib/live-coach.ts');
+const coachTurns=load('src/lib/coach-turns.ts',{'./live-coach':coach});
 const context={learner:'Demo learner',unit:'Practice',task:'Yesterday',objective:'Past forms',source:'',slide:'Slide 1'};
 const feedback={heard:'Yesterday I go home.',strength:'Clear message',focus:'STALE COACHING',correction:'Yesterday I went home.',prompt:'What happened next?',next:'Try again.',uncertainty:''};
 const turn=(id,role,text,extra={})=>({id,role,text,at:'2026-10-22T12:00:00Z',...extra});
@@ -53,7 +54,7 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 // Run the component's real event handlers using deterministic browser adapters.
 // Every request, audio stream and WebRTC event below is local to this test.
 function liveHarness({delayTyped=false}={}){
-  const hooks=[],effects=[],downloads=[],requests=[];let cursor=0,ui,dataChannel,releaseTyped;
+  const hooks=[],effects=[],downloads=[],requests=[],responseRequests=new Map();let cursor=0,ui,dataChannel,releaseTyped;
   const same=(a,b)=>a&&b&&a.length===b.length&&a.every((value,index)=>Object.is(value,b[index]));
   const react={
     useState(initial){const index=cursor++,hook=hooks[index]||={value:initial};return [hook.value,value=>{hook.value=typeof value==='function'?value(hook.value):value;}];},
@@ -75,6 +76,7 @@ function liveHarness({delayTyped=false}={}){
     react,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/live-coach':coach,'@/app/teacher/live-coach.css':{},
     '@/components/CoachSlidePresenter':{default:()=>null},'@/components/CoachLessonArchive':{default:Archive},
     '@/lib/coach-evidence':{correctCoachSpeaker},
+    '@/lib/coach-turns':coachTurns,
     '@/lib/lesson-audio':{LessonAudioInput:class{async acquire(){return microphone;}close(){}},releaseLessonAudio(){}},
   },{
     navigator:{mediaDevices:{getUserMedia:async()=>microphone}},RTCPeerConnection:Peer,
@@ -96,10 +98,19 @@ function liveHarness({delayTyped=false}={}){
   async function prepare(){render();await settle();find(node=>node.type==='input'&&node.props.type==='checkbox').props.onChange({target:{checked:true}});render();}
   async function start(){await prepare();find(node=>node.type==='select'&&node.props.value==='unknown').props.onChange({target:{value:'learner'}});render();button('Start listening').props.onClick();await settle();}
   const event=value=>{dataChannel.onmessage({data:JSON.stringify(value)});render();};
-  function caption(id,text,responseId){event({type:'input_audio_buffer.speech_started',item_id:id});event({type:'input_audio_buffer.committed',item_id:id});event({type:'conversation.item.input_audio_transcription.completed',item_id:id,transcript:text});event({type:'response.created',response:{id:responseId}});}
-  function done(responseId,focus='STALE COACHING'){event({type:'response.done',response:{id:responseId,status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({...feedback,focus})}]}]}});}
+  function responseStarted(responseId,turnId){
+    const request=dataChannel.sent.findLast(item=>item.type==='response.create'&&item.response.metadata.source_turn_id===turnId);
+    assert.ok(request,`No explicit coaching request for ${turnId}`);responseRequests.set(responseId,request);
+    event({type:'response.created',response:{id:responseId,metadata:request.response.metadata}});
+  }
+  function caption(id,text,responseId){event({type:'input_audio_buffer.speech_started',item_id:id});event({type:'input_audio_buffer.committed',item_id:id});event({type:'conversation.item.input_audio_transcription.completed',item_id:id,transcript:text});if(responseId)responseStarted(responseId,id);}
+  function done(responseId,focus='STALE COACHING'){
+    const request=responseRequests.get(responseId);assert.ok(request);
+    const source=snapshot().turns.find(item=>item.id===request.response.metadata.source_turn_id);
+    event({type:'response.done',response:{id:responseId,metadata:request.response.metadata,status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({...feedback,heard:source.text,focus})}]}]}});
+  }
   function relabel(id,role){const original=snapshot().turns.find(item=>item.id===id);const article=find(node=>node.type==='article'&&walk(child=>child.type==='p'&&child.props.children===original.text,node));const select=walk(node=>node.type==='select',article);assert.ok(select);select.props.onChange({target:{value:role}});render();}
-  return {prepare,start,caption,done,relabel,snapshot,button,find,render,settle,downloads,requests,releaseTyped:()=>releaseTyped()};
+  return {prepare,start,caption,done,responseStarted,event,relabel,snapshot,button,find,render,settle,downloads,requests,sent:()=>dataChannel.sent,releaseTyped:()=>releaseTyped()};
 }
 
 test('live captions link both coaching surfaces to their source and correction reaches archive props and exported notes',async()=>{
@@ -144,4 +155,45 @@ test('completed typed feedback retains its source link and is removed when the o
   h.relabel(original.id,'unknown');
   assert.equal(h.snapshot().turns.length,1);assert.equal(h.snapshot().turns[0].role,'unknown');
   assert.equal(h.snapshot().turns[0].text,'Yesterday I go home.');assert.equal(h.snapshot().entries.length,0);
+});
+
+test('duplicate final ASR retains the selected learner speaker and cannot duplicate captions or requests',async()=>{
+  const h=liveHarness();await h.start();h.caption('same-caption','We played a game.','one-response');
+  h.event({type:'conversation.item.input_audio_transcription.completed',item_id:'same-caption',transcript:'We played a game.'});
+  assert.equal(h.snapshot().turns.length,1);assert.equal(h.snapshot().turns[0].role,'learner');
+  assert.equal(h.sent().filter(item=>item.type==='response.create').length,1);
+  h.done('one-response');assert.equal(h.snapshot().entries[0].sourceTurnId,'same-caption');
+});
+
+test('delayed ASR and rapidly alternating speakers keep explicit responses attached to the right caption',async()=>{
+  const h=liveHarness();await h.start();
+  h.event({type:'input_audio_buffer.speech_started',item_id:'delayed-learner'});
+  h.event({type:'input_audio_buffer.committed',item_id:'delayed-learner'});
+  h.find(node=>node.type==='select'&&node.props.value==='learner').props.onChange({target:{value:'teacher'}});h.render();
+  h.caption('rory-explanation','Now tell me what happened next.');
+  assert.equal(h.sent().filter(item=>item.type==='response.create').length,0);
+  h.event({type:'conversation.item.input_audio_transcription.completed',item_id:'delayed-learner',transcript:'I arrived at noon.'});
+  h.responseStarted('learner-response','delayed-learner');
+  assert.equal(h.snapshot().turns.find(item=>item.id==='delayed-learner').role,'learner');
+  assert.equal(h.sent().filter(item=>item.type==='response.create').length,1,'teacher feedback waits for learner feedback to finish');
+  h.done('learner-response','Learner feedback');
+  assert.equal(h.snapshot().entries[0].sourceTurnId,'delayed-learner');assert.equal(h.snapshot().entries[0].context.learner,'Demo learner');
+  h.responseStarted('teacher-response','rory-explanation');h.done('teacher-response','Teacher context');
+  const teacher=h.snapshot().entries.find(item=>item.sourceTurnId==='rory-explanation');
+  assert.equal(teacher.context.learner,'Rory');assert.equal(teacher.feedback.correction,'');
+});
+
+test('teacher and unassigned audio cannot display grammar coaching even when the model ignores its speaker instructions',async()=>{
+  const h=liveHarness();await h.start();
+  h.find(node=>node.type==='select'&&node.props.value==='learner').props.onChange({target:{value:'teacher'}});h.render();
+  h.caption('teacher-caption','Yesterday I go home.','teacher-response');h.done('teacher-response','Correct the past tense now');
+  const teacher=h.snapshot().entries[0];
+  assert.equal(teacher.context.learner,'Rory');assert.match(teacher.feedback.focus,/Teacher context only/);
+  for(const field of ['correction','strength','prompt','next'])assert.equal(teacher.feedback[field],'');
+  h.find(node=>node.type==='select'&&node.props.value==='teacher').props.onChange({target:{value:'unknown'}});h.render();
+  h.caption('unassigned-caption','Yesterday I go home.','unassigned-response');h.done('unassigned-response','Correct the past tense now');
+  const unassigned=h.snapshot().entries[0];
+  assert.equal(unassigned.context.learner,'Speaker unclear');assert.match(unassigned.feedback.focus,/Confirm who spoke/);
+  for(const field of ['correction','strength','prompt','next'])assert.equal(unassigned.feedback[field],'');
+  assert.ok(!h.snapshot().turns.filter(item=>item.role==='ai').some(item=>item.text.includes('Correct the past tense now')));
 });
