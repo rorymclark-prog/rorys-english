@@ -8,6 +8,7 @@ export default async function ProgressPage({ params }: { params: Promise<{ code:
     <ProgressView
       fetchCode={code}
       studentCode={code}
+      studentId={bundle.student.id}
       displayName={bundle.student.displayName}
       mode="student"
       links={bundle.student.progressLinks ?? []}

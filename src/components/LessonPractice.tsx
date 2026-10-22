@@ -1,4 +1,5 @@
 "use client";
+import StatusRow from "@/components/StatusRow";
 import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {readableDate} from '@/lib/clarity';
@@ -20,7 +21,7 @@ export function LessonPracticeDetails({code,record,practice,mode}:{code:string;r
 export function LatestLessonPractice({code,showFiles=true}:{code:string;showFiles?:boolean}) {
   const [entry,setEntry]=useState<ReturnType<typeof lessonPracticeRecord>>(null),[error,setError]=useState(false),[retry,setRetry]=useState(0);
   useEffect(()=>{let live=true;setEntry(null);setError(false);getLearning(code).then(r=>{if(live){if(r.ok)setEntry(lessonPracticeRecord(r.records||[]));else setError(true);}}).catch(()=>{if(live)setError(true);});return()=>{live=false;};},[code,retry]);
-  if(error)return <section className="re-card mt-5"><p role="alert">Could not check your latest lesson recap. <button type="button" className="underline" onClick={()=>setRetry(x=>x+1)}>Try again</button></p></section>;
+  if(error)return <StatusRow kind="error" className="mt-5" onRetry={()=>setRetry(x=>x+1)}>Could not check your latest lesson recap.</StatusRow>;
   if(!entry)return null;
   const {record,practice}=entry;
   const assignedHomework=record.body.source?.includes("-homework-reset-source-")===true;

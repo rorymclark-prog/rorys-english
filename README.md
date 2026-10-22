@@ -1,5 +1,7 @@
 # Rory's English
 
+The teacher-only [live teaching prototype](LIVE_TEACHING.md) adds private, silent coaching with selected lesson context and an explicit prepared rehearsal. It is reviewed separately before live activation.
+
 A lesson and homework hub for Rory, Ferdi and Valentin. The current deployment uses Vercel at https://rorys-english.vercel.app/ with Firebase email/password accounts and the authenticated Google Apps Script progress service (version 29). Existing records and the earlier GitHub Pages release are retained.
 
 Students use their existing lesson link, enter the email they use with Rory, and choose **Set or reset password** on their first visit. They choose their own password through the email link. Email verification is required; the app offers a verification email if needed. **Keep me signed in on this device** remembers the login on their own phone. Google sign-in remains disabled pending provider setup and testing. Existing private access codes remain supported; the teacher keeps the existing teacher login.

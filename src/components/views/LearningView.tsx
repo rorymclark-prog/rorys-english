@@ -1,4 +1,5 @@
 "use client";
+import StatusRow from "@/components/StatusRow";
 import {LessonPracticeDetails,LessonPracticeEditor} from "@/components/LessonPractice";
 import {readLessonPractice} from "@/lib/lesson-practice";
 import LessonProgressSummary,{ApprovedLessonSummary} from '@/components/LessonProgressSummary';
@@ -74,7 +75,7 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
       <details className="rounded-xl border border-black/10 p-3 dark:border-white/15"><summary className="cursor-pointer font-semibold">Tutor reflection · only Rory sees this</summary><div className="mt-3 space-y-3"><label className="block text-sm">What worked<textarea className={box} rows={2} value={worked} onChange={e=>setWorked(e.target.value)}/></label><label className="block text-sm">What to improve<textarea className={box} rows={2} value={improve} onChange={e=>setImprove(e.target.value)}/></label><label className="block text-sm">What I will change next time<textarea className={box} rows={2} value={plan} onChange={e=>setPlan(e.target.value)}/></label></div></details>
       <button className={button} disabled={busy||!title.trim()}>{busy?'Saving…':'Save review'}</button>
     </form></details>}
-    {error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error} <button type="button" className="underline" onClick={()=>void refresh()}>Try again</button></p>}{message&&<p role="status" className="rounded-xl bg-green-50 p-3 text-sm text-green-800">{message}</p>}
+    {error&&<StatusRow kind="error" onRetry={()=>void refresh()}>{error}</StatusRow>}{message&&<p role="status" className="rounded-xl bg-green-50 p-3 text-sm text-green-800">{message}</p>}
     {mode!=='teacher'&&!loading&&<LessonProgressSummary records={records} parent={mode==='parent'}/>}
     {mode==='teacher'&&<LearningMemoryPanel code={code} teacher records={records}/>}
     {(filter==='all'||filter==='homework'||filter==='rory')&&<SavedWriting code={code} name={name} teacher={mode==='teacher'} parent={mode==='parent'} reviewIds={records.map(r=>r.id)} onlyRoryFeedback={filter==='rory'}/>}

@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState, type SVGProps } from "react";
-import Link from "next/link";
 import { fetchResources, remoteEnabled, type ResourceItem } from "@/lib/remote";
-import { ExternalIcon, BookIcon, ChevronRightIcon, FileIcon as AppFileIcon } from "@/components/Icons";
-import {RepeatIcon} from "@/components/LearningVisuals";
+import { ExternalIcon } from "@/components/Icons";
 
 // File-type icons in the Icons.tsx 24px stroke style (kept local — this view
 // is their only consumer; no emoji per design spec §6).
@@ -169,7 +167,6 @@ export default function ResourcesView({
         </p>
       </header>
 
-      {mode==="student"&&<nav className="ux-route-grid" aria-label="Related learning pages"><Link className="ux-route-card" href={`/s/${fetchCode}/lessons/`}><BookIcon/><span><strong>Lessons</strong><small>Current unit and archive</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${fetchCode}/study/`}><RepeatIcon/><span><strong>Practice</strong><small>Study tools</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${fetchCode}/documents/`}><AppFileIcon/><span><strong>Documents</strong><small>Your own saved work</small></span><ChevronRightIcon/></Link></nav>}
 
       {lessonResources.length>0&&<section className="my-5"><h2 className="mb-3 text-sm font-bold uppercase tracking-wide">From your lessons</h2><ul className="re-resources-grid">{lessonResources.filter(item=>!transcriptPairs.some(t=>t.url===item.url)).map(item=>{
         const transcript=transcriptPairs.find(t=>item.url.replace(/\.mp3$/i,"_Transcript.txt")===t.url);

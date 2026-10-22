@@ -4,7 +4,8 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import type { StudyTool } from "@/lib/types";
 import { fetchProgress, remoteEnabled, type Progress, type Section } from "@/lib/remote";
-import { GearIcon, ExternalIcon, ChevronLeftIcon, ChevronRightIcon, CheckSquareIcon, FileIcon, TargetIcon } from "@/components/Icons";
+import { GearIcon, ExternalIcon, ChevronLeftIcon } from "@/components/Icons";
+import { buildProgressSummary } from "@/lib/storage";
 import {SharedSkillProgress} from '@/components/SkillProgressPanel';
 import LearningView from "./LearningView";
 import DocumentsView from "./DocumentsView";
@@ -14,6 +15,7 @@ type Mode = "student" | "parent" | "teacher";
 export default function ProgressView({
   fetchCode,
   studentCode,
+  studentId,
   displayName,
   mode,
   links = [],
@@ -23,6 +25,8 @@ export default function ProgressView({
   fetchCode: string;
   /** the student's own code, for the settings gear link (student mode only) */
   studentCode?: string;
+  /** the student's id, for the "Send my progress" summary (student mode only) */
+  studentId?: string;
   displayName: string;
   mode: Mode;
   links?: StudyTool[];
@@ -32,6 +36,16 @@ export default function ProgressView({
   const [state, setState] = useState<"loading" | "ok" | "error" | "off">("loading");
   const [data, setData] = useState<Progress | null>(null);
   const [retry,setRetry]=useState(0);
+  const [shareNote,setShareNote]=useState<{text:string;ok:boolean}|null>(null);
+  const shareProgress=async()=>{
+    if(!studentId)return;
+    const text=buildProgressSummary(studentId,displayName);
+    try{
+      if(navigator.share){await navigator.share({title:"My progress",text});return;}
+      await navigator.clipboard.writeText(text);
+      setShareNote({text:"Copied. Paste it to Rory on WhatsApp.",ok:true});
+    }catch{setShareNote({text:"Couldn’t open share. Copy your progress manually.",ok:false});}
+  };
 
   useEffect(() => {
     if (!remoteEnabled()) {
@@ -98,7 +112,6 @@ export default function ProgressView({
 
       <main className="re-screen-main progress-page">
         <SharedSkillProgress code={fetchCode} teacher={mode==="teacher"}/>
-        {mode==="student"&&studentCode&&<nav className="ux-route-grid" aria-label="Related work pages"><Link className="ux-route-card" href={`/s/${studentCode}/homework/`}><CheckSquareIcon/><span><strong>Homework</strong><small>Open your tasks</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${studentCode}/test-prep/`}><TargetIcon/><span><strong>Test prep</strong><small>Focus on school tests</small></span><ChevronRightIcon/></Link><Link className="ux-route-card" href={`/s/${studentCode}/documents/`}><FileIcon/><span><strong>Documents</strong><small>Find saved work</small></span><ChevronRightIcon/></Link></nav>}
         {state === "loading" && (
           <div className="mt-4 space-y-3">
             <div className="h-20 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark" />
@@ -166,6 +179,7 @@ export default function ProgressView({
             </ul>
           </section>
         )}
+        {mode==="student"&&studentId&&<div className="mt-8"><button type="button" onClick={()=>void shareProgress()} className="re-button w-full">Send my progress to Rory</button>{shareNote&&<p role="status" className={`mt-2 text-center text-sm ${shareNote.ok?"text-good dark:text-good-bright":"text-bad dark:text-bad-bright"}`}>{shareNote.text}</p>}</div>}
       </main>
     </>
   );

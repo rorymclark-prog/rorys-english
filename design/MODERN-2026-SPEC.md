@@ -69,7 +69,8 @@ ONE functional accent · motion that settles · zero "baby-app" cues (instant te
 
 ## 6. Teen rules (from the research — violations = instant "baby app" rejection)
 - Dark mode is the flagship; charcoal tones, never #000. No cartoon mascots, no
-  primary-color triads, no confetti, no hype copy, no emoji-dense UI.
+  primary-color triads, no ambient confetti (the single earned burst in
+  `src/lib/celebrate.ts` is Rory's choice, 24 Sep), no hype copy, no emoji-dense UI.
 - Streak stays **chill**: quiet ember counter, zero guilt mechanics.
 - One accent, functionally. The moment indigo becomes decoration, restraint is gone.
 

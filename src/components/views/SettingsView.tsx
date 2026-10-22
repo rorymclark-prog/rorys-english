@@ -7,7 +7,7 @@ import AppearanceSettings from "@/components/AppearanceSettings";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import {isStudentPreview} from "@/lib/student-preview";
 import Screen from "@/components/Screen";
-import { buildProgressSummary, resetProgress } from "@/lib/storage";
+import { resetProgress } from "@/lib/storage";
 
 export default function SettingsView() {
   const { studentId, code, displayName } = useStudent();
@@ -15,7 +15,6 @@ export default function SettingsView() {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
 
-  const [shareNote, setShareNote] = useState<{ text: string; ok: boolean } | null>(null);
 
   const doReset = () => {
     if(preview)return;
@@ -24,23 +23,6 @@ export default function SettingsView() {
     router.refresh();
     // Reload so every screen re-reads cleared storage.
     if (typeof window !== "undefined") window.location.reload();
-  };
-
-  const shareProgress = async () => {
-    if(preview)return;
-    const text = buildProgressSummary(studentId, displayName);
-    try {
-      if (navigator.share) {
-        // Native share sheet — student picks WhatsApp (or anything). No backend,
-        // nothing leaves the device unless the student chooses to send it.
-        await navigator.share({ title: "My progress", text });
-        return;
-      }
-      await navigator.clipboard.writeText(text);
-      setShareNote({ text: "Copied! Paste it to Rory on WhatsApp.", ok: true });
-    } catch {
-      setShareNote({ text: "Couldn't open share — copy your progress manually.", ok: false });
-    }
   };
 
   return (
@@ -52,29 +34,9 @@ export default function SettingsView() {
 
         <div className="re-card"><p className="re-eyebrow">YOUR PROFILE</p><div className="mt-4"><ProfileAvatar code={code} name={displayName} editable={!preview}/></div><p className="re-small-copy mt-3">Your picture stays on this device. It is not sent to Rory or shown on another phone.</p></div>
 
-        <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">Share your progress</p>
-          <button
-            onClick={shareProgress}
-            disabled={preview}
-            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#4F46E5,#4338CA)] px-4 font-bold text-white shadow-[0_1px_2px_rgba(0,0,0,.06),0_4px_12px_-4px_#4F46E5] transition active:scale-[.97] dark:bg-none dark:bg-amber dark:text-navy dark:shadow-none"
-          >
-            Send my progress to Rory
-          </button>
-          {shareNote && (
-            <p
-              className={`mt-2 text-center text-sm ${
-                shareNote.ok ? "text-good dark:text-good-bright" : "text-bad dark:text-bad-bright"
-              }`}
-            >
-              {shareNote.text}
-            </p>
-          )}
-        </div>
-
         <AppearanceSettings/>
 
-        <div className="re-card"><p className="re-eyebrow">MICROPHONE & CAMERA</p><p className="re-small-copy mt-2">Your iPhone or iPad controls access. Choose Allow when you start a voice chat or scan a page. Rory’s English cannot grant permission for you or override a new iOS prompt. If you declined, check this app’s microphone and camera access in device settings.</p></div>
+        <div className="re-card"><p className="re-eyebrow">MICROPHONE & CAMERA</p><p className="re-small-copy mt-2">Your device controls access. Choose Allow when you start a voice chat or scan a page.</p></div>
 
         <div className="pt-2">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-navy-soft dark:text-navy-mist">This device’s saved answers</p>
