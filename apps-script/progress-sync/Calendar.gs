@@ -64,8 +64,8 @@ function calendarService_(p,s){
       if(p.action==='calendarLink'||p.action==='calendarRevoke')return calendarLink_(p,s);
       var st=studentByAnyCode_(p.code);if(!st||s.role==='teacher'&&p.code!==st.code)return {ok:false,error:'Unknown student.'};
       if(s.role==='parent'&&p.action.indexOf('calendarTest')===0)return {ok:false,error:'Access denied'};
-      if(p.action==='calendarTestSave'||p.action==='teacherCalendarTestSave')return calendarTestSave_(p,st);
-      if(p.action==='calendarTestCancel'||p.action==='teacherCalendarTestCancel')return calendarTestCancel_(p,st);
+      if(p.action==='calendarTestSave'||p.action==='teacherCalendarTestSave')return calendarTestSave_(p,st,s);
+      if(p.action==='calendarTestCancel'||p.action==='teacherCalendarTestCancel')return calendarTestCancel_(p,st,s);
       if(p.action==='calendarRequest')return calendarRequest_(p,st,s);
       if(p.action==='teacherCalendarSave')return calendarSave_(p,st);
       if(p.action==='teacherCalendarCancel')return calendarCancel_(p,st);
@@ -80,7 +80,7 @@ function calendarService_(p,s){
 // Scope photos live in the existing owner-only folder, separate from submitted
 // work and AI review. Reads expose indices, never Drive IDs or public links.
 function calendarTestPublic_(t,st){return {id:t.id,date:t.date,title:t.title,scope:t.scope,status:t.status,sequence:t.sequence,updatedAt:t.updatedAt,studentCode:st.code,studentName:st.name,files:t.files.map(function(f,i){return {index:i,name:f.name,type:f.type,size:f.size};})};}
-function calendarTestSave_(p,st){
+function calendarTestSave_(p,st,s){
   calendarId_(p.id);calendarId_(p.mutationId);
   var rows=calendarRows_(st.code,'School test calendar'),old=rows.find(function(t){return t.id===p.id;});
   if(old&&old.mutationId===p.mutationId)return {ok:true,id:old.id,duplicate:true};
@@ -96,14 +96,14 @@ function calendarTestSave_(p,st){
   var stored=[],folder=incoming.length?documentFolder_(st.code):null;
   try{
     incoming.forEach(function(f,i){var file=folder.createFile(Utilities.newBlob(f.bytes,f.type,'test-'+p.id+'-'+p.mutationId+'-'+i+'-'+f.name));stored.push({id:file.getId(),name:f.name,type:f.type,size:f.size});});
-    var t={id:p.id,mutationId:p.mutationId,date:p.date,title:title,scope:scope,files:kept.concat(stored),status:'scheduled',sequence:old?old.sequence+1:0,updatedAt:new Date().toISOString()};
+    var t={id:p.id,mutationId:p.mutationId,date:p.date,title:title,scope:scope,files:kept.concat(stored),status:'scheduled',sequence:old?old.sequence+1:0,updatedAt:new Date().toISOString(),updatedBy:s?s.role:"teacher"};
     calendarPut_(st.code,'School test calendar',t);return {ok:true,id:t.id};
   }catch(err){stored.forEach(function(f){try{DriveApp.getFileById(f.id).setTrashed(true);}catch(ignored){}});throw err;}
 }
-function calendarTestCancel_(p,st){
+function calendarTestCancel_(p,st,s){
   calendarId_(p.mutationId);var t=calendarRows_(st.code,'School test calendar').find(function(x){return x.id===p.id;});if(!t)throw Error('Test not found.');
   if(t.mutationId===p.mutationId)return {ok:true};if(p.expectedSequence!==t.sequence)throw Error('This test has changed. Refresh before cancelling.');
-  t.status='cancelled';t.sequence++;t.mutationId=p.mutationId;t.updatedAt=new Date().toISOString();calendarPut_(st.code,'School test calendar',t);return {ok:true};
+  t.status='cancelled';t.sequence++;t.mutationId=p.mutationId;t.updatedAt=new Date().toISOString();t.updatedBy=s?s.role:'teacher';calendarPut_(st.code,'School test calendar',t);return {ok:true};
 }
 function calendarTestFile_(p){
   var st=studentByAnyCode_(p.code);if(!st)throw Error('Unknown student.');var t=calendarRows_(st.code,'School test calendar').find(function(x){return x.id===p.id;});
