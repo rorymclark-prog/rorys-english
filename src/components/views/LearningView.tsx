@@ -15,7 +15,7 @@ import FeedbackText from '@/components/FeedbackText';
 import ConversationTranscript from '@/components/ConversationTranscript';
 import PlainFeedback from '@/components/PlainFeedback';
 import {readableDate} from '@/lib/clarity';
-import {assessmentDisplayLabel,feedbackSource,matchesFeedbackFilter,type FeedbackFilter} from '@/lib/feedback-source';
+import {assessmentDisplayLabel,feedbackSource,matchesFeedbackFilter,focusedFeedbackFilter,type FeedbackFilter} from '@/lib/feedback-source';
 import SpeakingAudioReview from './SpeakingAudioReview';
 import WritingAnalysis,{ComparisonFields} from './WritingAnalysis';
 import HandwrittenAnswer from '@/components/HandwrittenAnswer';
@@ -44,12 +44,19 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
   const [comparisons,setComparisons]=useState<WritingComparison[]>([]);
   const [worked,setWorked]=useState(''),[improve,setImprove]=useState(''),[plan,setPlan]=useState(''),[busy,setBusy]=useState(false),[answer,setAnswer]=useState<Record<string,string>>({});
   const [ratings,setRatings]=useState<Record<string,number|null>>({});
-  const ids=useRef<Record<string,string>>({});
+  const ids=useRef<Record<string,string>>({}),focused=useRef('');
   const disabled=mode==='parent'||isStudentPreview(code);
   const checkpoints=records.filter(r=>r.kind==='speaking'&&r.body.ratings&&Object.values(r.body.ratings).some(v=>v!=null)).sort((a,b)=>a.date.localeCompare(b.date));
   const refresh=useCallback(async()=>{const r=await getLearning(code,mode==='teacher');setLoading(false);if(r.ok){setRecords((r.records||[]).filter(record=>!isTeachingPack(record)&&record.id!=='teacher-dashboard-settings'&&!record.body.tutorPrivate?.goalPlan&&!record.body.tutorPrivate?.skillCheck&&!record.body.tutorPrivate?.progressObservation));setReplies(r.replies||[]);setError('');}else setError(r.error||'Could not open the learning record.');},[code,mode]);
   useEffect(()=>{void refresh();},[refresh]);
-  useEffect(()=>{if(!loading){const target=focusRecordId?`review-${focusRecordId}`:/^#(?:review|write)-/.test(window.location.hash)?window.location.hash.slice(1):'';if(target)document.getElementById(target)?.scrollIntoView({block:"start"});}},[loading,records,focusRecordId]);
+  useEffect(()=>{
+    if(loading)return;
+    const target=focusRecordId?`review-${focusRecordId}`:/^#(?:review|write)-/.test(window.location.hash)?window.location.hash.slice(1):'';
+    if(!target)return;
+    const record=records.find(r=>target===`review-${r.id}`||target===`write-${r.id}`);
+    if(record&&focused.current!==target){focused.current=target;const visibleFilter=focusedFeedbackFilter(record);if(filter!==visibleFilter){setFilter(visibleFilter);return;}}
+    document.getElementById(target)?.scrollIntoView({block:'start'});
+  },[loading,records,focusRecordId,filter]);
   useReviewRefresh(()=>void refresh(),[...records.map(r=>r.feedbackAvailableAt),...replies.map(r=>r.feedbackAvailableAt)]);
   async function create(e:React.FormEvent){e.preventDefault();if(mode!=='teacher'||busy)return;setBusy(true);setError('');setMessage('');
     const body:LearningBody={summary:summary.trim(),strengths:split(strengths),targets:split(targets),nextStep:nextStep.trim(),evidenceType:evidenceType.trim(),source:source.trim(),studentNotes:studentNotes.trim(),lessonPoints:lessonPoints.trim(),ratings,tutorPrivate:{worked:worked.trim(),improve:improve.trim(),plan:plan.trim()}};
@@ -91,7 +98,7 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
       {!b.lessonSnapshot&&!b.plainReview&&b.nextStep&&<p className="mt-4 rounded-xl bg-indigo-50 p-3 text-sm dark:bg-navy"><strong>Try this:</strong> <FeedbackText text={b.nextStep}/></p>}
       {b.plainReview&&<details className="mt-4 rounded-xl border border-black/10 p-3 text-sm dark:border-white/15"><summary className="cursor-pointer font-semibold">Detailed lesson evidence</summary><p className="mt-3 whitespace-pre-wrap leading-7">{b.summary}</p><p className="mt-3 text-xs">{assessmentDisplayLabel(b.evidenceType)} · {b.source}</p><ul className="mt-3 ml-5 list-disc space-y-2">{[...(b.strengths||[]),...(b.targets||[])].map((x,i)=><li key={i}>{x}</li>)}</ul>{b.nextStep&&<p className="mt-3">{b.nextStep}</p>}</details>}{b.ratings&&Object.values(b.ratings).some(v=>v!=null)&&<div className="mt-4"><h4 className="font-semibold">Classroom checkpoint</h4><p className="text-xs text-navy-soft dark:text-navy-mist">Rory’s task based ratings, not a CEFR grade.</p><div className="mt-2 flex flex-wrap gap-2">{Object.entries(b.ratings).filter(([,v])=>v!=null).map(([k,v])=><span key={k} className="rounded-full bg-black/5 px-3 py-1 text-xs dark:bg-white/10">{ratingLabels[k]||k}: {v}/4</span>)}</div></div>}
       {w&&(w.original||w.corrected||w.model||w.practice?.length||w.comparisons?.length)?<WritingAnalysis key={`${r.id}-${r.created}`} record={r} code={code} teacher={mode==='teacher'} onSaved={refresh}/>:null}
-      {b.transcript&&<details className="mt-4 rounded-xl border border-black/10 p-3 dark:border-white/15"><summary className="cursor-pointer font-semibold">Conversation transcript</summary><ConversationTranscript text={b.transcript}/><p className="mt-2 text-xs">Words are joined into speaker turns for easier reading. Captions may contain mistakes or interruptions; they do not show how clearly or quickly you spoke.</p></details>}
+      {b.transcript&&<details open={r.id===focusRecordId} className="mt-4 rounded-xl border border-black/10 p-3 dark:border-white/15"><summary className="cursor-pointer font-semibold">Conversation transcript</summary><ConversationTranscript text={b.transcript}/><p className="mt-2 text-xs">Words are joined into speaker turns for easier reading. Captions may contain mistakes or interruptions; they do not show how clearly or quickly you spoke.</p></details>}
       {b.aiAnalysis&&<div className="mt-4 rounded-xl bg-indigo-50 p-3 text-sm dark:bg-navy"><strong>Conversation feedback · Rory has not reviewed this</strong><p className="mt-1 mb-3 text-xs">Suggestions based on the captions, not an assessment of the lesson recording.</p>{b.plainAiFeedback?<PlainFeedback review={b.plainAiFeedback}/>:<p className="mt-1 whitespace-pre-wrap leading-7"><FeedbackText text={b.aiAnalysis}/></p>}</div>}
       {b.audioDocumentId&&<SpeakingAudioReview code={code} name={name} mode={mode} record={r} onSaved={refresh}/>}
       {(b.studentNotes||b.lessonPoints)&&<details className="mt-4 space-y-2 text-sm"><summary className="cursor-pointer font-semibold">School context & lesson coverage</summary>{b.studentNotes&&<p><strong>Student notes:</strong> {b.studentNotes}</p>}{b.lessonPoints&&<p><strong>Lesson points:</strong> {b.lessonPoints}</p>}</details>}

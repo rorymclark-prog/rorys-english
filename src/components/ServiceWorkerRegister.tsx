@@ -14,18 +14,29 @@ export default function ServiceWorkerRegister() {
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
     const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    let registration:ServiceWorkerRegistration|undefined,live=true,checking=false,lastCheck=0;
+    const checkForUpdate=()=>{
+      if(!registration||document.hidden||!navigator.onLine||checking||Date.now()-lastCheck<60000)return;
+      lastCheck=Date.now();checking=true;
+      void registration.update().catch(()=>{/* Recheck after the connection returns. */}).finally(()=>{checking=false;});
+    };
+    window.addEventListener('focus',checkForUpdate);
+    window.addEventListener('online',checkForUpdate);
+    document.addEventListener('visibilitychange',checkForUpdate);
+    const timer=setInterval(checkForUpdate,60000);
 
     // controllerchange also fires on first-ever install (clients.claim) —
     // only treat it as an update if a controller already existed.
-    const hadController = !!navigator.serviceWorker.controller;
+    let hadController = !!navigator.serviceWorker.controller;
     const onControllerChange = () => {
       // Never over the sign-in screen: nothing there is worth interrupting.
       if (hadController && !document.querySelector(".signin")) {setUpdated(true);setDismissed(false);}
+      hadController=true;
     };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
     const onLoad = () => {
-      navigator.serviceWorker.register(`${base}/sw.js`, { scope: `${base}/` }).catch(() => {
+      navigator.serviceWorker.register(`${base}/sw.js`, { scope: `${base}/`,updateViaCache:"none" }).then(value=>{if(live)registration=value;}).catch(() => {
         /* offline support is a progressive enhancement; ignore failures */
       });
     };
@@ -34,6 +45,10 @@ export default function ServiceWorkerRegister() {
     if (document.readyState === "complete") onLoad();
     else window.addEventListener("load", onLoad);
     return () => {
+      live=false;clearInterval(timer);
+      window.removeEventListener('focus',checkForUpdate);
+      window.removeEventListener('online',checkForUpdate);
+      document.removeEventListener('visibilitychange',checkForUpdate);
       window.removeEventListener("load", onLoad);
       navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
     };
@@ -46,7 +61,7 @@ export default function ServiceWorkerRegister() {
       role="status"
       aria-live="polite"
       className="animate-sheet fixed inset-x-0 z-40 mx-auto max-w-md px-4 md:max-w-2xl"
-      style={{ top: "calc(env(safe-area-inset-top) + 0.5rem)" }}
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 5.5rem)" }}
     >
       <button
         onClick={() => window.location.reload()}
