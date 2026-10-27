@@ -45,7 +45,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
   const [inboxTab,setInboxTab]=useState<"messages"|"notifications"|null>(null);
   const [inboxCode,setInboxCode]=useState("__teacher__");
   const [initialSection,setInitialSection]=useState<string|undefined>();
-  useEffect(()=>{const q=new URLSearchParams(window.location.search),tab=q.get("inbox");if(tab==="messages"||tab==="notifications"){setInboxTab(tab);setInboxCode(q.get("student")||"__teacher__");}else if(q.get("student")){setSelectedCode(q.get("student"));setInitialSection(q.get("section")||undefined);if(q.get("section")==="calendar")setShowCalendar(true);}},[]);
+  useEffect(()=>{const q=new URLSearchParams(window.location.search),tab=q.get("inbox");if(tab==="messages"||tab==="notifications"){setInboxTab(tab);setInboxCode(q.get("student")||"__teacher__");}else if(q.get("student")){setSelectedCode(q.get("student"));setInitialSection(q.get("section")||undefined);const record=q.get("record");if(record&&/^[A-Za-z0-9_-]{16,100}$/.test(record))setRecordingReviewId(record);if(q.get("section")==="calendar")setShowCalendar(true);}},[]);
   const [liveTeaching, setLiveTeaching] = useState(initialLive);
   const [showCalendar,setShowCalendar]=useState(initialCalendar);
   const [testingVoice, setTestingVoice] = useState(false);

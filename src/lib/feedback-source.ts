@@ -25,3 +25,10 @@ export function feedbackSource(record:LearningRecord):{label:string;note:string}
 
 /** Presentation only: preserve original stored titles/evidence and review history. */
 export function assessmentDisplayLabel(value:string|undefined):string{return (value||'').replace(/AI analysis of recorded lessons?/gi,'Lesson assessment').replace(/AI conversation captions/gi,'Conversation captions').replace(/AI conversation feedback/gi,'Conversation feedback').replace(/AI (?:practice |writing )?feedback/gi,'Feedback').replace(/AI (?:assessment|assessed)/gi,'Assessment').replace(/AI draft/gi,'Draft').replace(/AI-prepared/gi,'Prepared');}
+
+/** Select a visible list before focusing a notification's exact source record. */
+export function focusedFeedbackFilter(record:LearningRecord):FeedbackFilter{
+  if(matchesFeedbackFilter(record,'chat'))return 'chat';
+  if(matchesFeedbackFilter(record,'recorded'))return 'recorded';
+  return 'all';
+}
