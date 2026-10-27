@@ -32,6 +32,8 @@ import ProfileAvatar from "@/components/ProfileAvatar";
 import QuickAppearance from "@/components/QuickAppearance";
 import StudentPreviewButton from "@/components/StudentPreviewButton";
 import studentRoster from "../../../content/students.json";
+import InboxView from "./InboxView";
+import InboxLink from "@/components/InboxLink";
 import LiveTeachingCoach from "./LiveTeachingCoach";
 
 // One-time removal of the old persisted password; only expiring tokens remain.
@@ -40,6 +42,10 @@ const STORAGE_KEY = "re_teacher_secret";
 type LoadState = "idle" | "loading" | "ok" | "error";
 
 export default function TeacherDashboardView({initialCalendar=false,initialLive=false,activeUnits={}}:{initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>}) {
+  const [inboxTab,setInboxTab]=useState<"messages"|"notifications"|null>(null);
+  const [inboxCode,setInboxCode]=useState("__teacher__");
+  const [initialSection,setInitialSection]=useState<string|undefined>();
+  useEffect(()=>{const q=new URLSearchParams(window.location.search),tab=q.get("inbox");if(tab==="messages"||tab==="notifications"){setInboxTab(tab);setInboxCode(q.get("student")||"__teacher__");}else if(q.get("student")){setSelectedCode(q.get("student"));setInitialSection(q.get("section")||undefined);if(q.get("section")==="calendar")setShowCalendar(true);}},[]);
   const [liveTeaching, setLiveTeaching] = useState(initialLive);
   const [showCalendar,setShowCalendar]=useState(initialCalendar);
   const [testingVoice, setTestingVoice] = useState(false);
@@ -122,12 +128,14 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
   if (!ready) return null;
   if (!secret) return <PasswordGate input={input} setInput={setInput} authing={authing} authError={authError} remember={rememberTeacher} setRemember={setRememberTeacher} onSubmit={submitGate} />;
 
+  if(inboxTab&&loadState==="ok")return <div className="teacher-workspace"><header className="teacher-topbar"><a className="teacher-quiet-button" href="/teacher/">← Students & teaching</a><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header><InboxView code={inboxCode} name="Rory" teacherToken={secret} students={(students||[]).map(s=>({code:s.code,name:s.name}))} initialTab={inboxTab}/></div>;
+
   if (liveTeaching && loadState === "ok") return <LiveTeachingCoach token={secret} learners={(students || []).map(s => ({ code: s.code, name: s.name, unit: activeUnits[s.code]?.title, focusNote: s.focusNote }))} onBack={() => setLiveTeaching(false)}/>;
 
-  if (showCalendar && loadState === "ok") return <div className="teacher-workspace"><header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(false)}>← Students & teaching</button><div className="flex items-center gap-2"><QuickAppearance/><AppMenu teacher/></div></header><CalendarView code="__teacher__" name="Rory" teacher students={(students||[]).map(s=>({code:s.code,name:s.name}))}/></div>;
+  if (showCalendar && loadState === "ok") return <div className="teacher-workspace"><header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(false)}>← Students & teaching</button><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header><CalendarView code="__teacher__" name="Rory" teacher students={(students||[]).map(s=>({code:s.code,name:s.name}))}/></div>;
 
   if (testingVoice) return <div className="teacher-workspace">
-    <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => setTestingVoice(false)}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><QuickAppearance/><AppMenu teacher/></div></header>
+    <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => setTestingVoice(false)}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header>
     <VoiceStudio code="__teacher__" lines={[]} teacherTest practiceOptions={studentRoster.map(s => ({ code: s.code, name: s.displayName, unit: s.units.find(u => u.active)?.title }))} />
   </div>;
 
@@ -136,7 +144,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
   // Drill-down: full per-student progress (same tables the student/parent see).
   if (secret && loadState === "ok" && selected && showFullProgress) {
     return (
-      <div><div className="flex justify-end px-5 pt-3"><QuickAppearance/><AppMenu teacher/></div><ProgressView
+      <div><div className="flex justify-end px-5 pt-3"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div><ProgressView
         fetchCode={selected.code}
         displayName={selected.name}
         mode="teacher"
@@ -153,6 +161,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
         secret={secret}
         student={selected}
         initialReviewId={recordingReviewId}
+        initialSection={initialSection}
         unit={activeUnits[selected.code]||null}
         onBack={() => {setSelectedCode(null);setRecordingReviewId(undefined);}}
         onViewProgress={() => setShowFullProgress(true)}
@@ -166,6 +175,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
       <header className="teacher-topbar">
         <a href="/teacher/" className="teacher-brand"><span aria-hidden>r.</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
         <div className="flex items-center gap-2">
+          <InboxLink teacher/>
           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
           <button type="button" disabled={loadState !== "ok"} className="teacher-quiet-button" onClick={() => setLiveTeaching(true)}>Live teaching</button>
           <button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(true)}>Calendar</button><QuickAppearance/><AppMenu teacher/>
@@ -182,6 +192,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
         {loadState === "loading" && <div className="teacher-student-grid" role="status" aria-label="Loading students">{[0,1].map(i=><div key={i} className="h-72 animate-pulse rounded-card bg-amber-soft dark:bg-amber-dusk"/>)}</div>}
         {loadState === "error" && <div className="teacher-empty" role="alert"><ChartIcon/><h2>Let’s try that again</h2><p>Your students’ records could not be loaded.</p><button className="teacher-primary" onClick={()=>setRefreshKey(k=>k+1)}>Reload students</button></div>}
         {loadState === "ok" && students && <>
+          <div className="inbox-home-actions"><a className="teacher-primary" href="/teacher/?inbox=notifications">Notifications & recent activity</a><a className="teacher-quiet-button" href="/teacher/?inbox=messages">Messages →</a></div>
           <RecordedLessonLinks students={students} onOpen={(code,id)=>{setRecordingReviewId(id);setSelectedCode(code);}}/>
           <div className="teacher-section-heading"><div><p className="teacher-eyebrow">ONE STEP AT A TIME</p><h2>Your students <span>{students.length}</span></h2></div><button type="button" onClick={()=>setAddingStudent(true)} className="teacher-quiet-button">+ Add student</button></div>
           <div className="teacher-student-grid">
@@ -271,6 +282,7 @@ function TeacherStudentPanel({
   onViewProgress,
   onPatch,
   initialReviewId,
+  initialSection,
   unit,
 }: {
   secret: string;
@@ -279,9 +291,10 @@ function TeacherStudentPanel({
   onViewProgress: () => void;
   onPatch: (patch: Partial<TeacherStudent>) => void;
   initialReviewId?:string;
+  initialSection?:string;
   unit:Unit|null;
 }) {
-  const [section, setSection] = useState<"overview" | "review" | "assign" | "assess" | "documents" | "learning" | "teaching">(initialReviewId?"learning":"overview");
+  const [section, setSection] = useState<"overview" | "review" | "assign" | "assess" | "documents" | "learning" | "teaching">(initialReviewId?"learning":(["overview","review","documents","learning"].includes(initialSection||"")?initialSection as "overview"|"review"|"documents"|"learning":"overview"));
   const [note, setNote] = useState(student.focusNote);
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
@@ -337,14 +350,14 @@ function TeacherStudentPanel({
     <div className="teacher-workspace">
       <header className="teacher-topbar">
         <button type="button" onClick={onBack} className="teacher-quiet-button flex items-center gap-2"><ChevronLeftIcon/>All students</button>
-        <QuickAppearance/><AppMenu teacher/>
+        <InboxLink teacher/><QuickAppearance/><AppMenu teacher/>
       </header>
       <main>
         <section className={`teacher-student-banner ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`}>
           <div className="teacher-banner-name"><ProfileAvatar code={student.code} name={student.name} editable className="teacher-avatar"/><div><p className="teacher-eyebrow">STUDENT WORKSPACE</p><h1>{student.name}</h1><p>Homework, practice & feedback</p></div></div>
           <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ChartIcon/><span>Saved progress & feedback <span aria-hidden>↗</span></span></button>
         </section>
-        <div className="mb-4 flex justify-end"><StudentPreviewButton code={student.code} name={student.name}/></div>
+        <div className="mb-4 flex justify-end"><a className="teacher-quiet-button" href={`/teacher/?inbox=messages&student=${student.code}`}>Message {student.name} →</a><StudentPreviewButton code={student.code} name={student.name}/></div>
         <nav className="teacher-section-nav" aria-label="Student workspace sections">
           <button type="button" aria-pressed={section === "overview"} onClick={()=>setSection("overview")}><ChartIcon/><span>Learning dashboard<small>Homework, activity & assessment</small></span></button>
           <button type="button" aria-pressed={section === "teaching"} onClick={()=>setSection("teaching")}><BookIcon/><span>Teaching materials<small>PowerPoints & teacher notes</small></span></button>

@@ -1,3 +1,4 @@
+import './inbox.css';
 import type { Metadata, Viewport } from "next";
 import { Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
