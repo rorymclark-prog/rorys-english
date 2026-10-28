@@ -105,7 +105,7 @@ function documentLease_(p,s,chat) {
       var prior=documentChats_(p.code,p.id).filter(function(c){return c.id===p.messageId;})[0];
       if(prior)return {reply:{ok:true,message:prior}};
       if(!r[6])throw new Error('Read and analyse this document before asking a question.');
-    } else if(r[6]){var a=JSON.parse(r[6]);if(a.workType!=='worksheet'&&a.writing||a.answerReview||a.exerciseAnswers&&a.exerciseAnswers.length)return {reply:{ok:true,document:documentPublic_(r,true,s.role==='teacher')}};}
+    } else if(r[6]){var a=JSON.parse(r[6]);if(a.writing&&a.writing.original&&a.writing.original.trim()||a.answerReview||a.exerciseAnswers&&a.exerciseAnswers.length)return {reply:{ok:true,document:documentPublic_(r,true,s.role==='teacher')}};}
     if(r[11]&&Date.now()-Number(r[12])<360000)return {reply:{ok:true,pending:true}};
     documentBudget_(s);
     var lease=token_(),sh=documentSheet_(p.code,false);

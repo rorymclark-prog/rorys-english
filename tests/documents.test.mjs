@@ -136,6 +136,13 @@ test('feedback check receipts are private, version-bound, idempotent and separat
  assert.equal(f.post({action:'document',id},'teacher').document.needsTeacherCheck,true);
  assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
 });
+test('a legacy worksheet with an empty prose review is upgraded instead of being returned as complete',()=>{
+ const f=fixture(),id=f.upload().document.id,sh=f.books.get('sheet-a').sheets.get('Documents');
+ const older={...f.analysis,writing:{original:'',comparisons:[]}};sh.data[1][6]=JSON.stringify(older);sh.data[1][5]='ready';
+ assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,1);
+ assert.equal(f.post({action:'document',id}).document.analysis.writing.original,f.analysis.writing.original);
+ assert.ok([...f.files.values()].some(x=>x.name.includes('previous-analysis')));
+});
 test('analysis failure preserves the original and quota is reserved before calling AI',()=>{
  const f=fixture(),id=f.upload().document.id;f.status=429;assert.equal(f.post({action:'documentAnalyse',id}).ok,false);assert.equal(f.post({action:'document',id}).document.status,'error');assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
  f.status=200;f.props.set('ai_student-a','40');assert.equal(f.post({action:'documentAnalyse',id}).ok,false);assert.equal(f.calls,1);

@@ -9,6 +9,7 @@ test('a slow AI request keeps waiting for its saved complete result, never treat
  const old={processing:false,error:'',analysis:{transcription:'Earlier reading'}};
  assert.equal(analysisReadState(old,false,''),'waiting');
  assert.equal(analysisReadState({...old,processing:true},false,''),'waiting');
+ assert.equal(analysisReadState({...old,analysis:{writing:{original:'',comparisons:[]}}},false,''),'waiting');
  assert.equal(analysisReadState({...old,analysis:{writing:{original:'I swim.',comparisons:[]}}},true,''),'ready');
 });
 test('a new failure ends the wait while a previous failure does not stop a new attempt before it starts',()=>{

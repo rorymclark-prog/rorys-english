@@ -9,7 +9,7 @@ export type DocumentReply=ApiResult&{documents?:LearnerDocument[];document?:Lear
 export const MAX_DOCUMENT_BYTES=2500000;
 export function analysisReadState(document:LearnerDocument,seenProcessing:boolean,previousError:string):'ready'|'error'|'waiting' {
   if(document.processing)return 'waiting';
-  if(document.analysis?.writing||document.analysis?.answerReview||document.analysis?.exerciseAnswers?.length)return 'ready';
+  if(document.analysis?.writing?.original.trim()||document.analysis?.answerReview||document.analysis?.exerciseAnswers?.length)return 'ready';
   if(document.error&&(seenProcessing||document.error!==previousError))return 'error';
   return 'waiting';
 }
