@@ -1,13 +1,15 @@
 import {authed, request, savedSession, type ApiResult} from './api';
 import type {LearningRecord,WritingComparison} from './learning';
-export type DocumentAnalysis={transcription:string;coverage:'complete'|'partial'|'unreadable';uncertainties:string[];summary:string;strengths:string[];corrections:{original:string;suggestion:string;explanation:string}[];retry:string;model?:string;exerciseAnswers?:{number:number;base:string;response:string;status:'fits'|'uncertain';note:string}[];writing?:{original:string;comparisons:WritingComparison[]}};
-export type LearnerDocument={id:string;title:string;created:string;uploadedBy:string;files:{index:number;name:string;type:string;size:number}[];status:'saved'|'analysing'|'ready'|'error';feedback:string;reviewed:string;parentId:string;context:string;error:string;processing:boolean;analysis?:DocumentAnalysis|null;feedbackAvailableAt?:string;reviewPending?:boolean};
+export type AnswerReview={label:string;prompt:string;response:string;status:'correct'|'needs-change'|'uncertain'|'not-answered';correction:string;note:string};
+export type DocumentWorkType='writing'|'worksheet'|'conversation'|'recording'|'material';
+export type DocumentAnalysis={transcription:string;coverage:'complete'|'partial'|'unreadable';uncertainties:string[];summary:string;strengths:string[];corrections:{original:string;suggestion:string;explanation:string}[];retry:string;model?:string;workType?:'writing'|'worksheet'|'material';answerReview?:AnswerReview[];exerciseAnswers?:{number:number;base:string;response:string;status:'fits'|'uncertain';note:string}[];writing?:{original:string;comparisons:WritingComparison[]}};
+export type LearnerDocument={id:string;title:string;created:string;uploadedBy:string;files:{index:number;name:string;type:string;size:number}[];status:'saved'|'analysing'|'ready'|'error';feedback:string;reviewed:string;parentId:string;context:string;error:string;processing:boolean;analysis?:DocumentAnalysis|null;feedbackAvailableAt?:string;reviewPending?:boolean;workType?:DocumentWorkType;needsTeacherCheck?:boolean;analysisVersion?:string;checkedAt?:string};
 export type DocumentMessage={id:string;created?:string;question:string;answer:string;askedBy:string};
 export type DocumentReply=ApiResult&{documents?:LearnerDocument[];document?:LearnerDocument;review?:LearningRecord|null;messages?:DocumentMessage[];message?:DocumentMessage;received?:boolean;pending?:boolean;file?:{name:string;type:string;data:string}};
 export const MAX_DOCUMENT_BYTES=2500000;
 export function analysisReadState(document:LearnerDocument,seenProcessing:boolean,previousError:string):'ready'|'error'|'waiting' {
   if(document.processing)return 'waiting';
-  if(document.analysis?.writing)return 'ready';
+  if(document.analysis?.writing||document.analysis?.answerReview||document.analysis?.exerciseAnswers?.length)return 'ready';
   if(document.error&&(seenProcessing||document.error!==previousError))return 'error';
   return 'waiting';
 }

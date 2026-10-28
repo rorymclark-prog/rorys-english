@@ -1,0 +1,4 @@
+import type {DocumentWorkType} from '@/lib/documents';
+export default function WorkTypeIcon({type}:{type:DocumentWorkType}){
+  return <svg data-work-type={type} width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{type==='conversation'?<><path d="M4 3h16v12H9l-5 4z"/><path d="M8 7v4m4-6v8m4-6v4"/></>:type==='recording'?<><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2m-7 9v3m-4 0h8"/></>:type==='worksheet'?<><rect x="4" y="3" width="16" height="19" rx="2"/><path d="m7 8 1 1 2-2m3 1h4M7 13h3m3 0h4M7 18h3m3 0h4"/></>:type==='writing'?<><path d="m14 5 5 5M3 21l5-1L21 7a2 2 0 0 0-5-5L3 15zM3 15l5 5m4 1h9"/></>:<><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/></>}</svg>;
+}

@@ -142,7 +142,7 @@ function doPost(e) {
     if(p.preview && reads.indexOf(p.action)<0)return json_({ok:false,error:'Student preview is read-only.'});
     if(typeof INBOX_ACTIONS_!=='undefined'&&INBOX_ACTIONS_.indexOf(p.action)>=0)return json_(inboxService_(p,s));
     if(CALENDAR_ACTIONS_.indexOf(p.action)>=0)return json_(calendarService_(p,s));
-    if(['documents','document','documentFile','documentUpload','documentAnalyse','documentChat','teacherDocumentReview','teacherDocumentLink'].indexOf(p.action)>=0)return json_(documentService_(p,s));
+    if(['documents','document','documentFile','documentUpload','documentAnalyse','documentChat','teacherDocumentReview','teacherDocumentLink','teacherDocumentCheck'].indexOf(p.action)>=0)return json_(documentService_(p,s));
     if(['learningMemory','learningMemoryEnabled','teacherSetLearningMemory','teacherPublishLessonSnapshot','learningRecords','teacherSaveLearningRecord','teacherReviewSpeaking','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio'].indexOf(p.action)>=0)return json_(learningService_(p,s));
     // Discard legacy client credentials. Only inject after validating session.
     p.secret=SECRET;

@@ -106,6 +106,36 @@ test('analysis is saved, grounded corrections are validated and repeated analysi
  const read=f.post({action:'document',id});assert.equal(read.document.analysis.transcription,f.analysis.transcription);assert.equal(read.document.feedback,'');assert.equal(read.document.status,'ready');
  assert.equal(f.ctx.documentAnalysisValid_({...f.analysis,corrections:[{original:'not in source',suggestion:'invented',explanation:'bad'}]}),false);
 });
+test('worksheet review checks every supplied answer without turning unclear or unanswered items into corrections',()=>{
+ const f=fixture(),base={...f.analysis,workType:'worksheet',transcription:'[Page 1]\nGROW growth\nHIGH highter\nCHEAP [unclear]\nPOOR',corrections:[],writing:{original:'',comparisons:[]},answerReview:[
+  {label:'1',prompt:'GROW',response:'growth',status:'correct',correction:'',note:'The noun fits.'},
+  {label:'2',prompt:'HIGH',response:'highter',status:'needs-change',correction:'higher',note:'Add -er without t.'},
+  {label:'3',prompt:'CHEAP',response:'[unclear]',status:'uncertain',correction:'',note:'Please confirm your spelling.'},
+  {label:'4',prompt:'POOR',response:'',status:'not-answered',correction:'',note:'Look for the noun form.'}
+ ]};
+ assert.equal(f.ctx.documentAnalysisValid_(base),true);
+ const change=(i,value)=>({...base,answerReview:base.answerReview.map((r,j)=>j===i?{...r,...value}:r)});
+ for(const invalid of [change(2,{status:'correct'}),change(2,{correction:'cheaper'}),change(3,{correction:'poverty'}),change(1,{response:'invented'}),change(0,{prompt:'UNSEEN TASK'}),change(1,{correction:''}),change(1,{label:'1'})])assert.equal(f.ctx.documentAnalysisValid_(invalid),false);
+ Object.assign(f.analysis,base);const id=f.upload().document.id;
+ assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,1);
+ assert.equal(f.post({action:'document',id}).document.analysis.answerReview.length,4);
+});
+test('feedback check receipts are private, version-bound, idempotent and separate from publishing',()=>{
+ const f=fixture(),id=f.upload().document.id;f.post({action:'documentAnalyse',id});
+ assert.equal(f.books.get('sheet-a').sheets.has('Document checks'),false);
+ const teacher=f.post({action:'document',id},'teacher').document;
+ assert.equal(teacher.needsTeacherCheck,true);assert.ok(teacher.analysisVersion);
+ for(const role of ['student','parent','other'])assert.equal(f.post({action:'teacherDocumentCheck',id,analysisVersion:teacher.analysisVersion},role).ok,false);
+ assert.equal(f.post({action:'teacherDocumentCheck',id,analysisVersion:teacher.analysisVersion,preview:true},'teacher').ok,false);
+ assert.equal(f.post({action:'teacherDocumentCheck',id,analysisVersion:'stale'},'teacher').ok,false);
+ const check={action:'teacherDocumentCheck',id,analysisVersion:teacher.analysisVersion};
+ assert.equal(f.post(check,'teacher').document.needsTeacherCheck,false);assert.equal(f.post(check,'teacher').ok,true);
+ assert.equal(f.books.get('sheet-a').sheets.get('Document checks').data.length,2);
+ for(const extra of [{},{preview:true}]){const d=f.post({action:'document',id,...extra},extra.preview?'teacher':'student').document;assert.equal(d.needsTeacherCheck,undefined);assert.equal(d.analysisVersion,undefined);assert.equal(d.checkedAt,undefined);assert.equal(d.feedback,'');assert.equal(d.reviewed,'');}
+ const sh=f.books.get('sheet-a').sheets.get('Documents');const changed=JSON.parse(sh.data[1][6]);changed.summary='New practice feedback';sh.data[1][6]=JSON.stringify(changed);
+ assert.equal(f.post({action:'document',id},'teacher').document.needsTeacherCheck,true);
+ assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
+});
 test('analysis failure preserves the original and quota is reserved before calling AI',()=>{
  const f=fixture(),id=f.upload().document.id;f.status=429;assert.equal(f.post({action:'documentAnalyse',id}).ok,false);assert.equal(f.post({action:'document',id}).document.status,'error');assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
  f.status=200;f.props.set('ai_student-a','40');assert.equal(f.post({action:'documentAnalyse',id}).ok,false);assert.equal(f.calls,1);

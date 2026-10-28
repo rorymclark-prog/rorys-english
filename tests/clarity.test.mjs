@@ -17,7 +17,7 @@ test('receipt and review statuses never imply held feedback was released',()=>{
  const base={unit:'u',task:'t',submitted:'2026-10-03',status:'reviewed',feedback:'Well done'};
  assert.equal(submissionStatus([], 'u','t'),'Available to practise');
  assert.equal(submissionStatus([base], 'u','t'),'Feedback from Rory ready');
- assert.match(submissionStatus([{...base,reviewPending:true}], 'u','t'),/waiting for review/);
+ assert.equal(submissionStatus([{...base,reviewPending:true}], 'u','t'),'Done · received by Rory');
  assert.equal(submissionStatus([base,{...base,submitted:'2026-10-04',status:'revision-needed'}], 'u','t'),'Revision requested');
  assert.equal(submissionStatus([base], 'other','t'),'Available to practise');
  for(const status of ['done','Completed',' reviewed '])assert.equal(isCompletedAssignment(status),true);
