@@ -342,3 +342,10 @@ test('rejected provider outputs can be revalidated from the private source store
  output.comparisons[0].original='A fabricated original.';folder.createFile(f.ctx.Utilities.newBlob(JSON.stringify(output),'application/json',doc+'-incomplete-analysis-'+(Date.now()+1)+'.json'));
  assert.equal(f.ctx.documentRecovery_('student-a',doc,reading,'','claude-opus-5-5'),null);assert.equal(f.calls,calls);
 });
+
+test('an unavailable printed question stays empty instead of turning an item-location label into source text',()=>{
+ const f=fixture(),reading={transcription:'p42/3b\n1. I enjoy working with my peers.',original:'',task:'',workType:'worksheet',coverage:'complete',uncertainties:[],teacherNotes:''};
+ const output={summary:'This sentence is grammatical; the task was not supplied.',strengths:[],corrections:[],retry:'Try the pattern again.',answerReview:[{label:'p42/3b item 1',prompt:'p42/3b item 1 (printed task not visible)',response:'I enjoy working with my peers.',status:'correct',correction:'',note:'The language is correct; task fit cannot be checked.'}],comparisons:[],model:'',modelNotes:[],exercises:[],teacherNotes:''};
+ const a=f.ctx.documentRichAnalysis_(output,reading,'B1',{reading:'claude-opus-5-5',analysis:'claude-opus-5-5'});assert.ok(a);assert.equal(a.answerReview[0].prompt,'');assert.equal(a.answerReview[0].response,output.answerReview[0].response);
+ output.answerReview[0].prompt='An invented question';assert.equal(f.ctx.documentRichAnalysis_(output,reading,'B1',{reading:'r',analysis:'a'}),null);
+});
