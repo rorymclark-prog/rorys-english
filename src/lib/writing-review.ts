@@ -2,10 +2,12 @@ import type {WritingComparison} from './learning';
 
 export type SentenceRow = WritingComparison & {
   number: number | null;
+  readingUncertain?: boolean;
   status: 'corrected' | 'unchanged' | 'pending' | 'source-note';
 };
 export type WritingSource = {original?:string;corrected?:string;model?:string;targetLevel?:'B1'|'B2';modelNotes?:string[];comparisons?:WritingComparison[];corrections?:{original:string;corrected:string;note:string}[]};
 const normal = (text:string) => text.replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/\s+/g,' ').trim().toLowerCase();
+const uncertainReading = (text:string) => /\[unclear\b|\bhard to read\b|\b(?:reading|handwriting|words?)\b[^.!?\n]{0,100}\b(?:uncertain|unclear|unconfirmed|confirm(?:ation|ing|ed)?)\b|\bconfirm\b[^.!?\n]{0,100}\b(?:reading|handwritten|words?|spelling)\b/i.test(text);
 const sourceNote = (text:string) => /^\[(?:crossed[- ]out|unclear|illegible|unreadable|transcription|wording unclear)\b[\s\S]*\]$/i.test(text.trim());
 
 export function writingSentences(text:string):string[] {
@@ -104,7 +106,8 @@ export function sentenceReview(w:WritingSource,{preferComparisons=true}:{preferC
     const notes=[...new Set(matches.map(row=>row.note.trim()).filter(Boolean))];
     if(aligned[position].note&&!exact) notes.push(aligned[position].note);
     if(!notes.length) notes.push(status==='unchanged'?'Already correct — no language correction is needed.':status==='pending'?'No complete correction is saved for this sentence yet. It has not been marked as correct.':'The full correction is shown. Rory can add the reason for this change.');
-    return {original,corrected,improved,note:notes.join(' '),number,status,...(exact?.checks?{checks:exact.checks}:{})};
+    const readingUncertain=uncertainReading([original,...notes,exact?.checks?.spelling||''].join(' '));
+    return {original,corrected,improved,note:notes.join(' '),number,status,readingUncertain,...(exact?.checks?{checks:exact.checks}:{})};
   });
   return {rows,hasOriginal:originals.length>0,pending:rows.filter(row=>row.status==='pending').length};
 }
