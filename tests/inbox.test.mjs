@@ -55,6 +55,17 @@ test('feedback notifications wait for release and a real teacher review',()=>{
  docs.data[1][14]='2026-01-01T00:00:00Z';assert.equal(f.post({action:'notifications',code:'student-a',session:f.student()}).events.length,1);
  docs.data[1][7]='';assert.equal(f.post({action:'notifications',code:'student-a',session:f.student()}).events.length,0);
 });
+test('reading a notification leaves the private feedback check outstanding until Rory checks that analysis',()=>{
+ const f=setup(),ss=f.ctx.studentSheet_('student-a'),docs=ss.insertSheet('Documents'),id=randomUUID();docs.appendRow(f.ctx.DOCUMENT_HEADERS_);
+ docs.appendRow([id,'School worksheet','2026-10-08T12:00:00Z','Student','[]','ready',JSON.stringify({workType:'worksheet'}),'','','','[Document role: answer]']);
+ const t=f.teacher(),read=()=>f.post({action:'teacherNotifications',session:t});
+ const first=read().events.find(e=>e.id==='document:'+id);assert.equal(first.needsCheck,true);assert.equal(first.title,'Check feedback');
+ f.post({action:'notificationsRead',code:'student-a',session:t,ids:[first.id]});assert.equal(read().events.find(e=>e.id===first.id).needsCheck,true);
+ const d=f.post({action:'document',id,code:'student-a',session:t}).document;
+ assert.equal(f.post({action:'teacherDocumentCheck',id,code:'student-a',session:t,analysisVersion:d.analysisVersion}).ok,true);
+ assert.equal(read().events.find(e=>e.id===first.id).needsCheck,false);
+ assert.equal(f.post({action:'notifications',code:'student-a',session:f.student()}).events.length,0);
+});
 test('unknown event ids cannot manufacture read receipts and long/blank messages are refused',()=>{
  const f=setup();for(const text of ['', '  ', 'x'.repeat(2001)])assert.equal(f.post(send(f,{text})).ok,false);
  assert.equal(f.sheets.has('Messages'),false);

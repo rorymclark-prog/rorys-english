@@ -26,3 +26,13 @@ AI uses the existing private Anthropic configuration, not the unavailable OpenAI
 Implementation reference: [Claude PDF input](https://platform.claude.com/docs/en/build-with-claude/pdf-support), [image input](https://platform.claude.com/docs/en/build-with-claude/vision). PDF and image content use authenticated base64 sources; no original is publicly shared with the AI service.
 
 The user mentioned a skill in another task. The existing “Digitise and analyse” task and Rory’s English skill were located; a different named analysis skill has not yet been identified. The current implementation uses the confirmed shared tutoring method.
+
+# Answer reviews and private checks — 28 October 2026
+
+Structured uploads (word formation, matching, gap-fill, multiple choice and short answers) now receive an `answerReview` entry for each visible item. The task, exact learner response, result, necessary correction and explanation stay beside the preserved transcription. Uncertain readings are unmarked; unanswered items receive hints rather than supplied solutions. Prose retains its full sentence comparison. Older `exerciseAnswers` records render through the same component without rewriting the saved analysis.
+
+Saved work uses conversation, pen, worksheet, recording and source-material icons with readable type labels. School worksheet is shown only with the explicit school source. Completed analysed work says **Done · feedback ready**, while errors/processing remain visible. A saved recording says **Done · recording saved**. These are receipts/practice feedback, not mastery or Rory approval.
+
+Rory sees private **Check feedback** flags in Documents, uploaded homework and Notifications, with a **Feedback to check** filter and exact-document navigation. **Mark checked** saves an idempotent receipt for that analysis fingerprint in the learner’s new Document checks tab, created only on an actual check. Reading a notification never clears the flag. A changed analysis needs a new check. Student/parent/preview responses exclude receipt state and fingerprints; writes require an authenticated teacher outside preview. The check neither publishes teacher feedback nor modifies originals, marks, deadlines or assignments. Rory can still add and approve separate optional feedback with the existing release rules.
+
+Local synthetic browser fixture: `node scripts/qa-upload-feedback-api.mjs`, then `NEXT_PUBLIC_SYNC_URL=http://127.0.0.1:4291 NEXT_PUBLIC_FIREBASE_API_KEY= npm run dev -- --hostname 127.0.0.1 --port 4290`. It never contacts production or paid AI.

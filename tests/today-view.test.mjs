@@ -53,7 +53,7 @@ test('Today offers feedback or a receipt when every unit task has been received,
   const reviewed=today({submissions:[submission('hw:1','reviewed',{feedback:'Good work'}),submission('hw:2')]});
   assert.match(reviewed,/Feedback from Rory ready/);assert.match(reviewed,/>View feedback<\/a>/);assert.doesNotMatch(reviewed,/>Start<|more task/);
   const waiting=today({submissions:[submission('hw:1','revision-needed',{submitted:'2026-10-20'}),submission('hw:1'),submission('hw:2','reviewed',{feedback:'Held feedback',reviewPending:true})]});
-  assert.match(waiting,/Received by Rory · waiting for review/);assert.match(waiting,/>View saved work<\/a>/);assert.doesNotMatch(waiting,/>Start<|>Revise<|>View feedback</);
+  assert.match(waiting,/Done · received by Rory/);assert.match(waiting,/>View saved work<\/a>/);assert.doesNotMatch(waiting,/>Start<|>Revise<|>View feedback</);
 });
 
 test('Today never claims no homework after a failed check or recommends stale cached tasks',()=>{

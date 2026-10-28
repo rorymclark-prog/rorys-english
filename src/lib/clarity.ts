@@ -19,7 +19,7 @@ export function submissionStatus(submissions:Submission[],unit:string,task:strin
   if(!latest)return 'Available to practise';
   if(latest.status==='revision-needed')return 'Revision requested';
   if(latest.status==='reviewed'&&latest.feedback&&!latest.reviewPending)return 'Feedback from Rory ready';
-  return 'Received by Rory · waiting for review';
+  return 'Done · received by Rory';
 }
 
 export function isCompletedAssignment(status:string):boolean{return /^(done|complete|completed|reviewed)$/i.test(status.trim());}
