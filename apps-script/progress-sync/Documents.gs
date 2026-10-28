@@ -20,7 +20,7 @@ function documentPublic_(r,full,teacher) {
   var analysis=JSON.parse(r[6]||'null'),conversation=documentConversation_(r);d.workType=documentWorkType_(r,analysis);
   if(full&&typeof documentJob_==='function'&&DOCUMENT_PROFILE_){var job=documentJob_(DOCUMENT_PROFILE_,r[0]);if(job&&job.state!=='done'&&r[5]==='analysing')d.analysisStage=job.state;}
   d.hasConversationFeedback=!!(conversation&&JSON.parse(conversation[6]||'{}').aiAnalysis);if(conversation)d.conversationId=conversation[0];
-  if(teacher){d.analysisVersion=documentAnalysisVersion_(r);var checked=documentCheckedAt_(r[0],d.analysisVersion);d.checkedAt=checked||r[8]||'';d.needsTeacherCheck=!!(analysis||d.hasConversationFeedback)&&d.workType!=='material'&&!d.checkedAt;}
+  if(teacher){d.analysisVersion=documentAnalysisVersion_(r);var checked=documentCheckedAt_(r[0],d.analysisVersion);var versioned=analysis&&analysis.pipelineVersion||conversation&&JSON.parse(conversation[6]||'{}').feedbackVersion>=2;d.checkedAt=checked||(!versioned?r[8]:'')||'';d.needsTeacherCheck=!!(analysis||d.hasConversationFeedback)&&d.workType!=='material'&&!d.checkedAt;}
   if(!teacher)d.context=documentStudentContext_(d.context,r[3]);
   if(full){d.analysis=analysis;if(DOCUMENT_PROFILE_&&typeof documentPracticeView_==='function'){var practice=documentPracticeView_(DOCUMENT_PROFILE_,r,analysis,teacher);d.practiceVersion=practice.version;d.practiceAttempts=practice.attempts;}if(!teacher&&d.analysis){delete d.analysis.model;delete d.analysis.readingModel;delete d.analysis.teacherNotes;d.analysis.uncertainties=(d.analysis.uncertainties||[]).map(documentStudentNote_).filter(Boolean);}}
   return d;
