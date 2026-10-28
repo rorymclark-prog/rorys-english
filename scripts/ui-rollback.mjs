@@ -19,6 +19,7 @@ const descriptions={
   "writing-help":"Writing and word helper",
   speaking:"Speaking screen visuals",
   "speaking-budget":"Weekly speaking allowance",
+  "writing-feedback":"Writing table and full paragraph versions",
   feedback:"Progress and Rory's reviews",
   "test-prep":"Test preparation page",
   documents:"Documents page navigation",
@@ -28,7 +29,7 @@ const descriptions={
   simplicity:"21 Oct one-job-per-page student screens",
 };
 const features=Object.keys(descriptions);
-const unstyled=new Set(["settings","speaking-budget","simplicity"]);
+const unstyled=new Set(["settings","speaking-budget","simplicity","writing-feedback"]);
 const styledFeatures=features.filter(name=>!unstyled.has(name));
 const [command,...args]=process.argv.slice(2);
 
