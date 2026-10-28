@@ -7,9 +7,9 @@ export type Dependencies = {
   upstream: (body: Record<string, unknown>) => Promise<Reply>;
   backendSession: (code: string, idToken: string, refresh?: boolean) => Promise<string>;
 };
-const studentActions = new Set(["progress", "resources", "assignments", "note", "submissions", "ai", "submit", "event", "documents", "document", "documentFile", "documentUpload", "documentAnalyse", "documentChat", "learningRecords", "learningMemory", "learningMemoryEnabled", "learningReply", "speakingSave", "speakingAnalyse", "speakingAttachAudio", "calendarLessons", "calendarTestFile", "calendarLink", "calendarRevoke", "calendarRequest", "calendarTestSave", "calendarTestCancel", "messages", "notifications", "messageSend", "messagesRead", "notificationsRead"]);
+const studentActions = new Set(["progress", "resources", "assignments", "note", "submissions", "ai", "submit", "event", "documents", "document", "documentFile", "documentUpload", "documentAnalyse", "documentChat", "documentPractice", "workFeedback", "workFeedbackAnalyse", "workPractice", "learningRecords", "learningMemory", "learningMemoryEnabled", "learningReply", "speakingSave", "speakingAnalyse", "speakingAttachAudio", "calendarLessons", "calendarTestFile", "calendarLink", "calendarRevoke", "calendarRequest", "calendarTestSave", "calendarTestCancel", "messages", "notifications", "messageSend", "messagesRead", "notificationsRead"]);
 export async function accountService(body: Record<string, unknown>, deps: Dependencies): Promise<Reply> {
-  if (body.preview && !new Set(["progress","resources","assignments","note","submissions","documents","document","documentFile","learningRecords","learningMemory","calendarLessons", "calendarTestFile", "messages", "notifications"]).has(String(body.action))) return {ok:false,error:"Student preview is read-only."};
+  if (body.preview && !new Set(["progress","resources","assignments","note","submissions","documents","document","documentFile","learningRecords","workFeedback","learningMemory","calendarLessons", "calendarTestFile", "messages", "notifications"]).has(String(body.action))) return {ok:false,error:"Student preview is read-only."};
   // Legacy teacher/student codes stay compatible during the move.
   if (body.action !== "accountLogin" && body.authProvider !== "firebase") {
     const reply = await deps.upstream(body);

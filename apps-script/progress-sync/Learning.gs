@@ -19,7 +19,7 @@ function learningLatest_(code,readerRole) {
 }
 function learningPublic_(row,role) {
   var body=JSON.parse(row[6]||'{}');
-  if(role!=='teacher')delete body.tutorPrivate;
+  if(role!=='teacher'){delete body.tutorPrivate;delete body.aiFeedbackModel;delete body.aiFeedbackEvidence;if(body.plainAiFeedback){var plain=body.plainAiFeedback;body.aiAnalysis=[plain.summary,'What went well',(plain.strengths||[]).join('\n'),'What to practise next',(plain.targets||[]).join('\n'),'Try this',plain.nextStep].filter(Boolean).join('\n\n');}}
   var available=row[8]||body.audioReviewAvailableAt||'',held=reviewHeld_(available);
   if(role!=='teacher'&&reviewHeld_(body.audioReviewAvailableAt)){delete body.audioReview;body.ratings={};}
   return {id:String(row[0]),created:String(row[1]),date:learningDate_(row[2]),kind:String(row[3]),title:String(row[4]),visibility:String(row[5]),author:String(row[7]),body:body,feedbackAvailableAt:available,reviewPending:held};
@@ -119,7 +119,8 @@ function learningService_(p,s) {
       } finally {lock.releaseLock();}
       return {ok:true,received:true,record:learningPublic_(row,'student')};
     }
-    if(p.action==='speakingAnalyse'&&s.role==='student') {
+    if(p.action==='teacherRefineConversationFeedback'&&s.role==='teacher')return refineConversationFeedback_(code,p,s);
+    if(p.action==='speakingAnalyse'&&(s.role==='student'||s.role==='teacher')) {
       var existing=learningFind_(code,p.id),body=JSON.parse(existing[6]||'{}');
       if(existing[3]!=='speaking'||existing[7]!=='Student')return {ok:false,error:'Speaking practice not found.'};
       if(body.aiAnalysis)return {ok:true,record:learningPublic_(existing,'student')};

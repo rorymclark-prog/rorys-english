@@ -4,14 +4,17 @@ export type SentenceRow = WritingComparison & {
   number: number | null;
   status: 'corrected' | 'unchanged' | 'pending' | 'source-note';
 };
-export type WritingSource = {original?:string;corrected?:string;comparisons?:WritingComparison[];corrections?:{original:string;corrected:string;note:string}[]};
+export type WritingSource = {original?:string;corrected?:string;model?:string;targetLevel?:'B1'|'B2';modelNotes?:string[];comparisons?:WritingComparison[];corrections?:{original:string;corrected:string;note:string}[]};
 const normal = (text:string) => text.replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/\s+/g,' ').trim().toLowerCase();
 const sourceNote = (text:string) => /^\[(?:crossed[- ]out|unclear|illegible|unreadable|transcription|wording unclear)\b[\s\S]*\]$/i.test(text.trim());
 
 export function writingSentences(text:string):string[] {
-  if(!text.trim()) return [];
-  if(typeof Intl.Segmenter==='function') return [...new Intl.Segmenter('en',{granularity:'sentence'}).segment(text)].map(x=>x.segment.trim()).filter(Boolean);
-  return (text.match(/[^.!?]+(?:[.!?]+[\]"”’]*|$)/g)||[]).map(x=>x.trim()).filter(Boolean);
+  const rows:string[]=[],end=/[.!?]+[\]"”’')]*(?=\s|$)/g;let cursor=0,match:RegExpExecArray|null;
+  while((match=end.exec(text))){const open=text.lastIndexOf('[',match.index),close=text.lastIndexOf(']',match.index);if(open>close&&/^\[unclear:/i.test(text.slice(open)))continue;const stop=match.index+match[0].length,part=text.slice(cursor,stop).trim();
+    if(/\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|etc|e\.g|i\.e)\.$/i.test(part)||/(?:\b[A-Z]\.){2,}$/.test(part))continue;
+    if(part)rows.push(part);cursor=stop;
+  }
+  const tail=text.slice(cursor).trim();if(tail)rows.push(tail);return rows;
 }
 
 function similarity(a:string,b:string):number {
@@ -78,7 +81,7 @@ function replacePhrase(text:string,phrase:string,replacement:string):string|null
 export function sentenceReview(w:WritingSource,{preferComparisons=true}:{preferComparisons?:boolean}={}):{rows:SentenceRow[];hasOriginal:boolean;pending:number} {
   const segments=writingSentences(w.original||'');
   const originals=segments.filter(s=>!sourceNote(s));
-  const comparisons=w.comparisons||w.corrections?.map(c=>({...c,improved:''}))||[];
+  const comparisons:WritingComparison[]=w.comparisons||w.corrections?.map(c=>({...c,improved:''}))||[];
   const aligned=align(originals,writingSentences(w.corrected||'').filter(s=>!sourceNote(s)));
   const fullRows=comparisons.length===originals.length&&comparisons.every((row,i)=>normal(row.original)===normal(originals[i]));
   let index=0;
@@ -101,7 +104,7 @@ export function sentenceReview(w:WritingSource,{preferComparisons=true}:{preferC
     const notes=[...new Set(matches.map(row=>row.note.trim()).filter(Boolean))];
     if(aligned[position].note&&!exact) notes.push(aligned[position].note);
     if(!notes.length) notes.push(status==='unchanged'?'Already correct — no language correction is needed.':status==='pending'?'No complete correction is saved for this sentence yet. It has not been marked as correct.':'The full correction is shown. Rory can add the reason for this change.');
-    return {original,corrected,improved,note:notes.join(' '),number,status};
+    return {original,corrected,improved,note:notes.join(' '),number,status,...(exact?.checks?{checks:exact.checks}:{})};
   });
   return {rows,hasOriginal:originals.length>0,pending:rows.filter(row=>row.status==='pending').length};
 }

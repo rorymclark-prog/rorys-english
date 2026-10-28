@@ -18,7 +18,7 @@ export function documentStatusLabel(d:LearnerDocument):string{
   if(d.processing)return 'Preparing feedback';
   if(d.status==='error')return 'Saved · feedback needs a retry';
   if(documentWorkType(d)==='material')return 'Saved · task material';
-  if(d.analysis||d.status==='ready'||d.feedback&&!d.reviewPending)return 'Done · feedback ready';
+  if(d.hasConversationFeedback||d.analysis||d.status==='ready'||d.feedback&&!d.reviewPending)return 'Done · feedback ready';
   if(d.files.some(f=>f.type.startsWith('audio/')))return 'Done · recording saved';
   return 'Saved · ready for feedback';
 }

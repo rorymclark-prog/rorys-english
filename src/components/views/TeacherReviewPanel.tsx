@@ -1,4 +1,5 @@
 "use client";
+import WorkFeedback from "@/components/WorkFeedback";
 import { useCallback, useEffect, useState } from "react";
 import { createAccess, fetchResources, fetchSubmissions, publishResources, reviewSubmission, type Submission, type ResourceItem } from "@/lib/remote";
 import { BookIcon, CheckSquareIcon, GearIcon } from "@/components/Icons";
@@ -56,6 +57,7 @@ function Review({row,code,onSaved}:{row:Submission;code:string;onSaved:()=>void}
     <p className="text-xs text-navy-soft dark:text-navy-mist">{row.unit} · Sent {row.submitted}</p>
     {row.feedbackAvailableAt&&<ReviewTiming availableAt={row.feedbackAvailableAt} teacher/>}
     {Object.entries(row.answers).map(([prompt,answer])=><div key={prompt} className="teacher-answer"><p>{row.prompts?.[prompt]||(prompt==="handwritten_work"?"Handwritten answer":prompt)}</p><AnswerWithPhotos answer={answer} code={code} teacher/></div>)}
+    <WorkFeedback code={code} id={row.id} sourceType="submission" teacher/>
     <label className="block text-sm font-bold">Your feedback<textarea value={feedback} onChange={e=>setFeedback(e.target.value)} className="mt-2 w-full font-normal" rows={4} maxLength={2000} placeholder="What went well? What could they try next?"/><span className="mt-1 block text-xs font-normal">Key instruction words are highlighted for the student. Add **double stars** around any other short phrase you want to highlight.</span></label>
     <div className="flex flex-wrap gap-2">{['reviewed','revision-needed'].map(status=><button type="button" disabled={saving} key={status} className={status==='reviewed'?"teacher-primary disabled:opacity-50":"teacher-quiet-button border disabled:opacity-50"} onClick={async()=>{setSaving(true);const r=await reviewSubmission(code,row.id,status,feedback);setSaving(false);setMessage(r.ok?"Feedback saved.":r.error || "Could not save");if(r.ok)onSaved();}}>{saving?"Saving…":status==='reviewed'?'Save feedback · reviewed':'Ask for a revision'}</button>)}</div>
     <p role="status" className="text-sm">{message}</p>

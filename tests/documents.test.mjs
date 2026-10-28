@@ -15,13 +15,19 @@ function fixture(){
  PropertiesService:{getScriptProperties:()=>property},CacheService:{getScriptCache:()=>({get:k=>cache.get(k),put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},Session:{getScriptTimeZone:()=> 'Europe/Vienna'},Utilities:{getUuid:randomUUID,base64Decode:s=>Array.from(Buffer.from(s,'base64')),base64Encode:b=>Buffer.from(b.map(v=>(v+256)%256)).toString('base64'),base64EncodeWebSafe:b=>Buffer.from(b).toString('base64url'),computeDigest:(_,s)=>createHash('sha256').update(s).digest(),DigestAlgorithm:{SHA_256:'sha256'},newBlob:blob,formatDate:()=> '2026-09-21'},SpreadsheetApp:{openById:spreadsheet},DriveApp:{Access:{PRIVATE:'PRIVATE'},createFolder:folder,getFolderById:id=>folders.get(id),getFileById:id=>files.get(id)},
  studentByAnyCode_:c=>c==='student-a'||c==='parent-a'?{code:'student-a',parentCode:'parent-a',name:'Synthetic A'}:c==='student-b'?{code:'student-b',name:'Synthetic B'}:null,
  sanitize_:s=>/^[=+\-@]/.test(s)?"'"+s:s,json_:v=>v,aiCount_:c=>Number(props.get('ai_'+c)||0),aiKey_:c=>'ai_'+c,pruneAiCounters_(){},legacyPost_:()=>({ok:true}),
- UrlFetchApp:{fetch:(_url,o)=>{aiCalls++;if(aiHook)aiHook();const payload=JSON.parse(o.payload);return {getResponseCode:()=>aiStatus,getContentText:()=>JSON.stringify(payload.tools?{content:[{type:'tool_use',name:'record_document',input:analysis}]}:{content:[{type:'text',text:'In “I go”, use the past simple: “I went”. Try one more sentence.'}]})};}}
+ UrlFetchApp:{fetch:(_url,o)=>{aiCalls++;if(aiHook)aiHook();const payload=JSON.parse(o.payload);let value;
+ if(payload.output_config?.format){
+  if(payload.system.startsWith('TRANSCRIBE ONLY'))value={transcription:analysis.transcription,original:analysis.writing?.original||'',task:'',workType:analysis.workType||'writing',coverage:analysis.coverage,uncertainties:analysis.uncertainties,teacherNotes:''};
+  else {const original=analysis.writing?.original||'',quote=original.slice(0,Math.min(30,original.length));value={summary:analysis.summary,strengths:analysis.strengths,corrections:analysis.corrections,retry:analysis.retry,answerReview:analysis.answerReview||[],comparisons:(analysis.writing?.comparisons||[]).map(r=>({...r,checks:{spelling:'ok',grammar:'ok',wordChoice:'ok',punctuation:'ok',flow:'ok',taskFit:'ok'}})),model:'',modelNotes:[],exercises:original?Array.from({length:4},(_,i)=>({id:'synthetic-exercise-000'+i,type:'gap',prompt:'Sample person '+i+' ___ at home.',options:[],accepted:['is'],example:'is',explanation:'Use is with one person.',sourceQuote:quote,focus:'A new sentence'})):[],teacherNotes:''};}
+ }
+ return {getResponseCode:()=>aiStatus,getContentText:()=>JSON.stringify(value?{model:'claude-opus-5-5',content:[{type:'thinking',thinking:''},{type:'text',text:JSON.stringify(value)}]}:payload.tools?{content:[{type:'tool_use',name:'record_document',input:analysis}]}:{content:[{type:'text',text:'In “I go”, use the past simple: “I went”. Try one more sentence.'}]})};}}
  };
- vm.createContext(ctx);for(const f of ['V2.gs','Calendar.gs','Documents.gs','Learning.gs'])vm.runInContext(fs.readFileSync('apps-script/progress-sync/'+f,'utf8'),ctx);
+ vm.createContext(ctx);for(const f of ['V2.gs','Calendar.gs','Documents.gs','DocumentAnalysis.gs','DocumentPractice.gs','WorkFeedback.gs','Learning.gs'])vm.runInContext(fs.readFileSync('apps-script/progress-sync/'+f,'utf8'),ctx);
  const session=role=>ctx.issueSession_(role==='teacher'?'__teacher__':role==='parent'?'parent-a':role==='other'?'student-b':'student-a',role==='other'?'student':role).token;
- const post=(body,role='student')=>ctx.doPost({postData:{contents:JSON.stringify({code:'student-a',session:session(role),...body})}});
+ const postOnce=(body,role='student')=>ctx.doPost({postData:{contents:JSON.stringify({code:'student-a',session:session(role),...body})}});
+ const post=(body,role='student')=>{let r=postOnce(body,role);for(let i=0;i<2&&r.continueAnalysis;i++)r=postOnce(body,role);return r;};
  const upload=(extra={},role='student')=>post({action:'documentUpload',id:randomUUID(),title:'Synthetic work',context:'A short paragraph',files:[sample],...extra},role);
- return {ctx,props,books,files,folders,analysis,post,upload,get calls(){return aiCalls;},set status(s){aiStatus=s;},set hook(h){aiHook=h;}};
+ return {ctx,props,books,files,folders,analysis,post,postOnce,upload,get calls(){return aiCalls;},set status(s){aiStatus=s;},set hook(h){aiHook=h;}};
 }
 test('documents authenticate every entry point and isolate student, teacher, parent and preview roles',()=>{
  const f=fixture(),id=f.upload().document.id;
@@ -102,7 +108,7 @@ test('storage fails closed if its dedicated folder was shared',()=>{
  const f=fixture();f.upload();const root=f.folders.get(f.props.get('private_document_root'));root.access='ANYONE';assert.equal(f.upload().ok,false);assert.equal(f.files.size,1);
 });
 test('analysis is saved, grounded corrections are validated and repeated analysis costs nothing',()=>{
- const f=fixture(),id=f.upload().document.id;assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,1);assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,1);
+ const f=fixture(),id=f.upload().document.id;assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,2);assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,2);
  const read=f.post({action:'document',id});assert.equal(read.document.analysis.transcription,f.analysis.transcription);assert.equal(read.document.feedback,'');assert.equal(read.document.status,'ready');
  assert.equal(f.ctx.documentAnalysisValid_({...f.analysis,corrections:[{original:'not in source',suggestion:'invented',explanation:'bad'}]}),false);
 });
@@ -117,7 +123,7 @@ test('worksheet review checks every supplied answer without turning unclear or u
  const change=(i,value)=>({...base,answerReview:base.answerReview.map((r,j)=>j===i?{...r,...value}:r)});
  for(const invalid of [change(2,{status:'correct'}),change(2,{correction:'cheaper'}),change(3,{correction:'poverty'}),change(1,{response:'invented'}),change(0,{prompt:'UNSEEN TASK'}),change(1,{correction:''}),change(1,{label:'1'})])assert.equal(f.ctx.documentAnalysisValid_(invalid),false);
  Object.assign(f.analysis,base);const id=f.upload().document.id;
- assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,1);
+ assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,2);
  assert.equal(f.post({action:'document',id}).document.analysis.answerReview.length,4);
 });
 test('feedback check receipts are private, version-bound, idempotent and separate from publishing',()=>{
@@ -139,7 +145,7 @@ test('feedback check receipts are private, version-bound, idempotent and separat
 test('a legacy worksheet with an empty prose review is upgraded instead of being returned as complete',()=>{
  const f=fixture(),id=f.upload().document.id,sh=f.books.get('sheet-a').sheets.get('Documents');
  const older={...f.analysis,writing:{original:'',comparisons:[]}};sh.data[1][6]=JSON.stringify(older);sh.data[1][5]='ready';
- assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,1);
+ assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,2);
  assert.equal(f.post({action:'document',id}).document.analysis.writing.original,f.analysis.writing.original);
  assert.ok([...f.files.values()].some(x=>x.getBlob().name.includes('previous-analysis')));
 });
@@ -156,15 +162,15 @@ test('incomplete AI output is kept privately without replacing a valid earlier r
  assert.equal(f.post({action:'documentAnalyse',id}).ok,false);
  assert.deepEqual(JSON.parse(row[6]),earlier);
  assert.equal(row[5],'ready');
- assert.equal([...f.files.values()].filter(file=>file.getBlob().name?.includes('-incomplete-analysis-')).length,1);
+ assert.equal([...f.files.values()].filter(file=>file.getBlob().name?.includes('-incomplete-analysis-')).length,2);
  assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
 });
 test('active processing leases prevent concurrent AI charges and expired leases can retry',()=>{
- const f=fixture(),id=f.upload().document.id;let nested;f.hook=()=>{f.hook=null;nested=f.post({action:'documentAnalyse',id});};assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(nested.pending,true);assert.equal(f.calls,1);
+ const f=fixture(),id=f.upload().document.id;let nested;f.hook=()=>{f.hook=null;nested=f.post({action:'documentAnalyse',id});};assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(nested.pending,true);assert.equal(f.calls,2);
  const next=f.upload().document.id,sh=f.books.get('sheet-a').sheets.get('Documents');const row=sh.data.find(r=>r[0]===next);row[11]='stale';row[12]=Date.now()-400000;assert.equal(f.post({action:'documentAnalyse',id:next}).ok,true);
 });
 test('teacher review and chat persist without replacing AI advice or original, chat retries are idempotent',()=>{
- const f=fixture(),id=f.upload().document.id;f.post({action:'documentAnalyse',id});const messageId=randomUUID();assert.equal(f.post({action:'documentChat',id,messageId,question:'Explain this change.'}).ok,true);assert.equal(f.post({action:'documentChat',id,messageId,question:'Explain this change.'}).ok,true);assert.equal(f.calls,2);
+ const f=fixture(),id=f.upload().document.id;f.post({action:'documentAnalyse',id});const messageId=randomUUID();assert.equal(f.post({action:'documentChat',id,messageId,question:'Explain this change.'}).ok,true);assert.equal(f.post({action:'documentChat',id,messageId,question:'Explain this change.'}).ok,true);assert.equal(f.calls,3);
  assert.equal(f.post({action:'teacherDocumentReview',id,feedback:'Use went for yesterday.'},'teacher').ok,true);
  const read=f.post({action:'document',id},'teacher');assert.equal(read.messages.length,1);assert.equal(read.document.feedback,'Use went for yesterday.');assert.equal(read.document.analysis.transcription,f.analysis.transcription);assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
 });
@@ -242,10 +248,10 @@ test('uploaded Word answers are read automatically as text and prior AI output i
  f.ctx.Utilities.unzip=()=>[{getName:()=> 'word/document.xml',getDataAsString:()=> '<document/>'}];
  f.ctx.XmlService={parse:()=>({getRootElement:()=>node('document','',[node('p','',[node('r','',[node('t','I go to the park yesterday.')]),node('del','',[node('t','Abandoned wording')])])])})};
  const id=f.upload({files:[word]}).document.id;
- assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,1);
+ assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,2);
  assert.equal(f.post({action:'document',id}).document.analysis.writing.comparisons[0].original,'I go to the park yesterday.');
  const sh=f.books.get('sheet-a').sheets.get('Documents'),old={...f.analysis};delete old.writing;sh.data[1][6]=JSON.stringify(old);
- const before=f.files.size;assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,2);assert.equal(f.files.size,before+1);
+ const before=f.files.size;assert.equal(f.post({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,4);assert.equal(f.files.size,before+1);
  assert.equal(f.post({action:'documentFile',id,index:0}).file.data,word.data);
 });
 
@@ -269,4 +275,50 @@ test('reviewed lesson snapshots preserve the release time and never expose the p
  sh.data.at(-1)[8]='2020-01-01T00:00:00Z';
  const parent=f.post({action:'learningRecords',code:'parent-a'},'parent');assert.equal(parent.records.length,1);assert.equal(parent.records[0].body.lessonSnapshot.reviewedBy,'Rory');assert.doesNotMatch(JSON.stringify(parent),/PRIVATE|FORGED|tutorPrivate|transcript/);
  assert.equal(f.post({...action,code:'student-b'},'teacher').ok,false);
+});
+
+test('Opus reading and adaptive analysis are independently checkpointed with structured JSON, never forced tools',()=>{
+ const f=fixture(),id=f.upload().document.id,payloads=[],call=f.ctx.documentClaude_;f.ctx.documentClaude_=p=>{payloads.push(p);return call(p);};
+ const first=f.postOnce({action:'documentAnalyse',id});assert.equal(first.continueAnalysis,true);assert.equal(f.calls,1);
+ const checkpoint=f.post({action:'document',id},'teacher').document;assert.equal(checkpoint.analysisStage,'analysis-ready');assert.equal(checkpoint.analysis,null);
+ const done=f.postOnce({action:'documentAnalyse',id});assert.equal(done.ok,true);assert.equal(f.calls,2);
+ for(const p of payloads){assert.equal(p.model,'claude-opus-5-5');assert.equal(p.thinking.type,'adaptive');assert.equal(p.tool_choice,undefined);assert.equal(p.tools,undefined);assert.equal(p.output_config.format.type,'json_schema');}
+ assert.equal(payloads[1].max_tokens,32000);assert.equal(payloads[1].output_config.effort,'high');
+ const d=f.post({action:'document',id},'teacher').document;assert.equal(d.analysis.model,'claude-opus-5-5');assert.equal(d.analysis.readingModel,'claude-opus-5-5');assert.equal(d.analysis.writing.comparisons[0].checks.taskFit,'ok');assert.equal(f.post({action:'document',id}).document.analysis.model,undefined);
+ assert.equal(f.postOnce({action:'documentAnalyse',id}).ok,true);assert.equal(f.calls,2);
+});
+test('the frozen original preserves misspellings and the corrected version shows the necessary fixes',()=>{
+ const f=fixture();Object.assign(f.analysis,{transcription:'[Page 1]\nAppart from that, he shold go.',corrections:[],writing:{original:'Appart from that, he shold go.',comparisons:[{original:'Appart from that, he shold go.',corrected:'Apart from that, he should go.',improved:'',note:'Spell apart and should this way.'}]}});
+ const id=f.upload().document.id;assert.equal(f.post({action:'documentAnalyse',id}).ok,true);const a=f.post({action:'document',id}).document.analysis;assert.equal(a.writing.original,'Appart from that, he shold go.');assert.equal(a.writing.corrected,'Apart from that, he should go.');assert.equal(a.exercises.length,4);assert.equal(a.exercises[0].example,undefined);
+});
+test('missing sentence checks retry once without replacing or silently correcting the frozen reading',()=>{
+ const f=fixture();f.analysis.transcription='I go yesterday. I like it.';f.analysis.writing.original=f.analysis.transcription;
+ const id=f.upload().document.id;assert.equal(f.post({action:'documentAnalyse',id}).ok,false);assert.equal(f.calls,3);assert.equal(f.post({action:'document',id}).document.analysis,null);
+});
+test('private pipeline notes and teacher instructions never reach student or preview document payloads',()=>{
+ const f=fixture(),context='[Document role: answer]\n[Work source: School homework — set by the school]\nPrivate instruction for the AI: keep the wording.';
+ const id=f.upload({context},'teacher').document.id;f.post({action:'documentAnalyse',id});
+ assert.match(f.post({action:'document',id},'teacher').document.context,/Private instruction/);
+ for(const role of ['student','parent']){const r=f.post({action:'document',id,...(role==='parent'?{code:'parent-a'}:{})},role).document;assert.doesNotMatch(r.context,/Private instruction/);assert.match(r.context,/School homework/);assert.equal(r.analysis.teacherNotes,undefined);}
+ assert.doesNotMatch(f.post({action:'document',id,preview:true},'teacher').document.context,/Private instruction/);
+});
+test('conversation audio opens its exact saved caption feedback instead of an empty document analysis',()=>{
+ const f=fixture(),id=randomUUID();f.post({action:'speakingSave',id,title:'Conversation',transcript:'You: I go yesterday.',reflection:''});f.post({action:'speakingAnalyse',id});
+ const audio=f.upload({files:[{name:'sample.webm',type:'audio/webm',data:Buffer.from([0x1a,0x45,0xdf,0xa3,1,2,3,4,5,6,7,8]).toString('base64')}]}).document.id;f.post({action:'speakingAttachAudio',id,documentId:audio});
+ const r=f.post({action:'document',id:audio});assert.equal(r.review.id,id);assert.ok(r.review.body.aiAnalysis);assert.equal(r.document.hasConversationFeedback,true);
+ const d=f.post({action:'document',id:audio},'teacher').document;assert.equal(d.needsTeacherCheck,true);assert.equal(f.post({action:'teacherDocumentCheck',id:audio,analysisVersion:d.analysisVersion},'teacher').document.needsTeacherCheck,false);assert.equal(f.post({action:'document',id:audio},'other').ok,false);
+});
+test('practice answers stay hidden until an immutable, scoped student attempt is saved',()=>{
+ const f=fixture(),id=f.upload().document.id;f.post({action:'documentAnalyse',id});const d=f.post({action:'document',id}).document,e=d.analysis.exercises[0];assert.equal(e.accepted,undefined);assert.equal(e.example,undefined);
+ const p={action:'documentPractice',id,attemptId:randomUUID(),exerciseId:e.id,version:d.practiceVersion,answer:'is'};
+ assert.equal(f.post(p,'teacher').ok,false);assert.equal(f.post({...p,preview:true},'teacher').ok,false);assert.equal(f.post(p,'other').ok,false);
+ const result=f.post(p);assert.equal(result.received,true);assert.equal(result.attempt.result.status,'correct');assert.equal(result.attempt.result.example,'is');assert.equal(f.post(p).ok,true);assert.equal(f.books.get('sheet-a').sheets.get('Document practice').data.length,2);
+ assert.equal(f.post({...p,answer:'are'}).ok,false);assert.equal(f.post({...p,attemptId:randomUUID(),version:'stale'}).ok,false);assert.equal(f.post({action:'document',id}).document.practiceAttempts[0].answer,'is');
+});
+test('typed task feedback uses the saved source and rejects cross-profile, parent and preview writes',()=>{
+ const f=fixture(),id=randomUUID(),answer='medical';f.post({action:'submit',id,task:'Vocabulary',unit:'u1',title:'Word formation',prompts:{a:'MEDICINE'},answers:{a:answer}});
+ Object.assign(f.analysis,{corrections:[],writing:{original:'',comparisons:[]},answerReview:[{label:'a',prompt:'MEDICINE',response:answer,status:'correct',correction:'',note:'The adjective fits.'}]});
+ const p={action:'workFeedbackAnalyse',sourceType:'submission',id};for(const role of ['other','parent'])assert.equal(f.post(p,role).ok,false);assert.equal(f.post({...p,preview:true},'teacher').ok,false);
+ const r=f.post(p);assert.equal(r.ok,true);assert.equal(r.analysis.answerReview[0].response,answer);const before=f.calls;assert.equal(f.post(p).ok,true);assert.equal(f.calls,before);
+ assert.equal(f.post({action:'workFeedback',sourceType:'submission',id}).analysis.model,undefined);assert.equal(f.post({action:'submissions'}).submissions[0].answers.a,answer);assert.equal(f.post({action:'submissions'}).submissions[0].feedback,'');
 });

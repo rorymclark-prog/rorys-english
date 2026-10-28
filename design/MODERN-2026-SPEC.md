@@ -81,3 +81,8 @@ at low opacity — the one Twitch-y flourish, contained to the entry moment.
 ---
 *Research + judging: workflow `wf_e1086501-2ac` (9 agents, journal in session dir).
 Reference implementation of the portable spec: `projects/assistenze-care-app`.*
+
+
+## Complete work feedback · 28 October 2026
+
+Use the same sentence table in uploaded writing, retained writing reviews and new typed homework. Table order: original, corrected, optional stronger wording, checks/explanation. Correct rows may collapse; no sentence is omitted. Below it, retain the full original, corrected and optional example as paragraphs. Use the established red/green/blue writing tokens consistently in headings, borders and changed-word highlights; preserve unchanged words and paragraph gaps. Corrections expose their reason on demand. The table scrolls within its container on small screens. Put new practice beneath the full text and keep answers hidden until the learner saves a try. Show saved conversation feedback beside its audio original and in Speaking, with an explicit caption limitation. Rory's private checks never appear in student/parent/preview views. An AI result is not a formal teacher mark.

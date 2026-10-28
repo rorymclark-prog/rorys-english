@@ -3,6 +3,8 @@ import {useEffect,useState} from "react";
 import {isStudentPreview} from "@/lib/student-preview";
 import {deliver,outbox,type PendingEvent} from "@/lib/sync";
 import {fetchSubmissions,type Submission} from "@/lib/remote";
+import WorkFeedback from "@/components/WorkFeedback";
+import {authed} from "@/lib/api";
 import FeedbackText from "@/components/FeedbackText";
 import HandwrittenAnswer from "@/components/HandwrittenAnswer";
 import AnswerWithPhotos from "@/components/AnswerWithPhotos";
@@ -57,7 +59,7 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
     // count. A failure that parks the submission still counts: the writing was
     // done, and the streak must never punish a bad connection.
     onSubmitted?.();
-    if(r.ok) {setMessage("Received by Rory — waiting for review.");void refresh();}
+    if(r.ok) {void authed(code,{action:'workFeedbackAnalyse',sourceType:'submission',id:event.id});setMessage("Done · received by Rory. Preparing your feedback.");void refresh();}
     else setMessage(r.error||"Saved here, but not received yet. Retry when connected.");
   }
   const last=history[0];
@@ -73,15 +75,16 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
     <HandwrittenAnswer source="tutor" code={code} title={title||task} context={`Task: ${task} · Unit: ${unit}\n${fields.map(f=>f.prompt).join("\n")}`} disabled={preview||!ready||!!pending||busy||handwritingParts(answers.handwritten_work||"").documentIds.length>=6} onBusyChange={setPhotoBusy} onSaved={reference=>edit("handwritten_work",[answers.handwritten_work,reference].filter(Boolean).join("\n"))}/>
     {answers.handwritten_work&&<AnswerWithPhotos key={answers.handwritten_work} code={code} answer={answers.handwritten_work}/>}
     <p className="text-xs">Drafts stay on this device. Submitted copies and Rory’s feedback are saved privately to your progress record. Avoid personal details.</p>
-    <ReviewTiming availableAt={last?.feedbackAvailableAt}/>
+
     {pending && <p role="status" className="rounded-xl bg-amber-soft p-3 text-navy">A saved copy is waiting to send. Retry it before making a revision.</p>}
     <button type="button" disabled={preview||!ready||busy||photoBusy||(!pending&&(!Object.values(answers).some(v=>v.trim())||!!unchanged))} onClick={()=>void submit()} className="min-h-12 w-full rounded-xl bg-indigo-700 p-3 font-bold text-white disabled:opacity-50">
       {preview?"Sending is disabled in teacher preview":busy?"Sending…":pending?"Retry saved submission":last?"Submit revision":"Send answers to Rory"}
     </button>
     {message && <p role="status" className="text-sm">{message}</p>}
     {last && <section className="rounded-card border border-indigo-200 p-4">
-      <h3 className="font-bold">{last.status==="revision-needed"?"Your next revision":last.status==="reviewed"?"Reviewed by Rory":"Received — waiting for Rory’s review"}</h3>
+      <h3 className="font-bold">{last.status==="revision-needed"?"Your next revision":last.status==="reviewed"?"Reviewed by Rory":"Done · received by Rory"}</h3>
       {last.feedback && <p className="mt-2 whitespace-pre-wrap"><FeedbackText text={last.feedback}/></p>}
+      <WorkFeedback key={last.id} code={code} id={last.id} sourceType="submission" generate/>
       <p className="mt-2 text-xs">{last.submitted} · {history.length} submitted version{history.length===1?"":"s"}</p>
       <details className="mt-3"><summary>View last submitted copy</summary>{Object.entries(last.answers).map(([id,value])=><div key={id} className="mt-2"><AnswerWithPhotos code={code} answer={value}/></div>)}</details>
     </section>}
