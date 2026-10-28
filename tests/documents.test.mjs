@@ -10,7 +10,7 @@ function fixture(){
  const analysis={transcription:'Page 1\nI go to the park yesterday.',coverage:'complete',uncertainties:[],summary:'A short account of a visit.',strengths:['The main idea is clear.'],corrections:[{original:'I go',suggestion:'I went',explanation:'Use the past simple for yesterday.'}],retry:'Write one more sentence about yesterday.',writing:{original:'I go to the park yesterday.',comparisons:[{original:'I go to the park yesterday.',corrected:'I went to the park yesterday.',improved:'',note:'Use the past simple for yesterday.'}]}};
  const blob=(bytes,type,name)=>({getBytes:()=>Array.from(typeof bytes==='string'?Buffer.from(bytes):bytes),getDataAsString:()=>Buffer.from(bytes).toString(),type,name});
  function spreadsheet(id){if(books.has(id))return books.get(id);const sheets=new Map(),book={sheets,getSheetByName:n=>sheets.get(n)||null,insertSheet:n=>{const data=[],sh={data,getDataRange:()=>({getValues:()=>data.map(r=>r.slice())}),appendRow:r=>data.push(r.slice()),getRange:(row,col)=>({setValues:vs=>vs.forEach((r,i)=>r.forEach((v,j)=>{data[row-1+i]||=[];data[row-1+i][col-1+j]=v;})),setValue:v=>{data[row-1]||=[];data[row-1][col-1]=v;}})};sheets.set(n,sh);return sh;}};books.set(id,book);return book;}
- function folder(){const id=randomUUID(),f={getId:()=>id,access:'PRIVATE',getSharingAccess:()=>f.access,getEditors:()=>[],getViewers:()=>[],createFolder:folder,createFile:b=>{const fid=randomUUID(),file={getId:()=>fid,getBlob:()=>b,setTrashed:t=>{file.trashed=t;}};files.set(fid,file);return file;}};folders.set(id,f);return f;}
+ function folder(){const folderFiles=[],id=randomUUID(),f={getFiles:()=>{let i=0;return {hasNext:()=>i<folderFiles.length,next:()=>folderFiles[i++]};},getId:()=>id,access:'PRIVATE',getSharingAccess:()=>f.access,getEditors:()=>[],getViewers:()=>[],createFolder:folder,createFile:b=>{const fid=randomUUID(),file={getName:()=>b.name,getId:()=>fid,getBlob:()=>b,setTrashed:t=>{file.trashed=t;}};files.set(fid,file);folderFiles.push(file);return file;}};folders.set(id,f);return f;}
  const property={getProperty:k=>props.get(k)||null,setProperty:(k,v)=>props.set(k,v)},ctx={console,Date,JSON,Object,Array,String,Number,Math,isFinite,SECRET:'private',TEACHER_PASSWORD_PROP:'TEACHER_PASSWORD',AI_DAILY_CAP:40,
  PropertiesService:{getScriptProperties:()=>property},CacheService:{getScriptCache:()=>({get:k=>cache.get(k),put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},Session:{getScriptTimeZone:()=> 'Europe/Vienna'},Utilities:{getUuid:randomUUID,base64Decode:s=>Array.from(Buffer.from(s,'base64')),base64Encode:b=>Buffer.from(b.map(v=>(v+256)%256)).toString('base64'),base64EncodeWebSafe:b=>Buffer.from(b).toString('base64url'),computeDigest:(_,s)=>createHash('sha256').update(s).digest(),DigestAlgorithm:{SHA_256:'sha256'},newBlob:blob,formatDate:()=> '2026-09-21'},SpreadsheetApp:{openById:spreadsheet},DriveApp:{Access:{PRIVATE:'PRIVATE'},createFolder:folder,getFolderById:id=>folders.get(id),getFileById:id=>files.get(id)},
  studentByAnyCode_:c=>c==='student-a'||c==='parent-a'?{code:'student-a',parentCode:'parent-a',name:'Synthetic A'}:c==='student-b'?{code:'student-b',name:'Synthetic B'}:null,
@@ -321,4 +321,24 @@ test('typed task feedback uses the saved source and rejects cross-profile, paren
  const p={action:'workFeedbackAnalyse',sourceType:'submission',id};for(const role of ['other','parent'])assert.equal(f.post(p,role).ok,false);assert.equal(f.post({...p,preview:true},'teacher').ok,false);
  const r=f.post(p);assert.equal(r.ok,true);assert.equal(r.analysis.answerReview[0].response,answer);const before=f.calls;assert.equal(f.post(p).ok,true);assert.equal(f.calls,before);
  assert.equal(f.post({action:'workFeedback',sourceType:'submission',id}).analysis.model,undefined);assert.equal(f.post({action:'submissions'}).submissions[0].answers.a,answer);assert.equal(f.post({action:'submissions'}).submissions[0].feedback,'');
+});
+
+test('uncertain missing worksheet evidence remains unmarked while readable sentence parts can be corrected',()=>{
+ const f=fixture(),row={label:'Task 2',prompt:'Write three sentences.',response:'',status:'uncertain',correction:'',note:'No answer page was supplied; upload it if available.'};
+ assert.equal(f.ctx.documentAnswersValid_({transcription:'Write three sentences.',answerReview:[row]}),true);
+ assert.equal(f.ctx.documentAnswersValid_({transcription:'Write three sentences.',answerReview:[{...row,status:'correct'}]}),false);
+ const original='I go to [unclear: Vienne?] yesterday.',a={transcription:original,writing:{original,comparisons:[{original,corrected:'I went to [unclear: Vienne?] yesterday.',improved:'',note:'Went is the past tense; please confirm the place name.'}]}};
+ assert.equal(f.ctx.documentWritingValid_(a),true);
+ a.writing.comparisons[0].corrected='I went to Vienna yesterday.';assert.equal(f.ctx.documentWritingValid_(a),false);
+ a.writing.comparisons[0].corrected='I went to [unclear: Vienna?] yesterday.';assert.equal(f.ctx.documentWritingValid_(a),false);
+});
+test('rejected provider outputs can be revalidated from the private source store without a fresh AI call',()=>{
+ const f=fixture(),doc=f.upload().document.id;f.post({action:'documentAnalyse',id:doc});const calls=f.calls;
+ const saved=JSON.parse(f.books.get('sheet-a').sheets.get('Documents').data[1][6]);
+ const output={summary:saved.summary,strengths:[...saved.strengths,'A second evidenced strength.','A third.','A fourth.','Extra bounded summary.'],corrections:saved.corrections,retry:saved.retry,answerReview:saved.answerReview,comparisons:saved.writing.comparisons,model:'',modelNotes:[],exercises:saved.exercises,teacherNotes:''};
+ const folder=f.folders.get(f.props.get('private_documents_student-a'));folder.createFile(f.ctx.Utilities.newBlob(JSON.stringify(output),'application/json',doc+'-incomplete-analysis-'+Date.now()+'.json'));
+ const reading={transcription:saved.transcription,original:saved.writing.original,coverage:saved.coverage,uncertainties:[],teacherNotes:'',workType:'writing',task:''};
+ const recovered=f.ctx.documentRecovery_('student-a',doc,reading,'','claude-opus-5-5');assert.ok(recovered);assert.equal(recovered.strengths.length,4);assert.equal(f.calls,calls);
+ output.comparisons[0].original='A fabricated original.';folder.createFile(f.ctx.Utilities.newBlob(JSON.stringify(output),'application/json',doc+'-incomplete-analysis-'+(Date.now()+1)+'.json'));
+ assert.equal(f.ctx.documentRecovery_('student-a',doc,reading,'','claude-opus-5-5'),null);assert.equal(f.calls,calls);
 });
