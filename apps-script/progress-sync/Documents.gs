@@ -162,7 +162,7 @@ function documentAnswersValid_(a){
     if(r.prompt&&source.indexOf(documentSourceText_(r.prompt))<0)return false;
     if(r.response){var text=documentSourceText_(r.response),index=source.indexOf(text,cursor);if(index<0)return false;cursor=index+text.length;}
     if(r.status==='not-answered')return !r.response&&!r.correction;
-    if(!r.response.trim())return false;
+    if(!r.response.trim())return r.status==='uncertain'&&!r.correction;
     if(/\[unclear[^\]]*\]/i.test(r.response)&&r.status!=='uncertain')return false;
     if(r.status==='needs-change')return !!r.correction.trim()&&r.correction!==r.response;
     return !r.correction;
@@ -256,7 +256,7 @@ function documentWritingValid_(a){
     var sourceText=documentSourceText_(r.original),index=w.original.indexOf(r.original,cursor),source=transcript.indexOf(sourceText,transcriptCursor);
     if(index<0||source<0||w.original.slice(cursor,index).trim())return false;
     cursor=index+r.original.length;transcriptCursor=source+sourceText.length;
-    return !/\[unclear[^\]]*\]/i.test(r.original)||(!r.corrected&&!r.improved);
+    var unclear=r.original.match(/\[unclear[^\]]*\]/gi)||[];return [r.corrected,r.improved].every(function(text){if(!text)return true;var tokens=text.match(/\[unclear[^\]]*\]/gi)||[];return JSON.stringify(tokens)===JSON.stringify(unclear);});
   });
   return valid&&!w.original.slice(cursor).trim();
 }
