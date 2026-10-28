@@ -5,6 +5,7 @@ import FeedbackText from "@/components/FeedbackText";
 import { fetchSubmissions, type Assignment, type Submission } from "@/lib/remote";
 import { getLearning, type LearningRecord } from "@/lib/learning";
 import { guidedSpeakingForHomework } from "@/lib/guided-speaking";
+import { assignmentTargetId } from "@/lib/today-task";
 
 const unitId = "english-in-context5-unit01-2026";
 const weeks = [
@@ -50,7 +51,7 @@ export default function SpeakingHomeworkCard({ code, assignment }: { code: strin
     });
     return () => { live = false; };
   }, [code]);
-  return <section className="hw-speaking" aria-labelledby={`speaking-${assignment.id}`}>
+  return <section id={assignmentTargetId(assignment.id)} tabIndex={-1} className="hw-speaking studio-assignment-target" aria-labelledby={`speaking-${assignment.id}`}>
     <div className="hw-heading"><div><p className="hw-kicker">FAMILY LIFE · TWO PRACTICE SETS</p><h2 id={`speaking-${assignment.id}`}>Speaking and writing, one step at a time</h2><p><strong>Each set has one chat and one written answer.</strong> The chat replaces the speaking rehearsal in the linked task.</p></div><span className="hw-time">30–40 min / set</span></div>
     <p className="hw-gentle-note">Choose your own ideas. These are examples to help you start, not sentences to memorise. <strong>Work on one set at a time. Stop at 45 minutes.</strong></p>
     <div className="hw-chat-grid">{weeks.map(week => {

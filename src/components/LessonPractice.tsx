@@ -5,10 +5,11 @@ import Link from 'next/link';
 import {readableDate} from '@/lib/clarity';
 import {getLearning,saveLearning,type LearningRecord} from '@/lib/learning';
 import {lessonPracticeRecord,readLessonPractice,type LessonPractice} from '@/lib/lesson-practice';
+import {learnerTaskTitle} from '@/lib/today-task';
 
 export function LessonPracticeDetails({code,record,practice,mode}:{code:string;record:LearningRecord;practice:LessonPractice;mode:'student'|'parent'|'teacher'}) {
   return <section className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-800 dark:bg-navy-raised">
-    <p className="re-eyebrow">FROM YOUR LESSON · {readableDate(practice.lessonDate)}</p><h3 className="mt-1 text-lg font-bold">{practice.title}</h3><p className="mt-2">{practice.recap}</p>
+    <p className="re-eyebrow">FROM YOUR LESSON · {readableDate(practice.lessonDate)}</p><h3 className="mt-1 text-lg font-bold">{learnerTaskTitle(practice.title)}</h3><p className="mt-2">{practice.recap}</p>
     <ul className="mt-3 ml-5 list-disc">{practice.focus.map(x=><li key={x}>{x}</li>)}</ul>
     <p className="mt-3"><strong>Speak · about {practice.speakingMinutes} minutes:</strong> {practice.speakingPrompt}</p>
     {mode==='student'&&<Link className="re-button mt-3 inline-block" href={`/s/${code}/speak/?mode=lesson&practice=${encodeURIComponent(record.id)}`}>Practise with AI →</Link>}
@@ -18,14 +19,18 @@ export function LessonPracticeDetails({code,record,practice,mode}:{code:string;r
     <p className="mt-3 text-xs">Optional practice. Your Conversation feedback is saved separately after the chat.</p>
   </section>;
 }
-export function LatestLessonPractice({code,showFiles=true}:{code:string;showFiles?:boolean}) {
+export function LatestLessonPractice({code,showFiles=true,compact=false}:{code:string;showFiles?:boolean;compact?:boolean}) {
   const [entry,setEntry]=useState<ReturnType<typeof lessonPracticeRecord>>(null),[error,setError]=useState(false),[retry,setRetry]=useState(0);
   useEffect(()=>{let live=true;setEntry(null);setError(false);getLearning(code).then(r=>{if(live){if(r.ok)setEntry(lessonPracticeRecord(r.records||[]));else setError(true);}}).catch(()=>{if(live)setError(true);});return()=>{live=false;};},[code,retry]);
   if(error)return <StatusRow kind="error" className="mt-5" onRetry={()=>setRetry(x=>x+1)}>Could not check your latest lesson recap.</StatusRow>;
   if(!entry)return null;
   const {record,practice}=entry;
   const assignedHomework=record.body.source?.includes("-homework-reset-source-")===true;
-  return <section className="re-card mt-5"><p className="re-eyebrow">{assignedHomework?'CURRENT HOMEWORK':record.body.feedbackOrigin==='recorded-lesson-practice'?'RECAP FROM YOUR RECORDED LESSON':'RECAP FROM YOUR LAST LESSON'} · {readableDate(practice.lessonDate)}</p><h2 className="mt-1 text-xl font-bold">{practice.title}</h2><p className="mt-2 text-sm font-semibold">{assignedHomework?<>Assigned by Rory · speaking counts within your weekly practice · no fixed deadline</>:<>Optional · about {practice.speakingMinutes+practice.writingMinutes} minutes total · no deadline</>}</p><p className="mt-2 text-sm">{practice.recap}</p>{record.body.feedbackOrigin==='recorded-lesson-practice'&&<p className="mt-2 text-xs">Recap and practice from your lesson recording. Rory’s full lesson analysis is separate and awaits his review.</p>}<div className="mt-4 flex flex-wrap gap-3"><Link className="re-button re-secondary" href={`/s/${code}/progress/#review-${record.id}`}>{record.body.feedbackOrigin==='recorded-lesson-practice'?'Read recorded lesson recap & practice':'Read lesson recap & targets'}</Link><Link className="re-button" href={`/s/${code}/speak/?mode=lesson&practice=${encodeURIComponent(record.id)}`}>Practise with AI · {practice.speakingMinutes} min</Link><Link className="re-button re-secondary" href={`/s/${code}/progress/#write-${record.id}`}>Short writing task · {practice.writingMinutes} min</Link>{showFiles&&<Link className="re-button re-secondary" href={`/s/${code}/lessons/`}>Lesson slides & files</Link>}</div></section>;
+  if(compact)return <section className="studio-lesson-note" aria-labelledby="studio-lesson-title">
+    <div><p className="re-eyebrow">{assignedHomework?'CURRENT PRACTICE FOCUS':'FROM YOUR LESSON'} · {readableDate(practice.lessonDate)}</p><h2 id="studio-lesson-title">{learnerTaskTitle(practice.title)}</h2><p className="studio-lesson-focus">{practice.focus[0]}</p></div>
+    <Link className="studio-lesson-link" href={`/s/${code}/progress/#review-${record.id}`}>Recap & full task <span aria-hidden="true">→</span></Link>
+  </section>;
+  return <section className="re-card mt-5"><p className="re-eyebrow">{assignedHomework?'CURRENT HOMEWORK':record.body.feedbackOrigin==='recorded-lesson-practice'?'RECAP FROM YOUR RECORDED LESSON':'RECAP FROM YOUR LAST LESSON'} · {readableDate(practice.lessonDate)}</p><h2 className="mt-1 text-xl font-bold">{learnerTaskTitle(practice.title)}</h2><p className="mt-2 text-sm font-semibold">{assignedHomework?<>Assigned by Rory · speaking counts within your weekly practice · no fixed deadline</>:<>Optional · about {practice.speakingMinutes+practice.writingMinutes} minutes total · no deadline</>}</p><p className="mt-2 text-sm">{practice.recap}</p>{record.body.feedbackOrigin==='recorded-lesson-practice'&&<p className="mt-2 text-xs">Recap and practice from your lesson recording. Rory’s full lesson analysis is separate and awaits his review.</p>}<div className="mt-4 flex flex-wrap gap-3"><Link className="re-button re-secondary" href={`/s/${code}/progress/#review-${record.id}`}>{record.body.feedbackOrigin==='recorded-lesson-practice'?'Read recorded lesson recap & practice':'Read lesson recap & targets'}</Link><Link className="re-button" href={`/s/${code}/speak/?mode=lesson&practice=${encodeURIComponent(record.id)}`}>Practise with AI · {practice.speakingMinutes} min</Link><Link className="re-button re-secondary" href={`/s/${code}/progress/#write-${record.id}`}>Short writing task · {practice.writingMinutes} min</Link>{showFiles&&<Link className="re-button re-secondary" href={`/s/${code}/lessons/`}>Lesson slides & files</Link>}</div></section>;
 }
 export function LessonPracticeEditor({code,record,existing,onSaved}:{code:string;record:LearningRecord;existing?:LearningRecord;onSaved:()=>void}) {
   const initial=readLessonPractice((existing||record).body.lessonPractice);

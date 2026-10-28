@@ -16,6 +16,7 @@ import {BookIcon,ChevronRightIcon,CheckSquareIcon,ClockIcon,FileIcon,PencilIcon}
 import {MicrophoneIcon} from "@/components/LearningVisuals";
 
 import {readableDate,submissionStatus,isCompletedAssignment} from "@/lib/clarity";
+import {assignmentTargetId,learnerTaskTitle,revealAssignment,selectedAssignmentId} from "@/lib/today-task";
 
 type WorkKind="speaking"|"writing"|"task";
 const kindLabel:Record<WorkKind,string>={speaking:"Speaking",writing:"Writing",task:"Assignment"};
@@ -34,15 +35,15 @@ function WeekCard({week,unitId,code,upcoming,status}:{week:HomeworkWeek;unitId:s
   const kind=kindForWeek(week),Icon=kindIcon[kind];
   return <Link className={`work-card work-${kind} ${upcoming?"work-upcoming":""}`} href={`/s/${code}/lessons/${unitId}/homework/${week.week}/`}>
     <span className="work-icon" aria-hidden="true"><Icon/></span>
-    <span className="work-card-main"><span className="work-card-top"><span className="work-kind">{kindLabel[kind]}</span><span className={`work-status ${upcoming?"is-upcoming":"is-ready"}`}>{upcoming?"Not available yet":status}</span></span><strong>{week.title}</strong><span className="work-description">{week.description||"Open the task to see your steps."}</span><span className="work-meta">{week.estimatedMinutes&&<span><ClockIcon/> About {week.estimatedMinutes} min</span>}<span>{upcoming?`Starts ${readableDate(week.availableFrom||"")}`:week.due?`Due ${readableDate(week.due)}`:"No deadline set"}</span></span></span>
+    <span className="work-card-main"><span className="work-card-top"><span className="work-kind">{kindLabel[kind]}</span><span className={`work-status ${upcoming?"is-upcoming":"is-ready"}`}>{upcoming?"Not available yet":status}</span></span><strong>{learnerTaskTitle(week.title)}</strong><span className="work-description">{week.description||"Open the task to see your steps."}</span><span className="work-meta">{week.estimatedMinutes&&<span><ClockIcon/> About {week.estimatedMinutes} min</span>}<span>{upcoming?`Starts ${readableDate(week.availableFrom||"")}`:week.due?`Due ${readableDate(week.due)}`:"No deadline set"}</span></span></span>
     <span className="work-card-action">Open task<ChevronRightIcon/></span>
   </Link>;
 }
 
 function AssignedCard({assignment,code,previous=false,archived=false}:{assignment:Assignment;code:string;previous?:boolean;archived?:boolean}){
   const kind=kindForAssignment(assignment),Icon=kindIcon[kind];
-  return <details className={`work-card work-${kind} work-assigned ${previous?"work-upcoming":""}`}>
-    <summary><span className="work-icon" aria-hidden="true"><Icon/></span><span className="work-card-main"><span className="work-card-top"><span className="work-kind">{kindLabel[kind]}</span><span className={`work-status ${isDone(assignment)?"is-done":"is-ready"}`}>{archived?"Replaced · reference only":isDone(assignment)?"Marked complete":previous?"Previous year":"Assigned by Rory"}</span></span><strong>{assignment.title}</strong><span className="work-description">{assignment.details.trim().split(/\n|\.\s/)[0]||"Open to read the task."}</span><span className="work-meta"><span>{assignment.due?`Due ${readableDate(assignment.due)}`:"No deadline set"}</span></span></span><span className="work-card-action">Read task<ChevronRightIcon/></span></summary>
+  return <details id={assignmentTargetId(assignment.id)} className={`work-card work-${kind} work-assigned studio-assignment-target ${previous?"work-upcoming":""}`}>
+    <summary><span className="work-icon" aria-hidden="true"><Icon/></span><span className="work-card-main"><span className="work-card-top"><span className="work-kind">{kindLabel[kind]}</span><span className={`work-status ${isDone(assignment)?"is-done":"is-ready"}`}>{archived?"Replaced · reference only":isDone(assignment)?"Marked complete":previous?"Previous year":"Assigned by Rory"}</span></span><strong>{learnerTaskTitle(assignment.title)}</strong><span className="work-description">{assignment.details.trim().split(/\n|\.\s/)[0]||"Open to read the task."}</span><span className="work-meta"><span>{assignment.due?`Due ${readableDate(assignment.due)}`:"No deadline set"}</span></span></span><span className="work-card-action">Read task<ChevronRightIcon/></span></summary>
     <div className="work-card-detail"><p className="whitespace-pre-wrap">{assignment.details}</p>{!archived&&<SubmissionForm code={code} unit="assigned" task={assignment.id} title={assignment.title} fields={[{id:"answer",prompt:previous?"Optional revision or practice notes":"Your answer or practice notes",type:"written"}]}/>}</div>
   </details>;
 }
@@ -52,6 +53,7 @@ export default function HomeworkListView({unit}:{unit:Unit|null}){
   const [assignments,setAssignments]=useState<Assignment[]>([]),[error,setError]=useState(""),[loaded,setLoaded]=useState(false),[submissions,setSubmissions]=useState<Submission[]>([]);
   async function refresh(){setError("");try{const [r,sent]=await Promise.all([fetchAssignments(code),fetchSubmissions(code)]);if(sent.ok)setSubmissions(sent.submissions||[]);else setError(sent.error||"Could not check saved answers.");if(r.ok)setAssignments((r.assignments?.rows||[]).map(rowToAssignment));else setError(r.error||"Could not load homework. Please retry.");}catch{setError("Could not load homework. Please retry.");}finally{setLoaded(true)}}
   useEffect(()=>{void refresh();},[code]);
+  useEffect(()=>{if(!loaded)return;const open=()=>{const id=selectedAssignmentId(window.location.search,window.location.hash);if(id&&assignments.some(a=>a.id===id))revealAssignment(id,document);};open();window.addEventListener('hashchange',open);return()=>window.removeEventListener('hashchange',open);},[loaded,assignments]);
   const currentYear=assignments.filter(isCurrentAssignment),archivedAssignments=currentYear.filter(isArchived),current=currentYear.filter(a=>!isArchived(a)),readyAssignments=current.filter(a=>!isDone(a)),completedAssignments=current.filter(isDone),previous=assignments.filter(a=>!isCurrentAssignment(a));
   const resetHomework=currentYear.some(a=>a.id.startsWith("homework-reset-"));
   const hasSpeakingHomework=current.some(a=>isFerdiSpeakingHomework(code,a));
