@@ -138,7 +138,7 @@ test('feedback check receipts are private, version-bound, idempotent and separat
  assert.equal(f.post(check,'teacher').document.needsTeacherCheck,false);assert.equal(f.post(check,'teacher').ok,true);
  assert.equal(f.books.get('sheet-a').sheets.get('Document checks').data.length,2);
  for(const extra of [{},{preview:true}]){const d=f.post({action:'document',id,...extra},extra.preview?'teacher':'student').document;assert.equal(d.needsTeacherCheck,undefined);assert.equal(d.analysisVersion,undefined);assert.equal(d.checkedAt,undefined);assert.equal(d.feedback,'');assert.equal(d.reviewed,'');}
- const sh=f.books.get('sheet-a').sheets.get('Documents');const changed=JSON.parse(sh.data[1][6]);changed.summary='New practice feedback';sh.data[1][6]=JSON.stringify(changed);
+ const sh=f.books.get('sheet-a').sheets.get('Documents');sh.data[1][8]='2026-10-01T12:00:00Z';const changed=JSON.parse(sh.data[1][6]);changed.summary='New practice feedback';sh.data[1][6]=JSON.stringify(changed);
  assert.equal(f.post({action:'document',id},'teacher').document.needsTeacherCheck,true);
  assert.equal(f.post({action:'documentFile',id,index:0}).file.data,sample.data);
 });
