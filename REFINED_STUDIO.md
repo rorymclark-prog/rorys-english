@@ -8,6 +8,7 @@ The first implementation from the 28 October 2026 app audit, based on main `64cf
 - Speak has illustrated starting points using existing conversation modes. A known current unit is the initial student choice. Teacher tests and requested lesson/guided modes keep their existing paths.
 - Feedback puts filters and a source-linked next step before the results. Entries expand individually; exact review/writing links open their target. Phone sentence cards retain every sentence and all saved checks, with the full table still available. Full original/corrected/example paragraphs remain underneath.
 - Saved work has title/content search, work-type filters, recent ordering and a phone detail/back view that keeps the current search.
+- Expanded homework uses the full available card width, including at tablet breakpoints. Its embedded document view has no empty library column, and long headings use the available space.
 - Unsent exercise answers, document questions, teacher feedback, learning replies and new teacher reviews have identity- and source-scoped device drafts. An uncertain send keeps its exact payload and retry ID; confirmed receipt clears the draft.
 - Student speaking checkpoints captions and bounded sample chunks on the device. Recovery is explicit, uses the original session ID and frozen payload, and never automatically replays paid feedback analysis. A hard close can lose the final uncommitted audio chunk; unavailable sound remains distinct from saved captions.
 - A corrupt queued item is retained in a downloadable local recovery copy while other valid answers continue sending.
@@ -16,6 +17,8 @@ The first implementation from the 28 October 2026 app audit, based on main `64cf
 ## What remains
 
 The current identity, appearance choices, avatars, practice rings and counting rules, full feedback, handwriting uncertainty, original/revision relationships, teacher checks and learner/parent/teacher permissions remain. No new task, deadline, grade, publication, billing rule or provider configuration is introduced. The backend is unchanged.
+
+The complete-feedback release and follow-up audit (`98b2cc4` and `64cfd84`) are ancestors of this branch. Sentence-by-sentence feedback, full colour-highlighted original/corrected/example texts, per-answer worksheet reviews, linked conversation recordings/captions/feedback, saved practice before example reveal, and private teacher check flags are retained. Uncertain readings remain visible and unmarked, unavailable task requirements are not presented as assessed, read-only previews retain multiple-choice options, and suggested wording does not confirm handwriting. The saved learner records, including the completed conversation recap and 27-sentence dialogue review, are not rewritten by this visual change.
 
 This is the first stage. A delayed-recall scheduler, a new teacher attention queue, a parent overview redesign, server-side document jobs, a new backend and account-wide voice budgets are separate future work.
 

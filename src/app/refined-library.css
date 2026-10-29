@@ -1,5 +1,8 @@
 /* Refinements reuse the established palette, typography and feedback colours. */
 .refined-library .doc-workspace{align-items:start;grid-template-columns:minmax(16rem,.78fr) minmax(0,1.55fr);gap:1.4rem}
+/* Embedded homework has no library sidebar: give its feedback the whole card. */
+.documents-space.refined-library.doc-inline{padding:0}
+.refined-library.doc-inline .doc-workspace{grid-template-columns:minmax(0,1fr);margin-top:0}
 .refined-library .doc-library{border:1px solid var(--re-line);border-radius:1.35rem;overflow:hidden;background:var(--re-surface)}
 .refined-library .doc-library>header{padding:1.25rem 1.25rem .8rem;border-bottom:0;align-items:center}
 .refined-library .doc-library h2{font-size:1.25rem;letter-spacing:-.03em}
@@ -19,7 +22,8 @@
 .refined-library .doc-list-item small{line-height:1.55;margin:.35rem 0 .5rem}
 .refined-library .doc-list-icon{background:var(--re-soft);border-radius:.75rem;padding:.55rem;color:var(--re-accent)}
 .refined-library .doc-detail{min-width:0;border-radius:1.35rem}
-.refined-library .doc-detail-heading h2{letter-spacing:-.035em;line-height:1.18;max-width:22ch;overflow-wrap:anywhere}
+.refined-library .doc-detail-heading>div{flex:1;min-width:0}
+.refined-library .doc-detail-heading h2{letter-spacing:-.035em;line-height:1.18;overflow-wrap:anywhere}
 .doc-library-back{display:none!important}
 .work-library-empty{padding:2rem 1.25rem}
 .work-library-empty h3{font-size:1.25rem;font-weight:700}
@@ -41,6 +45,8 @@
  .refined-library.has-detail .doc-library-back{display:inline-flex!important;margin:0 0 1.1rem;align-items:center;min-height:2.75rem}
  .refined-library.doc-inline .doc-detail{display:block}
  .refined-library .doc-detail-heading{gap:.8rem;flex-wrap:wrap}
+ .refined-library .doc-detail-heading>div{flex-basis:100%}
+ .refined-library .doc-detail-heading>button{max-width:none;text-align:left}
  .refined-library .doc-detail-heading h2{font-size:1.75rem;max-width:100%}
  .work-type-filters button{min-height:2.75rem;padding:.55rem .85rem}
 }
