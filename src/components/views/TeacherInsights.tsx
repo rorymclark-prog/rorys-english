@@ -16,6 +16,7 @@ import type {ProgressEvidence} from '@/lib/progress-evidence';
 import LearningGoalsPanel from '@/components/LearningGoalsPanel';
 import SkillProgressPanel from '@/components/SkillProgressPanel';
 import LessonAssessmentPanel from '@/components/LessonAssessmentPanel';
+import LessonBrief from '@/components/LessonBrief';
 const box='mt-1 w-full rounded-lg border border-black/15 bg-transparent p-2 dark:border-white/20';
 const emptySettings:DashboardSettings={version:1,requirements:{},schoolContext:''};
 function Metric({label,value,detail}:{label:string;value:string;detail:string}){return <article className="insight-metric"><p>{label}</p><strong>{value}</strong><small>{detail}</small></article>;}
@@ -31,6 +32,7 @@ export default function TeacherInsights({code,name,unit,onReview,onNotes}:{code:
  const today=viennaDay(),activity=engagementTotals(engagementEvents(engagementSource,today),shiftDay(today,-29),today),items=homeworkMetrics(code,unit,assignments,submissions,records,settings,today),required=items.filter(x=>x.requirement==='required'),received=required.filter(x=>x.received||x.reviewed).length,reviewed=required.filter(x=>x.reviewed).length,unclassified=items.filter(x=>x.requirement==='unclassified').length,lessons=assessedLessons(records),latest=lessons[0],assessment=latest&&readLessonAssessment(latest.body.tutorPrivate?.lessonAssessment),comparisons=lessonComparisons(records),checkpoints=records.filter(r=>r.visibility==='teacher'&&r.kind==='test'&&readCheckpoint(r.body.tutorPrivate?.checkpoint)).sort((a,b)=>b.date.localeCompare(a.date)),teacherScores=assessment?.teaching.filter(t=>t.score!=null)||[];
  return <section className="teacher-insights" aria-label={`${name}’s learning dashboard`}>
   <header className="insight-header"><div><p className="teacher-eyebrow">LEARNING DASHBOARD · PRIVATE TO RORY</p><h2>Practice, learning and your teaching</h2><p>Each result names the task, date and evidence behind it.</p></div><button className="teacher-quiet-button" onClick={()=>void refresh()}>Refresh dashboard</button></header>
+  <LessonBrief key={code} code={code} name={name} unit={unit} records={records} onSaved={refresh}/>
   <EngagementPanel code={code} teacher source={engagementSource} sourceError={evidenceError} onRefresh={refresh}/>
   <LearningGoalsPanel key={`goals-${code}-${records.filter(r=>r.body.tutorPrivate?.goalPlan).map(r=>r.created).join('-')||'new'}`} code={code} records={records} onSaved={refresh}/>
   <ProgressPortfolioPanel records={records} documents={documents} submissions={submissions} replies={replies} progress={progress} error={evidenceError} onAssess={e=>{setSource(e);window.setTimeout(()=>document.getElementById('marked-skill-check')?.scrollIntoView({behavior:'smooth',block:'start'}),50);}}/>

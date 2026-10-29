@@ -6,7 +6,7 @@ import type {Unit} from "@/lib/types";
 import {useStudent} from "@/components/StudentContext";
 import {fetchNote,fetchAssignments,fetchSubmissions,type Submission,rowToAssignment,isCurrentAssignment,type Assignment} from "@/lib/remote";
 import {ChevronRightIcon,MessageIcon} from "@/components/Icons";
-import {MicrophoneIcon,TopicArt} from "@/components/LearningVisuals";
+import {MicrophoneIcon,RepeatIcon,TopicArt} from "@/components/LearningVisuals";
 import {isFerdiSpeakingHomework} from "@/lib/speaking-homework";
 import {readableDate,submissionStatus,isCompletedAssignment} from "@/lib/clarity";
 import {LatestLessonPractice} from "@/components/LessonPractice";
@@ -68,6 +68,7 @@ export default function TodayView({unit}:{unit:Unit|null}){
       <NextLesson code={code} row/>
       <Link className="today-row" href={`${base}/speak/`}><MicrophoneIcon/><span><strong>Speak</strong><small>A short conversation, saved for Rory</small></span><ChevronRightIcon/></Link>
       <Link className="today-row" href={`${base}/progress/`}><MessageIcon/><span><strong>Feedback</strong><small>What worked and what to try next</small></span><ChevronRightIcon/></Link>
+      <Link className="today-row" href={`${base}/study/`}><RepeatIcon/><span><strong>Practice desk</strong><small>A few optional exercises from your own feedback</small></span><ChevronRightIcon/></Link>
     </div>
     {!isStudentPreview(code)&&<MomentumStrip studentId={studentId}/>}
     <EngagementPanel code={code} compact/>
