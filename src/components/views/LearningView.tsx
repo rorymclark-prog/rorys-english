@@ -60,7 +60,7 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
   const focused=useRef(''),scrolled=useRef('');
   const disabled=mode==='parent'||isStudentPreview(code);
   const checkpoints=records.filter(r=>r.kind==='speaking'&&r.body.ratings&&Object.values(r.body.ratings).some(v=>v!=null)).sort((a,b)=>a.date.localeCompare(b.date));
-  const refresh=useCallback(async()=>{const r=await getLearning(code,mode==='teacher');setLoading(false);if(r.ok){setRecords((r.records||[]).filter(record=>!isTeachingPack(record)&&record.id!=='teacher-dashboard-settings'&&!record.body.tutorPrivate?.goalPlan&&!record.body.tutorPrivate?.skillCheck&&!record.body.tutorPrivate?.progressObservation));setReplies(r.replies||[]);setError('');}else setError(r.error||'Could not open the learning record.');},[code,mode]);
+  const refresh=useCallback(async()=>{const r=await getLearning(code,mode==='teacher');setLoading(false);if(r.ok){setRecords((r.records||[]).filter(record=>!isTeachingPack(record)&&record.id!=='teacher-dashboard-settings'&&!record.body.tutorPrivate?.goalPlan&&!record.body.tutorPrivate?.lessonBrief&&!record.body.tutorPrivate?.skillCheck&&!record.body.tutorPrivate?.progressObservation));setReplies(r.replies||[]);setError('');}else setError(r.error||'Could not open the learning record.');},[code,mode]);
   useEffect(()=>{void refresh();},[refresh]);
   useEffect(()=>{
     const readHash=()=>/^#(?:review|write)-/.test(window.location.hash)?window.location.hash.slice(1):'';

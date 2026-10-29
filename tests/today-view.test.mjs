@@ -28,7 +28,7 @@ function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,c
     '@/lib/remote':{isCurrentAssignment:a=>/^2026-(09|10|11|12)-|^2027-(01|02|03|04|05|06|07|08)-/.test(a.date)},
     '@/lib/clarity':clarity,'@/lib/speaking-homework':speaking,'@/lib/student-preview':{isStudentPreview:()=>true},
     '@/lib/today-task':todayTask,'@/lib/calendar-client':{},'@/lib/lesson-calendar':{viennaDate:()=> '2026-10-22'},'@/lib/engagement':{},
-    '@/components/Icons':{ChevronRightIcon:empty,MessageIcon:empty},'@/components/LearningVisuals':{MicrophoneIcon:empty,TopicArt:empty},
+    '@/components/Icons':{ChevronRightIcon:empty,MessageIcon:empty},'@/components/LearningVisuals':{MicrophoneIcon:empty,RepeatIcon:empty,TopicArt:empty},
     '@/components/LessonPractice':{LatestLessonPractice:empty},
     ...Object.fromEntries(['NextLesson','YearPlanNotice','EngagementPanel','StatusRow','MomentumStrip'].map(name=>[`@/components/${name}`,{default:empty}])),
   }).default;

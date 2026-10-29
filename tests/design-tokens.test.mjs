@@ -10,7 +10,7 @@ const read=f=>fs.readFileSync(f,"utf8");
 const SIZES=new Set([".75rem",".875rem","1rem","1.25rem","1.75rem"]);
 const RADII=new Set(["0","10px","16px","999px","50%","100%"]);
 const strict=["src/app/visual-refresh/today.css","src/app/year-plan.css","src/app/visual-refresh/signin.css","src/app/teacher/live-coach.css"];
-const refined=["src/app/refined-library.css","src/app/refined-feedback.css","src/app/refined-today.css"];
+const refined=["src/app/refined-library.css","src/app/refined-feedback.css","src/app/refined-today.css","src/app/practice-loop.css"];
 const student=[...fs.readdirSync("src/app").filter(f=>f.endsWith(".css")).map(f=>`src/app/${f}`),...fs.readdirSync("src/app/visual-refresh").filter(f=>f.endsWith(".css")).map(f=>`src/app/visual-refresh/${f}`)];
 
 test("the rewritten sheets keep five scalable type sizes and two radii",()=>{

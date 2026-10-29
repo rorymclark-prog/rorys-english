@@ -13,6 +13,7 @@ import "./refined-studio.css";
 import "./refined-today.css";
 import "./refined-feedback.css";
 import "./refined-library.css";
+import "./practice-loop.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 // Self-hosted at build time (static export downloads them once) — no runtime

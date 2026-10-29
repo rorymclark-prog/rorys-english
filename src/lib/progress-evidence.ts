@@ -32,7 +32,7 @@ export function progressEvidence({records,documents=[],submissions=[],replies=[]
  const status=(ref:string,base:ProgressEvidence['status'])=>checks.includes(ref)?'marked':observed.has(ref)?'draft':base;
  for(const r of rs){
   if(softwareCheck(r.title)){excluded++;continue;}
-  if(isTeachingPack(r)||r.body.lessonPractice){planned++;continue;}
+  if(isTeachingPack(r)||r.body.lessonPractice||r.body.tutorPrivate?.lessonBrief){planned++;continue;}
   if(r.body.tutorPrivate?.goalPlan||r.body.tutorPrivate?.dashboardSettings||r.body.tutorPrivate?.progressObservation||r.body.skillSnapshot||r.body.lessonSnapshot||r.body.source?.startsWith('skill-progress-summary:')||r.body.source?.startsWith('checkpoint-summary:'))continue;
   const c=readSkillCheck(r.body.tutorPrivate?.skillCheck,r.date);
   if(c?.sourceRef)continue; // assessed source stays one item; its check is linked by reference
