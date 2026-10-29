@@ -5,6 +5,7 @@ const PREFIX="re_outbox_v2_";
 // A submission the service keeps refusing is moved here rather than deleted:
 // the work is still the student's, so it stays readable and retryable.
 const PARKED_PREFIX="re_outbox_parked_v1_";
+const QUARANTINE_PREFIX="re_outbox_recovery_v1_";
 const META_KEY="re_outbox_meta_v1";
 const LOCK_KEY="re_sync_drain_lock";
 // Tries before a refused submission is parked so the queue behind it can move.
@@ -17,15 +18,32 @@ export interface PendingEvent {id:string;code:string;action:string;[key:string]:
 export interface ParkedEvent {event:PendingEvent;error:string;parked:number}
 const eventKey=(e:PendingEvent)=>PREFIX+e.code+":"+e.id;
 const parkedKey=(code:string,id:string)=>PARKED_PREFIX+code+":"+id;
+export interface RecoveredQueueItem {originalKey:string;raw:string;detectedAt:number;reason:string}
+function quarantine(key:string,code:string,raw:string,reason:string){
+  try {const record:RecoveredQueueItem={originalKey:key,raw,detectedAt:Date.now(),reason};
+    localStorage.setItem(QUARANTINE_PREFIX+code+":"+Date.now()+"_"+Math.random().toString(36).slice(2),JSON.stringify(record));
+    localStorage.removeItem(key);
+  }catch{/* Keep the original raw copy if recovery storage is unavailable. */}
+}
+function parseEvent(key:string,code:string):PendingEvent|null{
+  const raw=localStorage.getItem(key);if(!raw)return null;
+  try{const value=JSON.parse(raw);if(!value||typeof value.id!=="string"||!value.id||value.code!==code||typeof value.action!=="string"||!value.action||key!==PREFIX+code+":"+value.id)throw new Error("Invalid queue entry");return value;}
+  catch{quarantine(key,code,raw,"This local copy could not be read. Other saved work can still send.");return null;}
+}
+export function recoveredQueueItems(code:string):RecoveredQueueItem[]{
+  if(isStudentPreview())return [];
+  try{return Object.keys(localStorage).filter(k=>k.startsWith(QUARANTINE_PREFIX+code+":")).flatMap(key=>{try{const v=JSON.parse(localStorage.getItem(key)||"null");return v&&typeof v.raw==='string'&&typeof v.originalKey==='string'&&Number.isFinite(v.detectedAt)?[v as RecoveredQueueItem]:[];}catch{return [];}});}catch{return [];}
+}
 export function outbox(code:string):PendingEvent[] {
   if(isStudentPreview())return [];
-  try {return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX+code+":")).map(k=>JSON.parse(localStorage.getItem(k)||"null")).filter(Boolean);}
+  try {return Object.keys(localStorage).filter(k=>k.startsWith(PREFIX+code+":")).flatMap(key=>{const event=parseEvent(key,code);return event?[event]:[];});}
   catch {return [];}
 }
 export function parkedItems(code:string):ParkedEvent[] {
   if(isStudentPreview())return [];
-  try {return Object.keys(localStorage).filter(k=>k.startsWith(PARKED_PREFIX+code+":")).map(k=>JSON.parse(localStorage.getItem(k)||"null")).filter(Boolean);}
-  catch {return [];}
+  try {return Object.keys(localStorage).filter(k=>k.startsWith(PARKED_PREFIX+code+":")).flatMap(key=>{
+    const raw=localStorage.getItem(key);if(!raw)return [];try{const value=JSON.parse(raw);if(!value?.event||value.event.code!==code||typeof value.event.id!=="string"||typeof value.error!=="string")throw new Error('Invalid parked entry');return [value as ParkedEvent];}catch{quarantine(key,code,raw,"This unsent local copy needs recovery.");return [];}
+  });}catch{return [];}
 }
 function notify(){window.dispatchEvent(new Event("re-sync-change"));}
 // Tries and queue order live beside the queue, never inside the payload: a
@@ -123,7 +141,8 @@ export async function drainSyncQueue() {
   try {
     const keys=Object.keys(localStorage).filter(k=>k.startsWith(PREFIX)&&k.includes(":"));
     for(const key of keys) {
-      const event=JSON.parse(localStorage.getItem(key)||"null") as PendingEvent|null;
+      const code=key.slice(PREFIX.length).split(":")[0];
+      const event=parseEvent(key,code);
       if(!event||!savedSession(event.code))continue;
       holdLock(); // Keep it fresh through a long drain.
       const r=await deliver(event);

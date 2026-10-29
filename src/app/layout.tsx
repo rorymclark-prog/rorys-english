@@ -9,6 +9,10 @@ import "./visual-refresh.css";
 import "./calendar.css";
 import "./year-plan.css";
 import "./engagement.css";
+import "./refined-studio.css";
+import "./refined-today.css";
+import "./refined-feedback.css";
+import "./refined-library.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 // Self-hosted at build time (static export downloads them once) — no runtime

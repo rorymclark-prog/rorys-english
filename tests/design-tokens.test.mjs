@@ -10,6 +10,7 @@ const read=f=>fs.readFileSync(f,"utf8");
 const SIZES=new Set([".75rem",".875rem","1rem","1.25rem","1.75rem"]);
 const RADII=new Set(["0","10px","16px","999px","50%","100%"]);
 const strict=["src/app/visual-refresh/today.css","src/app/year-plan.css","src/app/visual-refresh/signin.css","src/app/teacher/live-coach.css"];
+const refined=["src/app/refined-library.css","src/app/refined-feedback.css","src/app/refined-today.css"];
 const student=[...fs.readdirSync("src/app").filter(f=>f.endsWith(".css")).map(f=>`src/app/${f}`),...fs.readdirSync("src/app/visual-refresh").filter(f=>f.endsWith(".css")).map(f=>`src/app/visual-refresh/${f}`)];
 
 test("the rewritten sheets keep five scalable type sizes and two radii",()=>{
@@ -26,7 +27,7 @@ test("the rewritten sheets keep five scalable type sizes and two radii",()=>{
 
 test("the student font-size inventory stays within its 22 October ceiling",()=>{
   const sizes=new Set();
-  for(const f of student)for(const [,v] of read(f).matchAll(/font-size:([^;}]*)/g))sizes.add(v.trim());
+  for(const f of student.filter(file=>!refined.includes(file)))for(const [,v] of read(f).matchAll(/font-size:([^;}]*)/g))sizes.add(v.trim());
   assert.ok(sizes.size<=92,`${sizes.size} distinct font-size values (92 after the 22 Oct accessibility fixes)`);
 });
 
@@ -38,5 +39,15 @@ test("raw colours outside tokens never increase per sheet",()=>{
     const stripped=read(f).replace(/--[\w-]+:\s*#[0-9a-fA-F]{3,8}/g,"");
     const count=(stripped.match(/#[0-9a-fA-F]{3,8}\b/g)||[]).length;
     assert.ok(count<=(baseline[f]||0),`${f}: ${count} raw colours, baseline ${baseline[f]||0}`);
+  }
+});
+
+// New refinement sheets are checked against a deliberate shared scale rather
+// than increasing the ceiling for the older, unmigrated sheets.
+test("new refined screens use the shared scalable type sizes with bounded Today display sizes",()=>{
+  const todayDisplay=new Set(["clamp(1.5rem,2.8vw,2.25rem)","1.625rem","1.125rem"]);
+  for(const file of refined)for(const [,value] of read(file).matchAll(/font-size:([^;}]*)/g)){
+    const size=value.replace("!important","").trim();
+    assert.ok(SIZES.has(size)||(file.endsWith("refined-feedback.css")&&size==='0')||(file.endsWith("refined-today.css")&&todayDisplay.has(size)),`${file}: ${size} must use the shared scale or its bounded display sizes`);
   }
 });

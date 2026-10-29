@@ -10,24 +10,25 @@ import {renderToStaticMarkup} from 'react-dom/server';
 function load(file,mocks={},globals={}){
   const exports={};
   const source=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
-  vm.runInNewContext(source,{exports,require:name=>{assert.ok(name in mocks,`Missing test dependency: ${name}`);return mocks[name];},...globals});
+  vm.runInNewContext(source,{exports,URLSearchParams,require:name=>{assert.ok(name in mocks,`Missing test dependency: ${name}`);return mocks[name];},...globals});
   return exports;
 }
-const clarity=load('src/lib/clarity.ts'),speaking=load('src/lib/speaking-homework.ts');
+const clarity=load('src/lib/clarity.ts'),speaking=load('src/lib/speaking-homework.ts'),todayTask=load('src/lib/today-task.ts');
 const empty=()=>null;
 const link={default:({href,children,...props})=>React.createElement('a',{...props,href},children)};
 const week=(number)=>({week:number,title:`Task ${number}`,tasks:[{type:'written'}]});
 const unit={id:'unit',homework:[week(1),week(2)]};
 const assignment=(id,status='open',date='2026-10-01')=>({id,title:id,date,status,details:'Write an answer.',due:''});
 const submission=(task,status='submitted',extra={})=>({id:task,unit:'unit',task,submitted:'2026-10-22T12:00:00Z',status,feedback:'',answers:{},...extra});
-function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,code='student'}={}){
-  const states=['',assignments,error,loaded,submissions];let state=0;
+function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,code='student',calendarState='ready'}={}){
+  const states=['',assignments,error,loaded,submissions,calendarState];let state=0;
   const view=load('src/components/views/TodayView.tsx',{
     react:{...React,useState:()=>[states[state++],()=>{}],useEffect:()=>{}},'react/jsx-runtime':jsxRuntime,'next/link':link,
     '@/components/StudentContext':{useStudent:()=>({code,studentId:code,displayName:'Student'})},
     '@/lib/remote':{isCurrentAssignment:a=>/^2026-(09|10|11|12)-|^2027-(01|02|03|04|05|06|07|08)-/.test(a.date)},
     '@/lib/clarity':clarity,'@/lib/speaking-homework':speaking,'@/lib/student-preview':{isStudentPreview:()=>true},
-    '@/components/Icons':{ChevronRightIcon:empty,MessageIcon:empty},'@/components/LearningVisuals':{MicrophoneIcon:empty},
+    '@/lib/today-task':todayTask,'@/lib/calendar-client':{},'@/lib/lesson-calendar':{viennaDate:()=> '2026-10-22'},'@/lib/engagement':{},
+    '@/components/Icons':{ChevronRightIcon:empty,MessageIcon:empty},'@/components/LearningVisuals':{MicrophoneIcon:empty,TopicArt:empty},
     '@/components/LessonPractice':{LatestLessonPractice:empty},
     ...Object.fromEntries(['NextLesson','YearPlanNotice','EngagementPanel','StatusRow','MomentumStrip'].map(name=>[`@/components/${name}`,{default:empty}])),
   }).default;
@@ -38,7 +39,7 @@ function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,c
 test('Today recommends the untouched task after reviewed work, including a received teacher assignment',()=>{
   const hero=today({assignments:[assignment('Assigned answer')],submissions:[submission('hw:1','reviewed',{feedback:'Good work'}),submission('Assigned answer','submitted',{unit:'assigned'})]});
   assert.match(hero,/<h2[^>]*>Task 2<\/h2>/);
-  assert.match(hero,/href="\/s\/student\/lessons\/unit\/homework\/2\/">Start<\/a>/);
+  assert.match(hero,/href="\/s\/student\/lessons\/unit\/homework\/2\/"[^>]*>Start<\/a>/);
   assert.doesNotMatch(hero,/more task/);
 });
 
@@ -80,6 +81,22 @@ test('Today preserves the combined speaking assignment instead of resurfacing it
   const combined={...assignment('Combined practice'),details:'Chat 1: Tell a story. Chat 2: Compare your ideas.'};
   const hero=today({code:'ferdi-7h3k',assignments:[combined]});
   assert.match(hero,/Family life · Speaking and writing practice/);assert.doesNotMatch(hero,/more task|Task 1/);
+});
+
+test('Today opens the exact named assignment for a start or revision without changing saved titles',()=>{
+  const task={...assignment('reset id / one'),title:'Friendships · current homework · 17 October reset'};
+  const expected='href="/s/student/homework/?assignment=reset%20id%20%2F%20one#assignment-reset%20id%20%2F%20one"';
+  const hero=today({assignments:[task]});
+  assert.ok(hero.includes(expected));assert.match(hero,/<h2[^>]*>Friendships<\/h2>/);assert.match(hero,/aria-label="Start: Friendships"/);
+  assert.equal(task.title,'Friendships · current homework · 17 October reset');
+  const revision=today({assignments:[task],submissions:[submission(task.id,'revision-needed',{unit:'assigned'})]});
+  assert.ok(revision.includes(expected));assert.match(revision,/aria-label="Revise: Friendships"/);
+});
+
+test('a verified break is visible next to the task while unknown calendar state makes no holiday claim',()=>{
+  const paused=today({calendarState:'paused'});assert.match(paused,/Optional during the break/);assert.match(paused,/Weekly practice is paused/);assert.match(paused,/>Start<\/a>/);
+  const unavailable=today({calendarState:'unavailable'});assert.doesNotMatch(unavailable,/Optional during the break|Weekly practice is paused/);assert.match(unavailable,/href="\/s\/student\/calendar\/"/);
+  assert.doesNotMatch(today({calendarState:'ready'}),/Optional during the break/);
 });
 
 function findShareButton(element){

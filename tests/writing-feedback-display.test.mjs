@@ -20,7 +20,7 @@ function load(file){
  };
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports,require:localRequire,Intl,Uint16Array,process});return exports;
 }
-const SentenceComparison=load('src/components/SentenceComparison.tsx').default,Practice=load('src/components/DocumentPractice.tsx').default;
+const SentenceCards=load('src/components/SentenceComparison.tsx').SentenceCards,SentenceComparison=load('src/components/SentenceComparison.tsx').default,Practice=load('src/components/DocumentPractice.tsx').default;
 const checks={spelling:'ok',grammar:'ok',wordChoice:'ok',punctuation:'ok',flow:'ok',taskFit:'The printed task was not supplied, so it cannot be checked.'};
 const renderWriting=writing=>renderToStaticMarkup(React.createElement(SentenceComparison,{writing}));
 test('an unchanged reading with uncertainty stays open and is counted even with a retained correction',()=>{
@@ -47,4 +47,21 @@ test('read-only teacher and parent views show choices without permitting a saved
 test('student practice still offers choices and keeps guidance hidden before a saved attempt',()=>{
  const html=renderToStaticMarkup(React.createElement(Practice,{code:'sample',documentId:'sample-document',version:'v1',exercises,attempts:[]}));
  assert.match(html,/<select/);assert.match(html,/Check my answer/);assert.doesNotMatch(html,/One possible answer|Answer guidance|Use at for events/);assert.match(html,/other correct answers/);
+});
+
+
+test('phone sentence cards retain every sentence and all six checks without a duplicate comparison table',()=>{
+ const writing={original:'Yesterday I go home. I enjoy music.',comparisons:[{original:'Yesterday I go home.',corrected:'Yesterday I went home.',improved:'Yesterday I returned home.',note:'Use the past simple.',checks},{original:'I enjoy music.',corrected:'I enjoy music.',improved:'',note:'A clear sentence.',checks}]};
+ const rows=load('src/lib/writing-review.ts').sentenceReview(writing).rows;
+ const html=renderToStaticMarkup(React.createElement(SentenceCards,{rows}));
+ assert.equal((html.match(/class="sentence-reading-card"/g)||[]).length,2);
+ for(const label of ['Spelling','Grammar','Word choice','Punctuation','Linking / flow','Fit to the task'])assert.equal((html.match(new RegExp('<dt>'+label+'</dt>','g'))||[]).length,2);
+ assert.match(html,/Original · red/);assert.match(html,/Corrected · green/);assert.match(html,/Another way · blue · optional/);
+ assert.match(html,/No language change suggested/);assert.match(html,/printed task was not supplied/);assert.doesNotMatch(html,/<table/);
+});
+test('phone cards preserve source notes and uncertainty without red or green error marking',()=>{
+ const rows=load('src/lib/writing-review.ts').sentenceReview({original:'[Crossed-out wording unclear.] I hape you are well.',comparisons:[{original:'I hape you are well.',corrected:'I hope you are well.',improved:'',note:'Please confirm the reading of the handwritten word.',checks}]}).rows;
+ const html=renderToStaticMarkup(React.createElement(SentenceCards,{rows}));
+ assert.match(html,/Crossed-out wording unclear/);assert.match(html,/Reading needs confirmation/);assert.match(html,/Saved wording; the reading is still unconfirmed/);
+ assert.doesNotMatch(html,/class="sentence-red"|class="sentence-green"|No language change suggested/);
 });

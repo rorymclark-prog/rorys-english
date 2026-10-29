@@ -1,0 +1,33 @@
+/* Refined studio: existing tasks and lesson context, with the same palette tokens. */
+.studio-today.today-page{max-width:960px}
+.studio-today .re-page-heading{margin-bottom:24px}
+.studio-today .re-page-heading>.re-eyebrow{font-size:.75rem;line-height:1.5;color:var(--re-muted)}
+.studio-today .today-hero{display:grid;grid-template-columns:minmax(0,1fr) 180px;align-items:center;gap:32px;padding:32px;border:1px solid var(--re-hero);border-radius:24px;background:var(--re-hero);color:var(--re-herotext);box-shadow:var(--re-shadow)}
+.studio-task-copy{min-width:0}
+.studio-today .today-hero-label{font-size:.875rem;font-weight:750;color:var(--re-heromuted);line-height:1.5}
+.studio-today .today-hero h2{font-size:clamp(1.5rem,2.8vw,2.25rem);line-height:1.2;letter-spacing:-.035em;margin:8px 0 12px;color:var(--re-herotext);overflow-wrap:anywhere}
+.studio-today .today-hero-meta{font-size:1rem;line-height:1.6;color:var(--re-heromuted)}
+.studio-today .today-hero .re-button{min-height:48px;margin-top:24px;padding:12px 24px;font-size:1rem;background:var(--re-herotext);color:var(--re-hero);border:1px solid transparent;box-shadow:none}
+.studio-today .today-hero .re-button:hover{border-color:var(--re-herotext);text-decoration:underline;text-underline-offset:4px}
+.studio-today .today-hero .re-button:focus-visible,.studio-today .today-hero-more:focus-visible,.studio-today .studio-calendar-note:focus-visible{outline:3px solid var(--re-herotext);outline-offset:4px}
+.studio-today .today-hero-more{margin:12px 0 0;display:flex;width:fit-content;max-width:100%;min-height:44px;font-size:.875rem;line-height:1.5;color:var(--re-herotext);white-space:normal}
+.studio-task-scene{display:flex;align-items:center;justify-content:center;min-width:0;padding:12px 0;border-radius:24px 24px 24px 8px;background:var(--re-surface);border:1px solid var(--re-line);transform:rotate(-3deg)}
+.studio-task-scene .re-topic-art{display:block;width:100%;max-height:140px;height:auto}
+.studio-break-note{padding:12px 16px;margin-top:16px;border:1px solid color-mix(in srgb,var(--re-herotext) 30%,transparent);border-radius:12px;background:color-mix(in srgb,var(--re-herotext) 5%,transparent);font-size:.875rem;line-height:1.5;color:var(--re-herotext)}
+.studio-break-note strong{display:block;font-size:.875rem;font-weight:750;margin-bottom:4px}
+.studio-calendar-note{display:inline-flex;align-items:center;min-height:44px;font-size:.875rem;line-height:1.5;margin-top:12px;color:var(--re-herotext);text-decoration:underline;text-underline-offset:3px}
+.studio-lesson-note{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 24px;margin-top:16px;background:var(--re-surface);border:1px solid var(--re-line);border-radius:18px;color:var(--re-ink)}
+.studio-lesson-note>div{min-width:0}
+.studio-lesson-note .re-eyebrow{font-size:.75rem;line-height:1.5;letter-spacing:.08em;color:var(--re-muted)}
+.studio-lesson-note h2{font-size:1.125rem;font-weight:750;line-height:1.4;letter-spacing:-.02em;margin-top:4px;overflow-wrap:anywhere}
+.studio-lesson-focus{font-size:1rem;line-height:1.6;color:var(--re-muted);margin-top:6px;overflow-wrap:anywhere}
+.studio-lesson-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;min-height:48px;padding:10px 14px;border:1px solid var(--re-line);border-radius:12px;background:var(--re-soft);color:var(--re-accent);font-size:.875rem;font-weight:750;line-height:1.5;text-align:center}
+.studio-lesson-link:hover{text-decoration:underline;text-underline-offset:3px}
+.studio-lesson-link:focus-visible,.studio-assignment-target:focus-visible{outline:3px solid var(--re-accent);outline-offset:4px}
+.studio-assignment-target{scroll-margin-top:110px}
+.studio-today .today-rows{gap:12px;margin-top:24px}
+.studio-today .today-row{min-height:72px;border-radius:16px}
+.studio-today .today-row small{font-size:.875rem;line-height:1.5}
+@media(max-width:850px){.studio-today .today-hero{grid-template-columns:minmax(0,1fr) 136px;gap:24px;padding:24px}.studio-lesson-note{align-items:flex-start;flex-direction:column;gap:12px}.studio-lesson-link{flex-shrink:1}}
+@media(max-width:560px){.studio-today .re-page-heading{margin-bottom:16px}.studio-today .today-hero{display:block;padding:24px;border-radius:20px}.studio-today .today-hero h2{font-size:1.625rem}.studio-today .today-hero .re-button{width:100%;margin-top:20px}.studio-task-scene{width:136px;height:76px;margin:12px 0 -4px auto;padding:0;border:0;background:transparent;transform:none}.studio-task-scene .re-topic-art{max-height:76px;width:136px}.studio-lesson-note{padding:20px;border-radius:16px}.studio-lesson-link{width:100%}.studio-break-note{padding:12px}.studio-today .today-hero-more{width:100%;justify-content:center;text-align:center}}
+@media(prefers-reduced-motion:reduce){.studio-today *{scroll-behavior:auto!important;transition:none!important}}

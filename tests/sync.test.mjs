@@ -99,3 +99,19 @@ test("one student's queue stays bounded and overflow is parked, not lost",async(
   assert.equal(f.api.outbox("demo").length,50);
   assert.equal(f.api.parkedItems("demo").length,5);
 });
+
+test('a malformed queue item is retained for recovery while valid later answers stay visible and deliver',async()=>{
+ const f=fixture(e=>({ok:true,id:e.id,received:'now'}));
+ f.storage['re_outbox_v2_demo:bad']='{incomplete';
+ f.storage['re_outbox_v2_demo:good']=JSON.stringify({id:'good',code:'demo',action:'submit',answers:{answer:'My original'}});
+ assert.equal(f.api.outbox('demo').map(e=>e.id).join(','),'good');
+ const recovered=f.api.recoveredQueueItems('demo');assert.equal(recovered.length,1);assert.equal(recovered[0].raw,'{incomplete');assert.equal(recovered[0].originalKey,'re_outbox_v2_demo:bad');assert.equal(f.api.recoveredQueueItems('other').length,0);
+ await f.api.drainSyncQueue();assert.equal(f.sent.map(e=>e.id).join(','),'good');assert.equal(f.api.outbox('demo').length,0);assert.equal(f.api.recoveredQueueItems('demo')[0].raw,'{incomplete');
+});
+test('a malformed item cannot abort draining another learner queue and recovery storage failure keeps the original',async()=>{
+ const f=fixture(e=>({ok:true,id:e.id,received:'now'}));
+ f.storage['re_outbox_v2_demo:bad']='null';
+ f.storage['re_outbox_v2_other:good']=JSON.stringify({id:'good',code:'other',action:'submit',answers:{answer:'Keep this'}});
+ await f.api.drainSyncQueue();assert.equal(f.sent.map(e=>e.code).join(','),'other');assert.equal(f.api.recoveredQueueItems('demo').length,1);
+ const g=fixture(()=>({ok:false}));g.storage['re_outbox_v2_demo:bad']='{broken';Object.preventExtensions(g.storage);assert.equal(g.api.outbox('demo').length,0);assert.equal(g.storage['re_outbox_v2_demo:bad'],'{broken');
+});

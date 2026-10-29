@@ -25,7 +25,7 @@ export default function InstallHint() {
       // @ts-expect-error iOS Safari only
       window.navigator.standalone === true;
     if (standalone) return;
-    if (localStorage.getItem(DISMISS_KEY) === "1") return;
+    try { if (localStorage.getItem(DISMISS_KEY) === "1") return; } catch { /* A nudge must not block lessons when storage is unavailable. */ }
 
     const ua = window.navigator.userAgent;
     // iPadOS 13+ reports "Macintosh" in the UA — detect it via touch support.
@@ -35,6 +35,9 @@ export default function InstallHint() {
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
+      // Chrome may offer installation again after client navigation while this
+      // component remains mounted. Honour a dismissal made since mount.
+      try { if(localStorage.getItem(DISMISS_KEY)==="1")return; } catch { /* Keep the session usable. */ }
       setDeferred(e as BeforeInstallPromptEvent);
       setShow(true);
     };

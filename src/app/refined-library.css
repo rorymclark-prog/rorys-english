@@ -1,0 +1,52 @@
+/* Refinements reuse the established palette, typography and feedback colours. */
+.refined-library .doc-workspace{align-items:start;grid-template-columns:minmax(16rem,.78fr) minmax(0,1.55fr);gap:1.4rem}
+/* Embedded homework has no library sidebar: give its feedback the whole card. */
+.documents-space.refined-library.doc-inline{padding:0}
+.refined-library.doc-inline .doc-workspace{grid-template-columns:minmax(0,1fr);margin-top:0}
+.refined-library .doc-library{border:1px solid var(--re-line);border-radius:1.35rem;overflow:hidden;background:var(--re-surface)}
+.refined-library .doc-library>header{padding:1.25rem 1.25rem .8rem;border-bottom:0;align-items:center}
+.refined-library .doc-library h2{font-size:1.25rem;letter-spacing:-.03em}
+.work-library-tools{padding:0 1.25rem 1rem;border-bottom:1px solid var(--re-line)}
+.work-search{display:grid;gap:.45rem;font-size:.875rem;font-weight:700}
+.work-search input{width:100%;min-height:2.9rem;border:1px solid var(--re-line);border-radius:.8rem;padding:.7rem .85rem;background:transparent;color:inherit;font-size:1rem;font-weight:400}
+.work-search input:focus-visible,.work-type-filters button:focus-visible,.doc-library-back:focus-visible{outline:3px solid var(--re-accent);outline-offset:3px}
+.work-type-filters{display:flex;flex-wrap:wrap;gap:.4rem;margin:.9rem 0 .65rem}
+.work-type-filters button{border:1px solid var(--re-line);border-radius:2rem;background:transparent;color:inherit;padding:.5rem .72rem;font-size:.875rem;font-weight:650;min-height:2.5rem}
+.work-type-filters button[aria-pressed="true"]{background:var(--re-accent);border-color:var(--re-accent);color:var(--re-onaccent)}
+.work-library-tools>.doc-muted{font-size:.75rem;line-height:1.5;margin:0}
+.refined-library .doc-list{gap:0;padding:.2rem .55rem .55rem}
+.refined-library .doc-list-item{border:0;border-radius:.85rem;padding:1rem .8rem;margin:.15rem 0;box-shadow:none;background:transparent;align-items:start}
+.refined-library .doc-list-item+.doc-list-item{border-top:1px solid var(--re-line)}
+.refined-library .doc-list-item.is-selected{background:var(--re-soft);box-shadow:inset 3px 0 var(--re-accent)}
+.refined-library .doc-list-item strong{font-size:1rem;line-height:1.45;letter-spacing:-.015em}
+.refined-library .doc-list-item small{line-height:1.55;margin:.35rem 0 .5rem}
+.refined-library .doc-list-icon{background:var(--re-soft);border-radius:.75rem;padding:.55rem;color:var(--re-accent)}
+.refined-library .doc-detail{min-width:0;border-radius:1.35rem}
+.refined-library .doc-detail-heading>div{flex:1;min-width:0}
+.refined-library .doc-detail-heading h2{letter-spacing:-.035em;line-height:1.18;overflow-wrap:anywhere}
+.doc-library-back{display:none!important}
+.work-library-empty{padding:2rem 1.25rem}
+.work-library-empty h3{font-size:1.25rem;font-weight:700}
+.work-library-empty p{margin:.5rem 0 1rem;font-size:.875rem;line-height:1.65}
+.draft-save-status{font-size:.875rem;line-height:1.5;color:inherit;opacity:.78;margin:.5rem 0}
+.refined-library .doc-chat form .draft-save-status{grid-column:1/-1}
+.dark .refined-library .doc-library{background:var(--re-surface);border-color:var(--re-line)}
+.dark .work-type-filters button[aria-pressed="true"]{background:var(--re-accent);color:var(--re-onaccent);border-color:var(--re-accent)}
+.dark .refined-library .doc-list-icon{color:var(--re-accent);background:var(--re-soft)}
+.dark .refined-library .doc-list-item.is-selected{background:var(--re-soft);box-shadow:inset 3px 0 var(--re-accent)}
+@media(min-width:1100px){.refined-library .doc-library{position:sticky;top:1.5rem}.refined-library .doc-list{max-height:65vh;overflow:auto}}
+@media(max-width:1000px){.refined-library .doc-workspace{grid-template-columns:minmax(14rem,.85fr) minmax(0,1.3fr);gap:.9rem}}
+@media(max-width:760px){
+ .refined-library .doc-workspace{display:block}
+ .refined-library .doc-library{border-radius:1.1rem}
+ .refined-library .doc-detail{display:none}
+ .refined-library.has-detail .doc-detail{display:block}
+ .refined-library.has-detail .doc-library,.refined-library.has-detail>.doc-hero,.refined-library.has-detail>.doc-upload-card,.refined-library.has-detail>.doc-transcript{display:none}
+ .refined-library.has-detail .doc-library-back{display:inline-flex!important;margin:0 0 1.1rem;align-items:center;min-height:2.75rem}
+ .refined-library.doc-inline .doc-detail{display:block}
+ .refined-library .doc-detail-heading{gap:.8rem;flex-wrap:wrap}
+ .refined-library .doc-detail-heading>div{flex-basis:100%}
+ .refined-library .doc-detail-heading>button{max-width:none;text-align:left}
+ .refined-library .doc-detail-heading h2{font-size:1.75rem;max-width:100%}
+ .work-type-filters button{min-height:2.75rem;padding:.55rem .85rem}
+}

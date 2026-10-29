@@ -37,8 +37,10 @@ export default function ProgressView({
   const [state, setState] = useState<"loading" | "ok" | "error" | "off">("loading");
   const [data, setData] = useState<Progress | null>(null);
   const [retry,setRetry]=useState(0);
+  const [measuredOpen,setMeasuredOpen]=useState(false);
   const [shareNote,setShareNote]=useState<{text:string;ok:boolean}|null>(null);
   const preview=isStudentPreview(studentCode);
+  useEffect(()=>{if(mode!=='student')return;const openMeasured=()=>{if(window.location.hash==='#measured-progress')setMeasuredOpen(true);};openMeasured();window.addEventListener('hashchange',openMeasured);return()=>window.removeEventListener('hashchange',openMeasured);},[mode]);
   const shareProgress=async()=>{
     if(preview||!studentId)return;
     const text=buildProgressSummary(studentId,displayName);
@@ -97,7 +99,7 @@ export default function ProgressView({
                 ? "Shared feedback and saved practice"
                 : mode === "teacher"
                   ? "Private assessments, progress charts and saved feedback"
-                  : "Lesson recaps, practice advice and feedback from Rory"}
+                  : "Your saved work, useful feedback and one clear next step"}
             </p>
           </div>
         </div>
@@ -113,7 +115,7 @@ export default function ProgressView({
       </header>
 
       <main className="re-screen-main progress-page">
-        <SharedSkillProgress code={fetchCode} teacher={mode==="teacher"}/>
+        {mode==='student'?<nav className="refined-progress-jumps" aria-label="Feedback and progress sections"><a href="#feedback-stream">Feedback & next steps</a><a href="#measured-progress" onClick={()=>setMeasuredOpen(true)}>Measured progress <span aria-hidden="true">↗</span></a></nav>:<SharedSkillProgress code={fetchCode} teacher={mode==="teacher"}/>}
         {state === "loading" && (
           <div className="mt-4 space-y-3">
             <div className="h-20 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark" />
@@ -133,8 +135,7 @@ export default function ProgressView({
 
         {state === "ok" && data && (
           <>
-            <p className="my-4 text-sm text-navy-soft dark:text-navy-mist">Each entry says whether it is practice advice, a lesson recap or feedback from Rory.</p>
-            <LearningView code={fetchCode} name={displayName} mode={mode} />
+            <section id="feedback-stream" className="refined-feedback-stream"><LearningView code={fetchCode} name={displayName} mode={mode} showHeader={false}/></section>
             <details className="mt-6 rounded-card border border-black/10 p-4 dark:border-white/15"><summary className="cursor-pointer font-bold">Practice history & activity counts</summary><h2 className="progress-history-heading">Practice history</h2>
             <p className="ux-subtle">Quiz scores show attempts, not proof that a topic is mastered.</p>
             <SummaryTiles data={data} />
@@ -152,6 +153,8 @@ export default function ProgressView({
             )}
           </>
         )}
+
+        {mode==='student'&&<details id="measured-progress" className="refined-feedback-support refined-measured-progress" open={measuredOpen} onToggle={event=>{if(event.target===event.currentTarget)setMeasuredOpen(event.currentTarget.open);}}><summary>Measured progress <span>Checked skills, vocabulary and dated evidence</span></summary><SharedSkillProgress code={fetchCode}/></details>}
 
         {/* Links shelf — dashboards / resources the tutor adds */}
         {links.length > 0 && (
