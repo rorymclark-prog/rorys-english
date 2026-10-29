@@ -52,3 +52,49 @@ test('partial detail failures retain successful work and list failures remain er
  await assert.rejects(desk.loadPracticeDesk('student',false,{request:async()=>({ok:false,error:'Sign in again'})}),/Sign in again/);
  const empty=await desk.loadPracticeDesk('student',false,{request:async()=>({ok:true,documents:[]})});assert.equal(empty.cards.length,0);assert.equal(empty.hasMore,false);assert.equal(empty.warnings.length,0);
 });
+
+test('an empty first batch still finds older prose without rereading the metadata list',async()=>{
+ const docs=Array.from({length:9},(_,index)=>document(`source-${index}`,{created:`2026-10-${String(29-index).padStart(2,'0')}T10:00:00Z`,...(index<8?{workType:'worksheet',analysis:{answerReview:[],exercises:[]}}:{})}));const calls=[];
+ const request=async(_code,_teacher,body)=>{calls.push(body);return body.action==='documents'?{ok:true,documents:docs}:{ok:true,document:docs.find(item=>item.id===body.id)};};
+ const first=await desk.loadPracticeDesk('student',false,{request,today:'2026-10-29'});assert.equal(first.cards.length,0);assert.equal(first.checked,8);assert.equal(first.remaining,1);assert.equal(first.total,9);assert.ok(first.continuation);
+ const next=await desk.extendPracticeDesk('student',false,first);assert.equal(next.cards.length,1);assert.equal(next.sources[0].id,'source-8');assert.equal(next.checked,9);assert.equal(next.remaining,0);assert.equal(next.hasMore,false);assert.equal(next.continuation,null);assert.equal(calls.filter(call=>call.action==='documents').length,1);
+});
+test('later batches preserve earlier card/source/attempt identities and ignore new uploads until refresh',async()=>{
+ const docs=Array.from({length:18},(_,index)=>document(`source-${String(index).padStart(2,'0')}`,{created:'2026-10-28T10:00:00Z'}));let listReads=0;const readIds=[];
+ const request=async(_code,_teacher,body)=>{if(body.action==='documents'){listReads++;return {ok:true,documents:docs};}readIds.push(body.id);return {ok:true,document:docs.find(item=>item.id===body.id)};};
+ const first=await desk.loadPracticeDesk('student',false,{request,today:'2026-10-29'}),oldSource=first.sources[0],oldCard=first.cards[0];const freshAttempt=attempt('saved-now','2026-10-29T12:00:00Z','correct',{documentId:oldSource.documentId});oldSource.attempts.push(freshAttempt);oldCard.attempts.push(freshAttempt);
+ docs.unshift(document('brand-new-upload',{created:'2026-10-29T12:00:00Z'}));
+ const second=await desk.extendPracticeDesk('student',false,first);assert.equal(second.checked,16);assert.equal(second.remaining,2);assert.equal(second.sources.length,16);assert.equal(second.sources[0],oldSource);assert.equal(second.cards[0],oldCard);assert.equal(second.sources[0].attempts[0],freshAttempt);assert.ok(!second.sources.some(item=>item.id==='brand-new-upload'));assert.equal(listReads,1);
+ const final=await desk.extendPracticeDesk('student',false,second);assert.equal(final.checked,18);assert.equal(final.cards.length,18);assert.equal(new Set(readIds).size,18);assert.equal(readIds.length,18);assert.equal(final.continuation,null);
+});
+test('failure coverage persists across older batches, then retries only failed details',async()=>{
+ const docs=Array.from({length:10},(_,index)=>document(`source-${index}`,{created:`2026-10-${String(29-index).padStart(2,'0')}T10:00:00Z`}));let failing=true;const calls=[];
+ const request=async(_code,_teacher,body)=>{calls.push(body);if(body.action==='documents')return {ok:true,documents:docs};if(failing&&body.id==='source-1')throw Error('Temporary transport failure');return {ok:true,document:docs.find(item=>item.id===body.id)};};
+ const first=await desk.loadPracticeDesk('student',false,{request,today:'2026-10-29'});assert.equal(first.checked,7);assert.equal(first.failed,1);assert.equal(first.remaining,2);assert.equal(first.warnings.length,1);
+ const older=await desk.extendPracticeDesk('student',false,first);assert.equal(older.checked,9);assert.equal(older.failed,1);assert.equal(older.remaining,0);assert.equal(older.hasMore,false);assert.ok(older.continuation);assert.equal(older.warnings.length,1);
+ failing=false;const before=calls.length,retried=await desk.extendPracticeDesk('student',false,older,'retry');assert.equal(calls.length-before,1);assert.equal(calls.at(-1).id,'source-1');assert.equal(retried.checked,10);assert.equal(retried.failed,0);assert.equal(retried.continuation,null);assert.equal(retried.warnings.length,0);assert.equal(retried.cards.length,10);assert.equal(retried.cards[0],first.cards[0]);
+});
+test('repeated extension clicks coalesce, each action is bounded and a shared pool caps concurrent reads',async()=>{
+ const docs=Array.from({length:25},(_,index)=>document(`source-${index}`,{created:'2026-10-28T10:00:00Z'}));let active=0,maximum=0;const details=[];
+ const request=async(_code,_teacher,body)=>{active++;maximum=Math.max(maximum,active);await new Promise(resolve=>setTimeout(resolve,1));active--;if(body.action==='documents')return {ok:true,documents:docs};details.push(body.id);return {ok:true,document:docs.find(item=>item.id===body.id)};};
+ const [first,other]=await Promise.all([desk.loadPracticeDesk('student',false,{request,today:'2026-10-29'}),desk.loadPracticeDesk('other-student',false,{request,today:'2026-10-29'})]);assert.equal(details.length,16);
+ const [next,duplicate,otherNext]=await Promise.all([desk.extendPracticeDesk('student',false,first),desk.extendPracticeDesk('student',false,first),desk.extendPracticeDesk('other-student',false,other)]);assert.equal(next,duplicate);assert.equal(details.length,32);assert.equal(next.checked,16);assert.equal(next.remaining,9);assert.equal(otherNext.checked,16);assert.equal(maximum,3);
+ await assert.rejects(desk.extendPracticeDesk('another-learner',false,next),/Refresh practice/);await assert.rejects(desk.extendPracticeDesk('student',true,next),/Refresh practice/);
+});
+test('every older detail is checked against current availability, release, source identity and version',async()=>{
+ const docs=Array.from({length:13},(_,index)=>document(`source-${index}`,{created:`2026-10-${String(29-index).padStart(2,'0')}T10:00:00Z`}));const changed=new Map([['source-8',document('source-8',{reviewPending:true})],['source-9',document('source-9',{feedbackAvailableAt:'2999-10-28T10:00:00Z'})],['source-10',document('source-10',{workType:'material'})],['source-11',document('wrong-source')],['source-12',document('source-12',{practiceVersion:'v2',practiceAttempts:[attempt('stale','2026-10-28T10:00:00Z','correct',{documentId:'source-12'})]})]]);
+ const request=async(_code,_teacher,body)=>body.action==='documents'?{ok:true,documents:docs}:{ok:true,document:changed.get(body.id)||docs.find(item=>item.id===body.id)};
+ const first=await desk.loadPracticeDesk('student',false,{request,today:'2026-10-29'}),next=await desk.extendPracticeDesk('student',false,first);assert.equal(next.checked,12);assert.equal(next.failed,1);assert.equal(next.cards.length,9);assert.equal(next.cards.at(-1).version,'v2');assert.equal(next.cards.at(-1).state,'first');assert.equal(next.cards.at(-1).attempts.length,0);assert.equal(next.cards.at(-1).exercise.example,undefined);
+});
+test('retry batches remain bounded and persistent failures do not starve other failed items',async()=>{
+ const docs=Array.from({length:18},(_,index)=>document(`source-${String(index).padStart(2,'0')}`,{created:'2026-10-28T10:00:00Z'}));let fail=true;const details=[];
+ const request=async(_code,_teacher,body)=>{if(body.action==='documents')return {ok:true,documents:docs};details.push(body.id);return fail?{ok:false,error:'Try later'}:{ok:true,document:docs.find(item=>item.id===body.id)};};
+ let result=await desk.loadPracticeDesk('student',false,{request,today:'2026-10-29'});result=await desk.extendPracticeDesk('student',false,result);result=await desk.extendPracticeDesk('student',false,result);assert.equal(result.failed,18);assert.equal(result.checked,0);assert.equal(result.remaining,0);
+ let before=details.length;result=await desk.extendPracticeDesk('student',false,result,'retry');assert.equal(details.length-before,8);assert.deepEqual(details.slice(before),docs.slice(0,8).map(item=>item.id));
+ fail=false;before=details.length;result=await desk.extendPracticeDesk('student',false,result,'retry');assert.equal(details.length-before,8);assert.deepEqual(details.slice(before),docs.slice(8,16).map(item=>item.id));assert.equal(result.checked,8);assert.equal(result.failed,10);
+});
+test('append ignores duplicate or changed versions of existing sources without replacing mounted cards',()=>{
+ const originalSource=source(),originalCard=desk.buildPracticeCards([originalSource],'2026-10-29')[0],state={sources:[originalSource],cards:[originalCard],warnings:[],hasMore:true,checked:1,remaining:1,failed:0,total:2,continuation:null};
+ const changed=source({version:'v2'}),added=source({id:'new-source',documentId:'new-source'}),batch={...state,sources:[changed,added,added],cards:desk.buildPracticeCards([changed,added],'2026-10-29'),hasMore:false,remaining:0,checked:2};
+ const merged=desk.appendPracticeDesk(state,batch);assert.equal(merged.sources.length,2);assert.equal(merged.cards.length,2);assert.equal(merged.sources[0],originalSource);assert.equal(merged.cards[0],originalCard);assert.equal(merged.cards[1].sourceId,'new-source');assert.equal(merged.sources[0].version,'v1');
+});

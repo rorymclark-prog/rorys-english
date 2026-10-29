@@ -3,7 +3,8 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import puppeteer from 'puppeteer-core';
-const origin='http://127.0.0.1:4310',api='http://127.0.0.1:4311';
+const origin=process.env.QA_ORIGIN||'http://127.0.0.1:4310',api=process.env.QA_API||'http://127.0.0.1:4311';
+for(const value of [origin,api])if(new URL(value).hostname!=='127.0.0.1'||new URL(value).protocol!=='http:')throw Error('Synthetic browser checks require loopback HTTP.');
 const output=process.env.QA_OUTPUT||'/tmp/rorys-english-practice-loop';
 const now=new Date(),old=new Date(now.getTime()-5*86400000).toISOString();
 const code='valentin-q9m2',docId='synthetic-practice-document-0001',version='synthetic-practice-v1';
@@ -13,6 +14,9 @@ const attempts=[{id:'synthetic-old-retry',documentId:docId,version,exerciseId:'r
 const sample={id:docId,title:'Synthetic travel writing',created:old,uploadedBy:'Student',files:[{index:0,type:'application/pdf',name:'synthetic.pdf',size:20}],status:'ready',processing:false,feedback:'',reviewed:'',parentId:'',context:'[Document role: answer]',error:'',workType:'writing',practiceVersion:version};
 let records=[{id:'synthetic-teacher-checkpoint-0001',created:old,date:old.slice(0,10),kind:'test',title:'Synthetic grammar checkpoint',visibility:'teacher',author:'Rory',body:{tutorPrivate:{checkpoint:{version:1,objective:'Use present and past forms in a short account',protocol:'Two sentences, no model',support:'Independent first attempt',criteria:[{skill:'Grammar in context',earned:3,possible:5,evidence:'Three accurate forms out of five.'}],strength:'The sequence was clear.',target:'Use a clear past time reference.',nextCheck:'Describe a new journey without an example.'}}}}];
 records.push(...['Compare two ideas with reasons.','Retell a different event.'].map((plan,i)=>({id:'synthetic-reflection-'+i,created:old,date:old.slice(0,10),kind:'lesson',title:'Synthetic teaching reflection '+i,visibility:'teacher',author:'Rory',body:{tutorPrivate:{plan}}})));
+let coverageMode=false,olderFailure=true;
+const coverageDocuments=Array.from({length:8},(_,i)=>({...sample,id:'synthetic-worksheet-no-practice-'+i,title:'Recent worksheet '+i,created:new Date(now.getTime()-(i+1)*60000).toISOString(),workType:'worksheet'}));
+const extraDocument={...sample,id:'synthetic-older-writing-0002',title:'Another older writing',created:new Date(now.getTime()-6*86400000).toISOString()};
 let uncertain=true,teacherUncertain=true;const writes=[],requests=[];
 const server=http.createServer(async(req,res)=>{
  res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Access-Control-Allow-Headers','Content-Type');res.setHeader('Content-Type','application/json');if(req.method==='OPTIONS'){res.end();return;}
@@ -20,7 +24,11 @@ const server=http.createServer(async(req,res)=>{
  requests.push(p);const teacher=p.session==='synthetic-teacher'&&!p.preview;let r={ok:true};
  if(!['synthetic-teacher','synthetic-student','synthetic-ferdi'].includes(p.session))r={ok:false,authRequired:true};
  else if(p.preview&&!['documents','document','learningRecords','progress','assignments','submissions','note','notifications','resources','calendarLessons','learningMemory'].includes(p.action))r={ok:false,error:'Read-only preview'};
- else if(p.action==='documents')r={ok:true,documents:p.code===code?[sample]:[]};
+ else if(p.action==='documents')r={ok:true,documents:p.code===code?(coverageMode?[...coverageDocuments,sample,extraDocument]:[sample]):[]};
+ else if(p.action==='document'&&coverageMode&&p.id!==sample.id){
+  if(p.id===extraDocument.id&&olderFailure){olderFailure=false;r={ok:false,error:'Synthetic detail read failed'};}
+  else {const d=p.id===extraDocument.id?extraDocument:coverageDocuments.find(d=>d.id===p.id);r={ok:!!d,document:d&&{...d,analysis:p.id===extraDocument.id?{writing:{original:'Another older piece.',comparisons:[]},exercises:[{id:'older-extra',type:'gap',focus:'An older prompt',prompt:'Complete an older sentence.',options:[]}]}:{workType:'worksheet',transcription:'Answer 1.',exercises:[],answerReview:[]},practiceAttempts:[]}};}
+ }
  else if(p.action==='document')r={ok:true,document:{...sample,analysis:{transcription:'I go to the lake yesterday.',coverage:'complete',uncertainties:[],summary:'Check past forms.',strengths:[],corrections:[],retry:'Try another journey.',writing:{original:'I go to the lake yesterday.',comparisons:[]},exercises},practiceAttempts:attempts},messages:[]};
  else if(p.action==='documentPractice'){
   writes.push({...p});let a=attempts.find(a=>a.id===p.attemptId);if(!a){const g=guidance[p.exerciseId];a={id:p.attemptId,documentId:p.id,version:p.version,exerciseId:p.exerciseId,created:now.toISOString(),answer:p.answer,result:{status:p.exerciseId==='revisit'?'compare':p.answer===g[0]?'correct':'try-again',example:g[0],explanation:g[1]}};attempts.push(a);}
@@ -40,7 +48,7 @@ const server=http.createServer(async(req,res)=>{
  else r={ok:false,error:'Unsupported synthetic action '+p.action};
  res.end(JSON.stringify(r));
 });
-await new Promise(resolve=>server.listen(4311,'127.0.0.1',resolve));
+await new Promise(resolve=>server.listen(Number(new URL(api).port),'127.0.0.1',resolve));
 await fs.mkdir(output,{recursive:true});
 const browser=await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
 const page=await browser.newPage(),errors=[],checks=[];page.on('pageerror',e=>errors.push(e.message));
@@ -72,9 +80,26 @@ try{
  await page.setViewport({width:1440,height:1000});await page.evaluate(()=>{document.documentElement.setAttribute('data-text-scale','normal');document.documentElement.classList.remove('dark');});
 
  await fs.writeFile(output+'/lesson-brief-dom.txt',await page.$eval('.lesson-brief',e=>e.innerText));await page.screenshot({path:output+'/lesson-brief-desktop.png',fullPage:true});checks.push('teacher lesson brief renders dated source queue');
+ // Another browser changes the fixed-ID brief while this device is editing.
+ const originalSaveCount=writes.filter(p=>p.action==='teacherSaveLearningRecord').length;
+ await page.locator('.lesson-brief-fields textarea').fill('My still-unsent earlier device draft.');
+ const previousBrief=records.find(r=>r.id==='teacher-next-lesson-brief');
+ const newerBrief={...previousBrief,created:new Date(now.getTime()+1000).toISOString(),body:{tutorPrivate:{lessonBrief:{...previousBrief.body.tutorPrivate.lessonBrief,opening:'A newer brief from another browser.'}}}};
+ records=[...records.filter(r=>r.id!==previousBrief.id),newerBrief];
+ await page.click('.lesson-brief-actions button[type=submit]');await waitText('A different brief is already saved');assert.equal(writes.filter(p=>p.action==='teacherSaveLearningRecord').length,originalSaveCount);
+ await button('Keep newer saved brief');await page.waitForSelector('.lesson-brief-summary');await button('Open lesson brief');await page.waitForSelector('.lesson-brief-fields textarea');assert.equal(await page.$eval('.lesson-brief-fields textarea',e=>e.value),'A newer brief from another browser.');await waitText('Download the recovery copy');checks.push('a conflicting newer brief is kept without a write; earlier device copy is recoverable');
+ await page.locator('.lesson-brief-fields textarea').fill('My explicitly chosen replacement brief.');
+ const beforeReplacement=writes.filter(p=>p.action==='teacherSaveLearningRecord').length,remoteBefore=records.find(r=>r.id==='teacher-next-lesson-brief');records=[...records.filter(r=>r.id!==remoteBefore.id),{...remoteBefore,created:new Date(now.getTime()+2000).toISOString(),body:{tutorPrivate:{lessonBrief:{...remoteBefore.body.tutorPrivate.lessonBrief,opening:'A second newer saved copy.'}}}}];
+ await page.click('.lesson-brief-actions button[type=submit]');await waitText('A different brief is already saved');assert.equal(writes.filter(p=>p.action==='teacherSaveLearningRecord').length,beforeReplacement);await button('Replace saved brief with my copy');await page.waitForSelector('.lesson-brief-summary');assert.equal(writes.filter(p=>p.action==='teacherSaveLearningRecord').length,beforeReplacement+1);assert.equal(records.find(r=>r.id==='teacher-next-lesson-brief').body.tutorPrivate.lessonBrief.opening,'My explicitly chosen replacement brief.');checks.push('explicit replacement rechecks the selected version and saves only after the teacher chooses it');
  // The actual preview mode must keep answer choices visible and refuse writing.
  await page.evaluate(code=>sessionStorage.setItem('re_teacher_preview_v1',code),code);await go('/s/'+code+'/study/');await waitText('Read-only preview');assert.equal(await page.$$eval('.practice-desk textarea,.practice-desk select',els=>els.length),0);assert.ok(await page.$eval('.practice-desk',e=>e.innerText.includes('are')));checks.push('teacher preview shows choices and has no answer controls');
 
+ // Eight recent worksheet-only details must not permanently hide older exercises.
+ coverageMode=true;await page.evaluate(()=>sessionStorage.removeItem('re_teacher_preview_v1'));await go('/s/'+code+'/study/');await waitText('Checked 8 of 10 pieces');assert.equal(await page.$$eval('.practice-desk-card',cards=>cards.length),0);await button('Check older saved work');await waitText('Checked 9 of 10 pieces');await page.waitForSelector('.practice-desk-card textarea:not([disabled])');await waitText('Retry unchecked work');
+ const pastCard=await page.$('.practice-desk-card[aria-label*="Past forms"]'),writingCard=await page.$('.practice-desk-card[aria-label*="Add a reason"]');assert.ok(pastCard&&writingCard);
+ await (await pastCard.$('textarea')).type('went');await (await pastCard.$('button')).click();await page.waitForFunction(()=>document.querySelector('.practice-desk-card[aria-label*="Past forms"]')?.innerText.includes('One possible answer: went'));
+ await (await writingCard.$('textarea')).type('My local draft stays while older work loads.');await button('Retry unchecked work');await waitText('Checked 10 of 10 pieces');assert.equal(await (await writingCard.$('textarea')).evaluate(e=>e.value),'My local draft stays while older work loads.');assert.ok(await pastCard.evaluate(e=>e.innerText.includes('Saved this visit')));assert.equal(await page.$$eval('.practice-desk-card',cards=>cards.length),3);await button('Another short set');await waitText('An older prompt');checks.push('empty first batch discovers older practice; failed checks retry without losing current drafts or receipts');
+ for(const [width,scale] of [[1440,'normal'],[320,'xl']]){await page.setViewport({width,height:1000});await page.evaluate(scale=>{document.documentElement.setAttribute('data-text-scale',scale);document.documentElement.classList.toggle('dark',scale==='xl');},scale);await noOverflow();await (await page.$('.practice-desk')).screenshot({path:output+'/older-practice-'+width+'.png'});}checks.push('progressive controls fit desktop and 320px extra-large text');
  await fs.writeFile(output+'/results.json',JSON.stringify({checks,errors,requests:requests.map(p=>({action:p.action,code:p.code})),writes:writes.map(p=>({action:p.action,id:p.id,attemptId:p.attemptId}))},null,2));
  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:checks.length,checks,errors,output},null,2));
 }catch(error){await fs.writeFile(output+'/failure-dom.txt',await page.evaluate(()=>document.body.innerText));await fs.writeFile(output+'/failure-writes.json',JSON.stringify(writes,null,2));await page.screenshot({path:output+'/failure.png',fullPage:true});throw error;}finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
