@@ -70,11 +70,11 @@ try{
  assert.equal(writes.filter(p=>p.action==='teacherSaveLearningRecord').length,1,'Readback confirms lost receipt without duplicate append');await page.reload({waitUntil:'networkidle0'});await button('Open lesson brief');await page.waitForSelector('.lesson-brief-fields textarea');assert.equal(await page.$eval('.lesson-brief-fields textarea',e=>e.value),'Describe a new journey without an example.');checks.push('teacher selects dated evidence, validates timing, saves private preparation and reopens exact plan');
  for(const [width,height,dark,scale] of [[1440,1000,false,'normal'],[390,844,true,'normal'],[320,900,true,'xl']]){await page.setViewport({width,height});await page.evaluate(({dark,scale})=>{document.documentElement.classList.toggle('dark',dark);document.documentElement.setAttribute('data-text-scale',scale);},{dark,scale});await noOverflow();await (await page.$('.lesson-brief')).screenshot({path:output+'/lesson-brief-'+width+'-'+scale+'.png'});}checks.push('expanded teacher brief fits phone and extra-large text');
  await page.setViewport({width:1440,height:1000});await page.evaluate(()=>{document.documentElement.setAttribute('data-text-scale','normal');document.documentElement.classList.remove('dark');});
- 
+
  await fs.writeFile(output+'/lesson-brief-dom.txt',await page.$eval('.lesson-brief',e=>e.innerText));await page.screenshot({path:output+'/lesson-brief-desktop.png',fullPage:true});checks.push('teacher lesson brief renders dated source queue');
  // The actual preview mode must keep answer choices visible and refuse writing.
  await page.evaluate(code=>sessionStorage.setItem('re_teacher_preview_v1',code),code);await go('/s/'+code+'/study/');await waitText('Read-only preview');assert.equal(await page.$$eval('.practice-desk textarea,.practice-desk select',els=>els.length),0);assert.ok(await page.$eval('.practice-desk',e=>e.innerText.includes('are')));checks.push('teacher preview shows choices and has no answer controls');
- 
+
  await fs.writeFile(output+'/results.json',JSON.stringify({checks,errors,requests:requests.map(p=>({action:p.action,code:p.code})),writes:writes.map(p=>({action:p.action,id:p.id,attemptId:p.attemptId}))},null,2));
  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:checks.length,checks,errors,output},null,2));
 }catch(error){await fs.writeFile(output+'/failure-dom.txt',await page.evaluate(()=>document.body.innerText));await fs.writeFile(output+'/failure-writes.json',JSON.stringify(writes,null,2));await page.screenshot({path:output+'/failure.png',fullPage:true});throw error;}finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
