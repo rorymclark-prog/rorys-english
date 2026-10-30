@@ -10,6 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Student, StudentBundle, Unit, UnitDef, HomeworkWeek } from "./types";
+import type { CoachLearnerLibrary } from "./coach-lessons";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
 
@@ -69,6 +70,16 @@ export function getBundle(code: string): StudentBundle | null {
 
   const activeUnit = units.find((u) => u.active) ?? null;
   return { student, units, activeUnit };
+}
+
+/** Only approved student resources cross into the live teaching client. */
+export function getCoachLibraries(): Record<string, CoachLearnerLibrary> {
+  return Object.fromEntries(getAllStudents().map(student => {
+    const units = getBundle(student.code)?.units || [];
+    return [student.code, { studentId: student.id, resources: units.flatMap(unit =>
+      (unit.resources || []).map(resource => ({ ...resource, unit: unit.title, schoolYear: unit.schoolYear || "" }))
+    ) }];
+  }));
 }
 
 /** Keep legacy links attached to the original unit, not whichever unit is current. */

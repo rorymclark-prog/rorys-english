@@ -35,13 +35,14 @@ import studentRoster from "../../../content/students.json";
 import InboxView from "./InboxView";
 import InboxLink from "@/components/InboxLink";
 import LiveTeachingCoach from "./LiveTeachingCoach";
+import type { CoachLearnerLibrary } from "@/lib/coach-lessons";
 
 // One-time removal of the old persisted password; only expiring tokens remain.
 const STORAGE_KEY = "re_teacher_secret";
 
 type LoadState = "idle" | "loading" | "ok" | "error";
 
-export default function TeacherDashboardView({initialCalendar=false,initialLive=false,activeUnits={}}:{initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>}) {
+export default function TeacherDashboardView({initialCalendar=false,initialLive=false,activeUnits={},lessonLibraries={}}:{initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>;lessonLibraries?:Record<string,CoachLearnerLibrary>}) {
   const [inboxTab,setInboxTab]=useState<"messages"|"notifications"|null>(null);
   const [inboxCode,setInboxCode]=useState("__teacher__");
   const [initialSection,setInitialSection]=useState<string|undefined>();
@@ -130,7 +131,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
 
   if(inboxTab&&loadState==="ok")return <div className="teacher-workspace"><header className="teacher-topbar"><a className="teacher-quiet-button" href="/teacher/">← Students & teaching</a><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header><InboxView code={inboxCode} name="Rory" teacherToken={secret} students={(students||[]).map(s=>({code:s.code,name:s.name}))} initialTab={inboxTab}/></div>;
 
-  if (liveTeaching && loadState === "ok") return <LiveTeachingCoach token={secret} learners={(students || []).map(s => ({ code: s.code, name: s.name, unit: activeUnits[s.code]?.title, focusNote: s.focusNote }))} onBack={() => setLiveTeaching(false)}/>;
+  if (liveTeaching && loadState === "ok") return <LiveTeachingCoach initialLearner={selectedCode||undefined} token={secret} learners={(students || []).map(s => ({ code: s.code, name: s.name, unit: activeUnits[s.code]?.title, focusNote: s.focusNote, library: lessonLibraries[s.code] }))} onBack={() => setLiveTeaching(false)}/>;
 
   if (showCalendar && loadState === "ok") return <div className="teacher-workspace"><header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(false)}>← Students & teaching</button><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header><CalendarView code="__teacher__" name="Rory" teacher students={(students||[]).map(s=>({code:s.code,name:s.name}))}/></div>;
 

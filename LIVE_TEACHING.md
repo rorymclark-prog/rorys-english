@@ -1,4 +1,6 @@
-# Live teaching · first working version
+# Live teaching
+
+**30 October lesson-aware update:** Student-first lesson selection, saved-folder packs and whole-PDF context are implemented in this release. The AI can follow a private inferred page reference without advancing displayed slides. The separate online-library publishing connection remains blocked. Read [the current behaviour and validation](LESSON_AWARE_COACH_2026-10-30.md).
 
 This is a full-screen teacher presenter workspace in the existing app. Open Teacher → **Live teaching**, or `/teacher/live/`. It uses the existing teacher sign-in and student list. It includes current-slide display, running commentary, private AI questions, and a slide-only audience window. It does not change student homework, submit assessments or synchronise the student's iPad slide selection.
 

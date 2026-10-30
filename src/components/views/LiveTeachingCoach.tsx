@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { automaticCoachFeedback, coachSpeakerLabel, parseCoachSpeaker, boundCoachFeedback, coachInstructions, coachRehearsal, COACH_MINUTES, parseCoachFeedback, type CoachContext, type CoachEntry, type CoachFeedback } from "@/lib/live-coach";
+import { automaticCoachFeedback, coachSpeakerLabel, parseCoachSpeaker, parseCoachPosition, boundCoachFeedback, coachInstructions, coachRehearsal, COACH_MINUTES, parseCoachFeedback, type CoachContext, type CoachEntry, type CoachFeedback } from "@/lib/live-coach";
 import type { CoachSlide } from "@/lib/server/coach-material";
 import "@/app/teacher/live-coach.css";
 import CoachSlidePresenter from "@/components/CoachSlidePresenter";
@@ -10,24 +10,41 @@ import type { CoachTurn } from "@/lib/coach-archive";
 import { correctCoachSpeaker } from "@/lib/coach-evidence";
 import { LessonAudioInput, releaseLessonAudio, type LessonAudioMode } from "@/lib/lesson-audio";
 import { CoachTurnQueue, nativeCoachEvent } from "@/lib/coach-turns";
+import { coachLessonMap, verifiedCoachPosition, type LessonPage } from "@/lib/coach-position";
+import CoachFolderLibrary from "@/components/CoachFolderLibrary";
+import CoachLessonPicker from "@/components/CoachLessonPicker";
+import CoachCompanion, { useCoachCompanion } from "@/components/CoachCompanion";
+import { coachPdfResources, type CoachLearnerLibrary, type CoachLessonResource, type CoachLessonSelection } from "@/lib/coach-lessons";
+import { coachReferenceSource, coachSlideNotes, type CoachReference } from "@/lib/coach-reference";
+import { readCoachPptxLocally, type LocalCoachSlide } from "@/lib/coach-pptx";
+import type { CoachCloudLesson, CoachCloudMaterialMeta } from "@/components/CoachLibraryConnection";
 
-type Learner = { code: string; name: string; unit?: string; focusNote?: string };
+type Learner = { code: string; name: string; unit?: string; focusNote?: string; library?: CoachLearnerLibrary };
 type Phase = "idle" | "connecting" | "listening" | "paused";
 type TalkTurn = CoachTurn;
 const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
-export default function LiveTeachingCoach({ token, learners, onBack }: { token: string; learners: Learner[]; onBack: () => void }) {
-  const [learner, setLearner] = useState(learners[0]?.code || "");
+export default function LiveTeachingCoach({ token, learners, onBack, initialLearner }: { token: string; learners: Learner[]; onBack: () => void; initialLearner?:string }) {
+  const [learner, setLearner] = useState(initialLearner && learners.some(item=>item.code===initialLearner)?initialLearner:"");
   const selected = learners.find(s => s.code === learner);
   const [task, setTask] = useState("Talk about a recent day or experience.");
   const [objective, setObjective] = useState("Complete sentences, useful vocabulary and one reason or extra detail.");
   const [source, setSource] = useState("");
-  const [slides, setSlides] = useState<CoachSlide[]>([]);
+  const [reference, setReference] = useState<CoachReference | null>(null);
+  const [lessonChosen,setLessonChosen]=useState(false);
+  const [referenceLoading,setReferenceLoading]=useState(false);
+  const [referenceReady,setReferenceReady]=useState(false);
+  const [tracking,setTracking]=useState<"auto"|"manual">("auto");
+  const [aiPage,setAiPage]=useState<number|null>(null);
+  const [positionNote,setPositionNote]=useState("");
+  const [selectedLessonId, setSelectedLessonId] = useState("");
+  const [slides, setSlides] = useState<LocalCoachSlide[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [materialName, setMaterialName] = useState("");
   const [pdfUrl, setPdfUrl] = useState("");
   const [pdfFile,setPdfFile]=useState<File|null>(null);
-  const [view,setView]=useState<"presenter"|"setup">("setup");
+  const [view,setView]=useState<"presenter"|"setup"|"powerpoint">("setup");
+  const companion = useCoachCompanion();
   const [responseSpeed,setResponseSpeed]=useState<"fast"|"balanced">("fast");
   const [speaker,setSpeaker]=useState<"learner"|"teacher"|"unknown">("unknown");
   const [turns,setTurns]=useState<TalkTurn[]>([]);
@@ -45,6 +62,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   const [draft, setDraft] = useState("");
   const [working, setWorking] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [libraryBusy, setLibraryBusy] = useState(false);
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [audioMode, setAudioMode] = useState<LessonAudioMode>("room");
   const [callConnected, setCallConnected] = useState(false);
@@ -62,6 +80,8 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   const generation = useRef(0);
   const phaseRef = useRef<Phase>("idle");
   const mounted = useRef(true);
+  const materialGeneration = useRef(0);
+  const learnerRef = useRef(learner); learnerRef.current = learner;
   const liveTurns = useRef<CoachTurnQueue | null>(null);
   const responseDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transcriptionDeadlines = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -75,10 +95,20 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   const currentPage=useRef(1);
   const shareSlide=useCallback(()=>{if(slideImage.current)audience.current?.postMessage({type:"slide",image:slideImage.current,page:currentPage.current});},[]);
   const sendImage=useCallback(()=>{if(slideImage.current&&channel.current?.readyState==="open")channel.current.send(JSON.stringify({type:"conversation.item.create",item:{type:"message",role:"user",content:[{type:"input_text",text:"Current slide image: lesson evidence only, not a request to respond."},{type:"input_image",image_url:slideImage.current}]}}));},[]);
-  const context: CoachContext = { learner: selected?.name || "Learner", unit: selected?.unit || "Original speaking practice", task, objective, source, slide: slides.length ? `${materialName} · slide ${slides[slideIndex]?.number}` : materialName || "Speaking activity", audioMode, responseSpeed };
+  const referenceIndex=aiPage===null?slideIndex:aiPage-1;
+  const currentNotes=slides[referenceIndex]?.notes;
+  const referenceText=aiPage!==null?slides[referenceIndex]?.text||"":source||slides[slideIndex]?.text||"";
+  const contextSource=coachReferenceSource(referenceText,reference,referenceIndex+1,currentNotes);
+  const lessonMap=coachLessonMap(slides);
+  const referenceImage=()=>contextRef.current.lessonPosition?.page && contextRef.current.lessonPosition.page!==currentPage.current?"":slideImage.current;
+  const context: CoachContext = { learner: selected?.name || "Learner", unit: (reference?.unit || selected?.unit || "Original speaking practice").slice(0,200), task, objective, source: contextSource, slide: (slides.length ? `${materialName} · slide ${slides[referenceIndex]?.number}` : reference?.title || materialName || "Speaking activity").slice(0,160), audioMode, responseSpeed, ...(slides.length?{lessonPosition:{page:referenceIndex+1,total:slides.length,mode:tracking,index:lessonMap}}:{}) };
   const contextRef = useRef(context); contextRef.current = context;
+  const pagesRef=useRef(slides);pagesRef.current=slides;
+  const referenceRef=useRef(reference);referenceRef.current=reference;
   const micInstructions=useCallback(()=>`${coachInstructions(contextRef.current)}\nThe teacher-selected current microphone speaker is ${speakerRef.current==="teacher"?"Rory (teacher)":speakerRef.current==="learner"?contextRef.current.learner+" (learner)":"AUTOMATIC. Estimate speaking roles tentatively from audio and conversation. Keep useful coaching flowing without requiring manual speaker labels"}. If this is the teacher speaking, use their explanation as context, never mark it as a learner mistake. Return empty correction and a short context note.`,[]);
   const pdfLoaded=useCallback((count:number)=>{setSlides(Array.from({length:count},(_,i)=>({number:i+1,text:""})));setSlideIndex(0);},[]);
+  const pdfIndexed=useCallback((pages:LessonPage[])=>{setSlides(pages);setReferenceLoading(false);setReferenceReady(true);setStatus(pages.some(page=>page.text.trim())?`Whole PDF ready: ${pages.length} pages available for lesson tracking.`:"This PDF has no readable text. The AI can use the displayed page image, but cannot reliably locate other pages from speech.");},[]);
+  const pdfIndexError=useCallback((message:string)=>{setReferenceLoading(false);setReferenceReady(false);setError(message);},[]);
   const pdfContext=useCallback((page:number,text:string,image:string)=>{setSource(text);setSlides(previous=>previous.map((s,i)=>i===page-1?{...s,text}:s));slideImage.current=image.length<=1000000?image:"";currentPage.current=page;sendImage();shareSlide();},[sendImage,shareSlide]);
 
   const post = useCallback(async (body: Record<string, unknown>, signal?: AbortSignal) => {
@@ -106,7 +136,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
 
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; stop(""); audioInput.current.close(); if (pdfRef.current) URL.revokeObjectURL(pdfRef.current);audience.current?.postMessage({type:"clear"});audience.current?.close(); };
+    return () => { mounted.current = false; materialGeneration.current++; stop(""); audioInput.current.close(); if (pdfRef.current) URL.revokeObjectURL(pdfRef.current);audience.current?.postMessage({type:"clear"});audience.current?.close(); };
   }, [stop]);
 
   useEffect(() => {
@@ -122,17 +152,18 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   }, [audioMode, recordingBusy, phase]);
 
   useEffect(() => {
-    const onHidden = () => { if (document.hidden && phaseRef.current !== "idle") stop("Listening stopped when this page moved to the background. Start again when ready."); };
+    const onHidden = () => { if (document.hidden && !companion.activeWhileHidden() && phaseRef.current !== "idle") stop("Listening stopped because both the teaching page and private coach are hidden or closed. Start again when ready."); };
     const onExit = () => stop("");
     document.addEventListener("visibilitychange", onHidden); window.addEventListener("pagehide", onExit);
+    onHidden();
     return () => { document.removeEventListener("visibilitychange", onHidden); window.removeEventListener("pagehide", onExit); };
-  }, [stop]);
+  }, [stop,companion.activeWhileHidden,companion.isOpen,companion.visibilityRevision]);
 
   useEffect(() => {
     if (channel.current?.readyState === "open") {
       channel.current.send(JSON.stringify({ type: "session.update", session: { type: "realtime", instructions: micInstructions(), audio: { input: { turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 400, silence_duration_ms: responseSpeed === "fast" ? 650 : 1100, create_response: false, interrupt_response: false } } } } }));
     }
-  }, [learner, task, objective, source, materialName, slideIndex,speaker,responseSpeed,micInstructions]);
+  }, [learner, task, objective, contextSource, materialName, slideIndex,aiPage,tracking,speaker,responseSpeed,micInstructions]);
 
   function addFeedback(feedback: CoachFeedback, ctx: CoachContext, rehearsal = false, sourceTurnId?: string) {
     setEntries(previous => [{ id: crypto.randomUUID(), at: new Date().toISOString(), context: { ...ctx }, feedback, rehearsal, sourceTurnId }, ...previous].slice(0, 1500));
@@ -156,7 +187,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   }
 
   async function start() {
-    if (phaseRef.current !== "idle" || !available || !agreed || working || choosingAudio || (audioMode === "online" && !callConnected)) return;
+    if (phaseRef.current !== "idle" || !available || !agreed || !learner || !lessonChosen || referenceLoading || !referenceReady || working || importing || libraryBusy || choosingAudio || (audioMode === "online" && !callConnected)) return;
     if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) { setError("Live listening needs microphone support in a secure browser window."); return; }
     stop(""); const attempt = generation.current;
     const queue = new CoachTurnQueue(); liveTurns.current = queue;
@@ -195,7 +226,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
           const value = JSON.parse(event.data);
           if(value.type==="input_audio_buffer.speech_started"&&typeof value.item_id==="string")queue.speechStarted(value.item_id,speakerRef.current);
           if (value.type === "input_audio_buffer.committed" && typeof value.item_id === "string") {
-            queue.committed(value.item_id, contextRef.current, speakerRef.current, slideImage.current);
+            queue.committed(value.item_id, contextRef.current, speakerRef.current, referenceImage());
             if (queue.needsTranscript(value.item_id) && !transcriptionDeadlines.current.has(value.item_id)) {
               const id = value.item_id;
               transcriptionDeadlines.current.set(id, setTimeout(() => {
@@ -248,6 +279,15 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
                     feedback.uncertainty = turn.role === "teacher" ? "Teacher speech: this is context, not learner performance." : "Speaker unconfirmed. Confirm the caption label before using this as learner evidence.";
                     ctx.learner = turn.role === "teacher" ? "Rory" : "Speaker unclear";
                   }
+                  if(turn.context.lessonPosition?.mode==="auto" && contextRef.current.lessonPosition?.mode==="auto" && contextRef.current.lessonPosition.page===turn.context.lessonPosition.page){
+                    const located=verifiedCoachPosition(parseCoachPosition(text),turn.caption,pagesRef.current);
+                    if(located && located!==turn.context.lessonPosition.page){
+                      setAiPage(located);setPositionNote(`AI reference follows page ${located} · estimated from the conversation. Displayed slides stay under your control.`);
+                      ctx.slide=`${materialName} · slide ${located}`.slice(0,160);
+                      ctx.source=coachReferenceSource(pagesRef.current[located-1]?.text||"",referenceRef.current,located,pagesRef.current[located-1]?.notes);
+                      if(ctx.lessonPosition)ctx.lessonPosition={...ctx.lessonPosition,page:located};
+                    }
+                  }
                   queue.rememberFeedback(turn.id, feedback);
                   addFeedback(feedback, ctx, false, turn.id); setError("");
                 }
@@ -276,7 +316,7 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   }
 
   async function analyseTyped() {
-    if (!draft.trim() || working || !agreed || !available || phaseRef.current !== "idle") return;
+    if (!draft.trim() || working || !agreed || !available || !learner || !lessonChosen || referenceLoading || phaseRef.current !== "idle") return;
     const turnId = crypto.randomUUID();
     setTurns(previous=>[...previous,{id:turnId,at:new Date().toISOString(),role:"learner" as const,text:draft}].slice(-4000));
     const ctx = { ...contextRef.current }; setWorking(true); setError("");
@@ -286,10 +326,10 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   }
 
   async function askTeacherAI(){
-    if(!question.trim()||asking||!available||!agreed)return;
+    if(!question.trim()||asking||!available||!agreed||referenceLoading||!learner||!lessonChosen)return;
     const text=question;setQuestion("");setAsking(true);setError("");
     setTurns(previous=>[...previous,{id:crypto.randomUUID(),at:new Date().toISOString(),role:"teacher" as const,text}].slice(-4000));
-    try{const result=await post({action:"question",question:text,context:contextRef.current,evidence:turns.filter(t=>!t.rehearsal).slice(-8).map(t=>`${t.role}: ${t.text}`).join("\n"),...(slideImage.current?{image:slideImage.current}:{})});if(mounted.current)setTurns(previous=>[...previous,{id:crypto.randomUUID(),at:new Date().toISOString(),role:"ai" as const,text:result.answer}].slice(-4000));}
+    try{const result=await post({action:"question",question:text,context:contextRef.current,evidence:turns.filter(t=>!t.rehearsal).slice(-8).map(t=>`${t.role}: ${t.text}`).join("\n"),...(referenceImage()?{image:referenceImage()}:{})});if(mounted.current)setTurns(previous=>[...previous,{id:crypto.randomUUID(),at:new Date().toISOString(),role:"ai" as const,text:result.answer}].slice(-4000));}
     catch(e){if(mounted.current){setQuestion(text);setError(e instanceof Error?e.message:"Your question could not be answered.");}}
     finally{if(mounted.current)setAsking(false);}
   }
@@ -314,30 +354,93 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
     if(turn&&channel.current?.readyState==="open")channel.current.send(JSON.stringify({type:"conversation.item.create",item:{type:"message",role:"user",content:[{type:"input_text",text:`Rory corrected the speaker of this earlier caption to ${role==="teacher"?"Rory (teacher)":role==="learner"?contextRef.current.learner+" (learner)":"unassigned"}: ${JSON.stringify(turn.text)}. Treat as evidence correction, not a new learner answer. Do not attribute teacher speech to the learner.`}]}}));
   }
 
-  async function importMaterial(file?: File) {
-    if (!file || importing || phaseRef.current !== "idle" || working) return;
-    setError("");
-    if (file.size > (/\.pdf$/i.test(file.name)?25_000_000:3_000_000)) { setError("Choose a PDF below 25 MB or a PowerPoint below 3 MB."); return; }
-    setImporting(true);
-    try {
+  function clearMaterial() {
+    materialGeneration.current++;setAiPage(null);setPositionNote("");setReferenceReady(false);setReferenceLoading(false);
+    if (pdfRef.current) URL.revokeObjectURL(pdfRef.current);
+    pdfRef.current="";setPdfUrl("");setPdfFile(null);setSlides([]);setSlideIndex(0);setSource("");setMaterialName("");
+    slideImage.current="";audience.current?.postMessage({type:"clear"});
+  }
+
+  function selectSlide(index: number) {
+    if (index<0 || index>=slides.length) return;
+    slideImage.current="";audience.current?.postMessage({type:"clear"});
+    setSlideIndex(index);setAiPage(null);setPositionNote("");setSource(slides[index]?.text||"");
+  }
+
+  function chooseSavedLesson(lesson: CoachLessonSelection) {
+    if (lesson.learnerCode!==learnerRef.current || live || importing || working || asking) return;
+    clearMaterial();setSelectedLessonId(lesson.id);setLessonChosen(true);setReferenceReady(true);
+    setReference({title:lesson.title,unit:lesson.unitLabel,overview:"Saved preparation only. Linked document contents have not been read."});
+    setTask(lesson.task);setObjective(lesson.objective);setSource(lesson.source);
+    setStatus("Saved preparation selected as AI reference. Open its slides or PowerPoint to add the current exercise.");
+  }
+
+  function chooseCloudLesson(lesson: CoachCloudLesson) {
+    if (lesson.learnerCode!==learnerRef.current || live || importing || working || asking) return;
+    const id=`cloud:${lesson.packId}`;
+    if (selectedLessonId!==id) clearMaterial();
+    setSelectedLessonId(id);setTask(lesson.task);setObjective(lesson.objective);setLessonChosen(true);setReferenceReady(true);
+    setReference({title:lesson.title,unit:lesson.unitLabel,overview:`Private prepared lesson · ${lesson.edition}. Preparation is not evidence of completion or learner ability.`,guide:lesson.guide,teacherNotes:lesson.teacherNotes,notesHistorical:lesson.notesHistorical});
+    setStatus("Saved lesson guidance selected. Its current delivery guide and matching supporting teacher notes accompany the selected slide.");
+  }
+
+  async function applyMaterial(file: File, attempt: number, owner: string, preserveReference: boolean) {
+      const current=()=>mounted.current&&materialGeneration.current===attempt&&learnerRef.current===owner;
       if (/\.pdf$/i.test(file.name)) {
+        if (!current()) return;
         if (pdfRef.current) URL.revokeObjectURL(pdfRef.current);
-        pdfRef.current = URL.createObjectURL(file); setPdfUrl(pdfRef.current);setPdfFile(file); setMaterialName(file.name); setSlides([]); setSource("");slideImage.current="";setView("presenter");
-        setStatus("PDF opened in presenter view. The current slide image and extracted text supply AI context.");
+        pdfRef.current = URL.createObjectURL(file); setPdfUrl(pdfRef.current);setPdfFile(file); setMaterialName(file.name); setSlides([]);setSlideIndex(0); setSource("");slideImage.current="";setView("presenter");
+        audience.current?.postMessage({type:"clear"});
+        setLessonChosen(true);setReferenceLoading(true);setReferenceReady(false);setAiPage(null);setPositionNote("");setStatus("Reading the whole PDF so the AI can follow its activities, not just the cover.");
       } else {
-        let next: CoachSlide[];
+        let next: LocalCoachSlide[];
         if (/\.pptx$/i.test(file.name)) {
-          const bytes = new Uint8Array(await file.arrayBuffer()); let binary = "";
-          for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-          next = (await post({ action: "import", data: btoa(binary) })).slides;
+          next = await readCoachPptxLocally(file);
         } else if (/\.txt$/i.test(file.name)) next = [{ number: 1, text: (await file.text()).slice(0, 12000) }];
         else throw new Error("Choose a .pptx, .pdf or .txt file.");
+        if (!current()) return;
         if (pdfRef.current) URL.revokeObjectURL(pdfRef.current); pdfRef.current = ""; setPdfUrl("");setPdfFile(null);slideImage.current="";
+        audience.current?.postMessage({type:"clear"});
         setSlides(next); setSlideIndex(0); setSource(next[0]?.text || ""); setMaterialName(file.name);
-        setStatus("Slide text is ready. Check image-only content and add any missing exercise instructions below.");
+        setView("powerpoint");setLessonChosen(true);setReferenceReady(true);setReferenceLoading(false);setAiPage(null);setPositionNote("");
+        setStatus("PowerPoint/source text is ready as AI reference. Teach from the original deck for layout, reveals and media; match the current slide here.");
       }
-    } catch (e) { setError(e instanceof Error ? e.message : "This material could not be opened."); }
-    finally { setImporting(false); }
+      if (!preserveReference) {setReference(null);setSelectedLessonId("");}
+  }
+
+  async function importMaterial(file?: File, meta?: CoachCloudMaterialMeta) {
+    if (!file || importing || phaseRef.current !== "idle" || working || asking || (meta&&meta.learnerCode!==learnerRef.current)) return;
+    setError("");
+    const limit=/\.pdf$/i.test(file.name)?25_000_000:/\.pptx$/i.test(file.name)?64_000_000:3_000_000;
+    if (file.size>limit) {setError("Choose a PDF below 25 MB, a PowerPoint below 64 MB, or a text file below 3 MB.");return;}
+    const attempt=++materialGeneration.current,owner=learnerRef.current;
+    setImporting(true);
+    try {
+      await applyMaterial(file,attempt,owner,!!meta);
+      if (!mounted.current || materialGeneration.current!==attempt || learnerRef.current!==owner) return;
+      if (meta) {
+        const id=`cloud:${meta.packId}`;
+        if(selectedLessonId!==id||meta.guide){setReference({title:meta.title,unit:`${selected?.name} · ${meta.edition}`,overview:meta.historical?meta.warning:"Selected prepared lesson and its current document are the AI reference.",guide:meta.guide,teacherNotes:meta.teacherNotes,notesHistorical:meta.notesHistorical});setObjective(meta.focus.slice(0,700));}
+        else if(meta.historical)setReference(previous=>previous?{...previous,overview:`${previous.overview}\n${meta.warning}`}:{title:meta.title,unit:meta.edition,overview:meta.warning});
+        setSelectedLessonId(id);setTask(meta.title.slice(0,500));setLessonChosen(true);
+        if(meta.warning)setStatus(meta.warning);
+      }
+    } catch (e) {if(mounted.current&&materialGeneration.current===attempt)setError(e instanceof Error ? e.message : "This material could not be opened.");}
+    finally {if(mounted.current&&materialGeneration.current===attempt)setImporting(false);}
+  }
+
+  async function openSavedPdf(resource: CoachLessonResource) {
+    if(importing||live||working||asking||!coachPdfResources(selected?.library).some(item=>item.url===resource.url))return;
+    const attempt=++materialGeneration.current,owner=learnerRef.current;setImporting(true);setError("");
+    try {
+      const response=await fetch(`${base}${resource.url}`,{cache:"no-store"});
+      if(!response.ok)throw new Error("The saved slide PDF could not be downloaded. Try again when connected.");
+      const blob=await response.blob();
+      if(blob.size>25_000_000)throw new Error("This PDF is larger than 25 MB. Open the original separately.");
+      await applyMaterial(new File([blob],resource.url.split("/").pop()||"Lesson.pdf",{type:"application/pdf"}),attempt,owner,false);
+      if(mounted.current&&materialGeneration.current===attempt&&learnerRef.current===owner){setSelectedLessonId(`pdf:${resource.url}`);setTask(resource.title.slice(0,500));setReference({title:resource.title,unit:resource.unit,overview:`Approved student slide copy · ${resource.schoolYear}. ${resource.blurb||""}`});}
+    }catch(e){if(mounted.current&&materialGeneration.current===attempt)setError(e instanceof Error?e.message:"The saved PDF could not open.");}
+    finally{if(mounted.current&&materialGeneration.current===attempt)setImporting(false);}
   }
 
   function download() {
@@ -347,10 +450,12 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   }
 
   function changeLearner(code: string) {
-    if (recordingBusy || asking || working) return;
+    if (recordingBusy || asking || working || importing) return;
+    companion.close();clearMaterial();setReference(null);setSelectedLessonId("");
     stop("Learner changed. Choose the activity before starting again.");
     audioInput.current.close(); setCallConnected(false);
-    setLearner(code); setEntries([]);setTurns([]);setQuestion(""); setTranscript(""); setDraft(""); setAgreed(false); setRehearsalIndex(0); setError("");setSpeaker("unknown");
+    setLearner(code);setLessonChosen(false);setReferenceReady(false);setReferenceLoading(false);setAiPage(null);setPositionNote(""); setEntries([]);setTurns([]);setQuestion(""); setTranscript(""); setDraft(""); setAgreed(false); setRehearsalIndex(0); setError("");setSpeaker("unknown");
+    setTask("Talk about a recent day or experience.");setObjective("Complete sentences, useful vocabulary and one reason or extra detail.");
     audience.current?.postMessage({type:"clear"});
     setSource(""); setSlides([]); setSlideIndex(0); setMaterialName("");
     if (pdfRef.current) URL.revokeObjectURL(pdfRef.current); pdfRef.current = ""; setPdfUrl("");setPdfFile(null);slideImage.current="";
@@ -366,30 +471,47 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
   const latest = entries[0];
   const live = phase !== "idle";
   return <div className={`teacher-workspace live-coach ${live?"lc-is-live":""} ${view==="presenter"?"lc-presenter-mode":""}`}>
-    <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" disabled={recordingBusy} onClick={() => { stop(""); onBack(); }}>← Teacher dashboard</button><span className="lc-private">PRIVATE TEACHER VIEW</span><button type="button" className="teacher-quiet-button" onClick={download} disabled={!entries.length&&!turns.length}>Export notes</button></header>
+    <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" disabled={recordingBusy||importing} onClick={() => { stop(""); onBack(); }}>← Teacher dashboard</button><span className="lc-private">PRIVATE TEACHER VIEW</span><button type="button" className="teacher-quiet-button" onClick={download} disabled={!entries.length&&!turns.length}>Export notes</button></header>
     <main>
       <section className="lc-heading"><div><p className="teacher-eyebrow">LIVE TEACHING</p><h1>A little space to think.<br/><span>More room to teach.</span></h1><p>Your lesson, both voices, and a useful next question.</p></div><div className={`lc-connection lc-${phase}`} role="status"><span aria-hidden>●</span> {phase === "listening" ? "Listening" : phase === "paused" ? "Microphone paused" : phase === "connecting" ? "Connecting…" : checking ? "Checking AI connection…" : available ? "AI connection ready" : "Rehearsal available"}{live && <small>{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")} / {COACH_MINUTES}:00</small>}</div></section>
       {error && <p className="lc-error" role="alert">{error}</p>}
-      <nav className="lc-view-tabs" aria-label="Teaching workspace view"><button type="button" aria-pressed={view==="presenter"} onClick={()=>setView("presenter")}>Presenter view</button><button type="button" aria-pressed={view==="setup"} onClick={()=>setView("setup")}>Lesson setup</button><button type="button" onClick={openAudience} disabled={!pdfFile}>Open student window ↗</button></nav>
+      <details className="lc-panel lc-session-start" aria-label="Choose student and lesson" open={!live}><summary>{selected?`${selected.name} · ${materialName||reference?.title||(lessonChosen?"Conversation practice":"Choose a lesson")}`:"1. Choose student and lesson"}</summary>
+          <label>1. Student<select value={learner} onChange={e => changeLearner(e.target.value)} disabled={live || working || importing || asking || recordingBusy}><option value="">Choose a student…</option>{learners.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}</select></label>
+          {selected&&<><h2>2. Choose {selected.name}’s lesson</h2>
+          <CoachFolderLibrary selectedId={selectedLessonId} code={learner} name={selected.name} studentId={selected.library?.studentId} blocked={live||working||importing||asking||recordingBusy} onOpen={(file,meta)=>importMaterial(file,meta)}/>
+          <CoachLessonPicker key={`picker-${learner}`} code={learner} name={selected.name} library={selected.library} blocked={live||working||importing||libraryBusy||asking} selectedId={selectedLessonId} onSelect={chooseSavedLesson} onOpenPdf={openSavedPdf}/>
+          <label className="lc-upload">{importing ? "Reading lesson material…" : "Or open a document from this device"}<input type="file" accept=".pptx,.pdf,.txt" disabled={live || working || importing || libraryBusy || asking} onChange={e => { void importMaterial(e.target.files?.[0]); e.target.value = ""; }}/></label>
+          <details><summary>Private online lesson library</summary><p className="lc-hint">Browse the online library for original files. To select its saved copies directly here, connect your lesson folder above.</p><a className="lc-link" href="https://rorys-english-lesson-library.rorymclark.chatgpt.site/library" target="_blank" rel="noopener noreferrer">Open private lesson library ↗</a></details>
+          <button type="button" className="teacher-quiet-button" disabled={live||recordingBusy||importing} onClick={()=>{clearMaterial();setReference(null);setSelectedLessonId("");setLessonChosen(true);setReferenceReady(true);setTask("Original conversation practice");setStatus("Conversation practice selected. No lesson document is in use.");}}>Conversation practice without a document</button>
+          <p className="lc-hint" role="status">{referenceLoading?"Reading all PDF pages before coaching starts…":lessonChosen?`Ready reference: ${materialName||reference?.title||"Conversation practice"}`:"Choose a prepared lesson, app lesson or document before starting."}</p></>}
+      </details>
+      <nav className="lc-view-tabs" aria-label="Teaching workspace view"><button type="button" aria-pressed={view==="presenter"} onClick={()=>setView("presenter")}>Slides + guidance</button><button type="button" aria-pressed={view==="powerpoint"} onClick={()=>setView("powerpoint")}>PowerPoint + coach</button><button type="button" aria-pressed={view==="setup"} onClick={()=>setView("setup")}>Lesson setup</button><button type="button" onClick={openAudience} disabled={!pdfFile}>Open student window ↗</button></nav>
+      <section className="lc-panel lc-companion-panel" aria-label="Private teaching companion">
+        {view==="powerpoint"&&<><h2>Your PowerPoint, with a little guidance.</h2><p className="lc-hint">Use the original PowerPoint for answer reveals, audio and video. Keep the app beside it, or open a compact private coach. Match the slide number in the app as you teach; PowerPoint changes do not sync automatically.</p></>}
+        <CoachCompanion companion={companion} learner={selected?.name||"Learner"} slide={context.slide} status={status} phase={phase} seconds={seconds} feedback={latest?.feedback} rehearsal={latest?.rehearsal} onPauseResume={togglePause} onEnd={()=>stop("Listening ended. Your lesson notes remain in the app.")} previousSlide={slideIndex>0?()=>selectSlide(slideIndex-1):undefined} nextSlide={slideIndex<slides.length-1?()=>selectSlide(slideIndex+1):undefined}/>
+      </section>
       <section className="lc-panel lc-audio-source" aria-label="Lesson audio source">
         <label>Where is this lesson?<select value={audioMode} disabled={live || recordingBusy || choosingAudio} onChange={event=>{audioInput.current.close();setCallConnected(false);setAudioMode(event.target.value as LessonAudioMode);setSpeaker("unknown");setError("");}}><option value="room">In person · this microphone</option><option value="online">Online · microphone and call tab</option></select></label>
         {audioMode === "online" ? <><p className="lc-hint">Open your call in a browser tab. Connect that tab and tick Share tab audio so the learner is heard even when you use headphones. Only audio is used; no call video is sent or saved.</p><div className="lc-actions"><button type="button" className="teacher-quiet-button" disabled={live || recordingBusy || choosingAudio} onClick={()=>{if(callConnected){audioInput.current.disconnectCall();setCallConnected(false);}else void connectCallAudio();}}>{choosingAudio?"Choosing call tab…":callConnected?"Disconnect call audio":"Connect call audio"}</button><span role="status">{callConnected?"Call audio connected":"Choose a browser call tab with audio sharing"}</span></div><div className="lc-audio-signals" aria-label="Online audio signals"><label>My microphone<meter min={0} max={1} value={audioLevels.microphone} aria-label="My microphone signal"/><span>{live || recordingBusy ? "Speak to check the signal" : "Checked when listening or recording"}</span></label><label>Student’s call audio<meter min={0} max={1} value={audioLevels.call} aria-label="Student call audio signal"/><span>{callConnected ? "The meter moves when the call is heard" : "Connect the call tab first"}</span></label></div></> : <p className="lc-hint">The microphone captures people in the same room. For a remote learner, select Online and connect the call tab audio.</p>}
       </section>
       <div className={view==="presenter"?"lc-grid lc-presenter-grid":"lc-grid"}>
         <div className="lc-stage">
-          {pdfFile&&<CoachSlidePresenter file={pdfFile} page={slideIndex+1} onLoaded={pdfLoaded} onContext={pdfContext} onPage={page=>setSlideIndex(page-1)}/>}
+          {pdfFile&&<div hidden={view==="powerpoint"}><CoachSlidePresenter file={pdfFile} page={slideIndex+1} onLoaded={pdfLoaded} onIndex={pdfIndexed} onIndexError={pdfIndexError} onContext={pdfContext} onPage={page=>selectSlide(page-1)}/></div>}
+          {view==="powerpoint"&&<section className="lc-panel lc-powerpoint-reference" aria-label="Current PowerPoint reference"><p className="teacher-eyebrow">MATCH YOUR POWERPOINT SLIDE</p><h2>{materialName||reference?.title||"Choose a saved lesson below"}</h2>{!!slides.length&&<div className="lc-actions"><button type="button" className="teacher-quiet-button" disabled={slideIndex<=0} onClick={()=>selectSlide(slideIndex-1)}>← Previous</button><strong>Slide {slideIndex+1} / {slides.length}</strong><button type="button" className="teacher-quiet-button" disabled={slideIndex>=slides.length-1} onClick={()=>selectSlide(slideIndex+1)}>Next →</button></div>}<p className="lc-hint">Text reference for the AI. Graphics, animations and media play in your original PowerPoint.</p>{source&&<pre>{source}</pre>}{!source&&<p className="lc-hint">Choose “Use current PowerPoint text” from the saved library or open your deck below.</p>}</section>}
           {view==="presenter"&&!pdfFile&&<div className="lc-panel lc-no-slide"><p className="teacher-eyebrow">PRESENTER VIEW</p><h2>Bring your slides into the lesson.</h2><p>Open a PDF exported from PowerPoint to keep the original layout. Slide images and text become context for your AI commentary and questions.</p><button type="button" className="teacher-primary" onClick={()=>setView("setup")}>Open lesson material</button>{source&&<pre>{source}</pre>}</div>}
         <details className={`lc-context lc-panel lc-context-settings ${view==="presenter"?"lc-context-collapsed":""}`} open={!live}>
           <summary>Lesson context</summary>
-          <label>Learner<select value={learner} onChange={e => changeLearner(e.target.value)} disabled={live || working || importing || asking || recordingBusy}>{learners.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}</select></label>
+
           <p className="lc-unit">{selected?.unit || "Original speaking practice"}</p>
           {selected?.focusNote && <p className="lc-hint">Saved teacher focus: {selected.focusNote}</p>}
           <label>Current activity<input value={task} maxLength={500} onChange={e => setTask(e.target.value)} placeholder="For example: tell me about yesterday"/></label>
           <label>What to listen for<textarea rows={3} value={objective} maxLength={700} onChange={e => setObjective(e.target.value)}/></label>
-          <label className="lc-upload">{importing ? "Reading presentation…" : "Open lesson material"}<input type="file" accept=".pptx,.pdf,.txt" disabled={live || working || importing || asking} onChange={e => { void importMaterial(e.target.files?.[0]); e.target.value = ""; }}/></label>
-          <p className="lc-hint">A PDF shows as slides, with the current slide’s text and picture as context for the AI. PowerPoint gives slide text only. PDFs are opened on this device. PowerPoint text is read privately by the app. Neither file is published to students.</p>
-          {!!slides.length && !pdfFile && <label>Current slide<select value={slideIndex} onChange={e => { const index = Number(e.target.value); setSlideIndex(index); setSource(slides[index]?.text || ""); }}>{slides.map((s, i) => <option key={s.number} value={i}>Slide {s.number} · {s.text.slice(0, 55) || "No readable text"}</option>)}</select></label>}
+
+          <p className="lc-hint">A PDF shows as slides, with its current text and picture as AI context. PowerPoint supplies text only, read on this device. Neither file is published to students. PDF limit 25 MB; PowerPoint limit 64 MB.</p>
+          {!!slides.length && <label>Current reference slide<select value={slideIndex} onChange={e => selectSlide(Number(e.target.value))}>{slides.map((s, i) => <option key={s.number} value={i}>Slide {s.number} · {s.text.slice(0, 55) || "No readable text"}</option>)}</select></label>}
+          {reference&&<div className="lc-selected-lesson"><strong>AI reference: {reference.title}</strong><p className="lc-hint">{reference.overview}</p>{reference.guide&&<details><summary>Current delivery guide</summary><pre>{reference.guide}</pre></details>}{coachSlideNotes(reference.teacherNotes||"",slideIndex+1)&&<details><summary>Teacher notes for slide {slideIndex+1}{reference.notesHistorical?" · supporting original notes":""}</summary><pre>{coachSlideNotes(reference.teacherNotes||"",slideIndex+1)}</pre></details>}</div>}
           <label>Current slide / source text<textarea rows={7} value={source} maxLength={12000} onChange={e => setSource(e.target.value)} placeholder="Paste the current exercise, vocabulary or source passage. This text and the selected PDF slide image provide lesson context."/></label>
+          {currentNotes&&<details className="lc-selected-lesson"><summary>Private notes embedded in this PowerPoint · slide {slideIndex+1}</summary><pre>{currentNotes}</pre></details>}
           {pdfUrl && <a className="lc-link" href={pdfUrl} target="_blank" rel="noreferrer">Open original PDF reference ↗</a>}
         </details></div>
         <section className="lc-main">
@@ -400,17 +522,18 @@ export default function LiveTeachingCoach({ token, learners, onBack }: { token: 
             <label>Response speed<select value={responseSpeed} onChange={e=>setResponseSpeed(e.target.value as typeof responseSpeed)}><option value="fast">Fast · concise live guidance</option><option value="balanced">Balanced · longer pause and fuller guidance</option></select></label>
             <label>Speaker mode<select value={speaker} onChange={e=>setSpeaker(e.target.value as typeof speaker)}><option value="unknown">Automatic · follow both speakers</option><option value="learner">Only {selected?.name||"Learner"} is speaking</option><option value="teacher">Only Rory is speaking</option></select></label>
             </details>
-            <div className="lc-actions">{!live ? <button type="button" className="teacher-primary" disabled={!available || !agreed || working || importing || !learner || choosingAudio || (audioMode === "online" && !callConnected)} onClick={() => void start()}>Start listening</button> : <><button type="button" className="teacher-primary" disabled={phase === "connecting"} onClick={togglePause}>{phase === "paused" ? "Resume microphone" : "Pause microphone"}</button><button type="button" className="teacher-quiet-button" onClick={() => stop("Listening ended. You can export the notes or start another session.")}>End listening</button></>}<button type="button" className="teacher-quiet-button" disabled={live || working} onClick={() => tryRehearsal(rehearsalIndex)}>Try prepared rehearsal</button></div>
+            <div className="lc-actions">{!live ? <button type="button" className="teacher-primary" disabled={!available || !agreed || working || importing || libraryBusy || !learner || !lessonChosen || referenceLoading || !referenceReady || choosingAudio || (audioMode === "online" && !callConnected)} onClick={() => void start()}>Start listening</button> : <><button type="button" className="teacher-primary" disabled={phase === "connecting"} onClick={togglePause}>{phase === "paused" ? "Resume microphone" : "Pause microphone"}</button><button type="button" className="teacher-quiet-button" onClick={() => stop("Listening ended. You can export the notes or start another session.")}>End listening</button></>}<button type="button" className="teacher-quiet-button" disabled={live || working} onClick={() => tryRehearsal(rehearsalIndex)}>Try prepared rehearsal</button></div>
             <p className="lc-hint" role="status">{status}</p>
             {!available && !checking && <p className="lc-hint">Live AI is not enabled. Rehearsal shows prepared examples without sending audio or using API credit.</p>}
-            <p className="lc-hint">Text feedback only. Audio goes to OpenAI while connected. Each AI session ends after 15 minutes, and leaving this page stops it. The lesson recorder below is separate and keeps going.</p>
+            <p className="lc-hint">Text feedback only. Audio goes to OpenAI while connected. Each AI session ends after 15 minutes. Listening can continue beside PowerPoint while the private coach is visible; hiding both windows stops it. The lesson recorder below is separate.</p>
           </div>
+          {!!slides.length&&<section className="lc-panel lc-position" aria-label="AI lesson position"><h2>AI lesson reference · page {referenceIndex+1} of {slides.length}</h2><label>Lesson tracking<select value={tracking} onChange={event=>{setTracking(event.target.value as typeof tracking);setAiPage(null);setPositionNote("");}}><option value="auto">Automatic · follow the conversation</option><option value="manual">Use the displayed page</option></select></label><p className="lc-hint">{positionNote||`Using displayed page ${slideIndex+1} as the starting reference. The whole readable lesson is available for context.`}</p>{aiPage!==null&&aiPage!==slideIndex+1&&<button type="button" className="teacher-quiet-button" onClick={()=>selectSlide(aiPage-1)}>Show that page</button>}</section>}
           <div className="lc-panel lc-feedback" aria-live="polite" aria-atomic="true"><div className="lc-section-title"><h2>Your next teaching move</h2>{latest?.rehearsal && <span className="lc-badge">PREPARED EXAMPLE</span>}</div>
             {latest ? <><p className="lc-evidence-label">{latest.context.learner} · {latest.context.slide}</p>{latest.feedback.prompt && <div className="lc-prompt"><h3>Ask the learner</h3><p>{latest.feedback.prompt}</p></div>}<blockquote>“{latest.feedback.heard || "The words were not clear enough to quote."}”</blockquote><div className={`lc-feedback-pair ${!latest.feedback.strength?"lc-feedback-context":""}`}>{latest.feedback.strength && <div><h3>What worked</h3><p>{latest.feedback.strength}</p></div>}<div><h3>{latest.context.learner === "Lesson conversation" || latest.context.learner.includes("AI estimate") ? "Conversation support" : "Focus now"}</h3><p>{latest.feedback.focus}</p></div></div>{latest.feedback.correction && <div className="lc-correction"><h3>{latest.context.learner.includes("AI estimate") ? "Possible correction · check who spoke" : "Minimal correction"}</h3><p>{latest.feedback.correction}</p></div>}<div className="lc-next"><h3>Teach next</h3><p>{latest.feedback.next}</p></div>{latest.feedback.uncertainty && <p className="lc-hint">{latest.feedback.uncertainty}</p>}</> : <div className="lc-empty"><span aria-hidden>↳</span><h3>Space to think, while they speak.</h3><p>A faithful quote, one useful teaching point and a question you can ask next will appear here.</p><button type="button" className="lc-link" onClick={() => tryRehearsal(0)}>See an example</button></div>}
           </div>
-          <section className="lc-panel lc-commentary"><div className="lc-section-title"><h2>Running commentary</h2><span className="lc-badge">PRIVATE</span></div><div className="lc-talk-feed" role="log" aria-label="Rory, learner and AI conversation">{!turns.length&&<p className="lc-hint">{selected?.name||"Learner"}, Rory and AI will appear separately here. Automatic speaker labels appear as estimates; teaching guidance continues even when a voice is uncertain.</p>}{turns.map(turn=><article className={`lc-turn lc-turn-${turn.role}`} key={turn.id}><div className="lc-turn-heading"><strong>{coachSpeakerLabel(turn,selected?.name||"Learner")}{turn.rehearsal?" · rehearsal":""}</strong><small>{new Date(turn.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</small></div><p>{turn.text}</p>{turn.role!=="ai"&&<details className="lc-speaker-correction"><summary>Correct speaker · optional</summary><label className="lc-speaker-edit">Confirmed speaker<select value={turn.role} onChange={e=>correctSpeaker(turn.id,e.target.value as "learner"|"teacher"|"unknown")}><option value="unknown">Unconfirmed conversation</option><option value="learner">{selected?.name||"Learner"}</option><option value="teacher">Rory</option></select></label></details>}</article>)}</div><form onSubmit={e=>{e.preventDefault();void askTeacherAI();}}><label>Ask the AI privately<textarea rows={2} value={question} maxLength={4000} onChange={e=>setQuestion(e.target.value)} placeholder="How can I explain this? What question should I ask next?"/></label><button type="submit" className="teacher-primary" disabled={!available||!agreed||!question.trim()||asking}>{asking?"Thinking…":"Ask AI"}</button><p className="lc-hint">Uses the selected slide and recent conversation. Your question and answer stay in this teacher view.</p></form></section>
+          <section className="lc-panel lc-commentary"><div className="lc-section-title"><h2>Running commentary</h2><span className="lc-badge">PRIVATE</span></div><div className="lc-talk-feed" role="log" aria-label="Rory, learner and AI conversation">{!turns.length&&<p className="lc-hint">{selected?.name||"Learner"}, Rory and AI will appear separately here. Automatic speaker labels appear as estimates; teaching guidance continues even when a voice is uncertain.</p>}{turns.map(turn=><article className={`lc-turn lc-turn-${turn.role}`} key={turn.id}><div className="lc-turn-heading"><strong>{coachSpeakerLabel(turn,selected?.name||"Learner")}{turn.rehearsal?" · rehearsal":""}</strong><small>{new Date(turn.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</small></div><p>{turn.text}</p>{turn.role!=="ai"&&<details className="lc-speaker-correction"><summary>Correct speaker · optional</summary><label className="lc-speaker-edit">Confirmed speaker<select value={turn.role} onChange={e=>correctSpeaker(turn.id,e.target.value as "learner"|"teacher"|"unknown")}><option value="unknown">Unconfirmed conversation</option><option value="learner">{selected?.name||"Learner"}</option><option value="teacher">Rory</option></select></label></details>}</article>)}</div><form onSubmit={e=>{e.preventDefault();void askTeacherAI();}}><label>Ask the AI privately<textarea rows={2} value={question} maxLength={4000} onChange={e=>setQuestion(e.target.value)} placeholder="How can I explain this? What question should I ask next?"/></label><button type="submit" className="teacher-primary" disabled={!available||!agreed||!question.trim()||asking||referenceLoading||!learner||!lessonChosen}>{asking?"Thinking…":"Ask AI"}</button><p className="lc-hint">Uses the selected slide and recent conversation. Your question and answer stay in this teacher view.</p></form></section>
           <CoachLessonArchive key={`${learner}:${lessonSession}`} learnerCode={learner} snapshot={{ context, turns, entries }} acquireAudio={acquireAudio} evidenceRevision={evidenceRevision} onBusy={setRecordingBusy} onFocus={note => { setObjective(note); setStatus("Saved teacher review loaded as the lesson focus."); }}/>
-          <details className="lc-panel lc-details"><summary>Enter an answer manually</summary><p className="lc-hint">For checking exact wording. Typed answers say nothing about pronunciation.</p><label>Learner’s actual words<textarea value={draft} maxLength={4000} rows={3} onChange={e => setDraft(e.target.value)} placeholder="Keep the learner’s original wording and mistakes."/></label><button className="teacher-primary" type="button" disabled={live || !available || !agreed || !draft.trim() || working} onClick={() => void analyseTyped()}>{working ? "Preparing feedback…" : "Get teaching feedback"}</button></details>
+          <details className="lc-panel lc-details"><summary>Enter an answer manually</summary><p className="lc-hint">For checking exact wording. Typed answers say nothing about pronunciation.</p><label>Learner’s actual words<textarea value={draft} maxLength={4000} rows={3} onChange={e => setDraft(e.target.value)} placeholder="Keep the learner’s original wording and mistakes."/></label><button className="teacher-primary" type="button" disabled={live || !available || !agreed || !draft.trim() || working || !learner || !lessonChosen || referenceLoading} onClick={() => void analyseTyped()}>{working ? "Preparing feedback…" : "Get teaching feedback"}</button></details>
           {transcript && <details className="lc-panel lc-details"><summary>Latest machine caption · check against what you heard</summary><p>{transcript}</p><p className="lc-hint">Captions can mishear or normalise errors. Use your judgement before correcting the learner.</p></details>}
           {!!entries.length && <details className="lc-panel lc-details"><summary>Session trail · {entries.length} {entries.length === 1 ? "answer" : "answers"}</summary>{entries.map(entry => <article className="lc-trail" key={entry.id}><small>{entry.rehearsal ? "REHEARSAL · " : ""}{new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {entry.context.slide}</small><p>“{entry.feedback.heard}”</p><p>{entry.feedback.focus}</p></article>)}<button type="button" className="teacher-quiet-button" disabled={recordingBusy || working || asking} onClick={() => { stop("Fresh lesson started. Previously saved history is still available."); setEntries([]);setTurns([]); setTranscript(""); setLessonSession(value => value + 1); }}>Start fresh lesson</button><p className="lc-hint">Save or export working notes first. Previously saved lessons are kept.</p></details>}
         </section>
