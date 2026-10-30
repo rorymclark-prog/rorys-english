@@ -384,6 +384,9 @@ test('uploaded PDF supplies the whole lesson and automatic reference tracking do
  const request=h.sent().findLast(item=>item.type==='response.create');
  assert.match(request.response.instructions,/current reference is page 3/);
  assert.ok(!request.response.input[1].content.some(item=>item.type==='input_image'),'the stale cover image must not accompany a later reference');
+ h.done('next-response','Morning routines',{lessonPage:'2',lessonConfidence:'high'});
+ assert.equal(h.snapshot().context.lessonPosition.page,3,'unsupported page guesses cannot change the reference');
+
 });
 
 test('manual page changes made while feedback is pending cannot be overwritten by an old position estimate',async()=>{
@@ -408,4 +411,20 @@ test('the microphone cannot start before student and lesson selection, including
  h.button('Conversation practice without a document').props.onClick();h.render();
  h.find(node=>node.type==='input'&&node.props.type==='checkbox').props.onChange({target:{checked:true}});h.render();
  await h.startPrepared();assert.equal(h.requests.some(request=>request.action==='connect'),true);
+});
+
+
+test('queued answers can move the AI reference in sequence while manual reference revisions remain protected',async()=>{
+ const h=liveHarness({speaker:null});await h.prepare();
+ h.find(node=>node.type==='input'&&node.props.accept==='.pptx,.pdf,.txt').props.onChange({target:{files:[{name:'Queued.pdf',size:100,type:'application/pdf'}],value:''}});await h.settle();
+ const presenter=h.find(node=>typeof node.props.onIndex==='function');
+ presenter.props.onLoaded(3);h.render();presenter.props.onIndex([{number:1,text:'Opening cover'},{number:2,text:'Timetable assembly registration morning playground'},{number:3,text:'Volcano eruption molten lava crater'}]);presenter.props.onContext(1,'Opening cover','');h.render();
+ await h.startPrepared();
+ h.caption('routine','Timetable assembly registration morning playground','routine-response');
+ h.caption('volcano','Volcano eruption molten lava crater');
+ h.done('routine-response','Routine',{lessonPage:'2',lessonConfidence:'high'});
+ assert.equal(h.snapshot().context.lessonPosition.page,2);
+ h.responseStarted('volcano-response','volcano');h.done('volcano-response','Volcano',{lessonPage:'3',lessonConfidence:'high'});
+ assert.equal(h.snapshot().context.lessonPosition.page,3);
+ assert.equal(h.find(node=>typeof node.props.onIndex==='function').props.page,1);
 });

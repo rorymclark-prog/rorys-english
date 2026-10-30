@@ -1,5 +1,5 @@
 export type LessonPage = { number: number; text: string; notes?: string };
-export type LessonPosition = { page: number; total: number; mode: "auto" | "manual"; index: string };
+export type LessonPosition = { page: number; total: number; mode: "auto" | "manual"; index: string; revision?: number };
 
 /** Every page has a place in the map, including later reserve/answer pages. */
 export function coachLessonMap(pages: LessonPage[]): string {

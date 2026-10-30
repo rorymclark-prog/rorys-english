@@ -36,6 +36,7 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
   const [referenceReady,setReferenceReady]=useState(false);
   const [tracking,setTracking]=useState<"auto"|"manual">("auto");
   const [aiPage,setAiPage]=useState<number|null>(null);
+  const [referenceRevision,setReferenceRevision]=useState(0);
   const [positionNote,setPositionNote]=useState("");
   const [selectedLessonId, setSelectedLessonId] = useState("");
   const [slides, setSlides] = useState<LocalCoachSlide[]>([]);
@@ -101,7 +102,7 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
   const contextSource=coachReferenceSource(referenceText,reference,referenceIndex+1,currentNotes);
   const lessonMap=coachLessonMap(slides);
   const referenceImage=()=>contextRef.current.lessonPosition?.page && contextRef.current.lessonPosition.page!==currentPage.current?"":slideImage.current;
-  const context: CoachContext = { learner: selected?.name || "Learner", unit: (reference?.unit || selected?.unit || "Original speaking practice").slice(0,200), task, objective, source: contextSource, slide: (slides.length ? `${materialName} · slide ${slides[referenceIndex]?.number}` : reference?.title || materialName || "Speaking activity").slice(0,160), audioMode, responseSpeed, ...(slides.length?{lessonPosition:{page:referenceIndex+1,total:slides.length,mode:tracking,index:lessonMap}}:{}) };
+  const context: CoachContext = { learner: selected?.name || "Learner", unit: (reference?.unit || selected?.unit || "Original speaking practice").slice(0,200), task, objective, source: contextSource, slide: (slides.length ? `${materialName} · slide ${slides[referenceIndex]?.number}` : reference?.title || materialName || "Speaking activity").slice(0,160), audioMode, responseSpeed, ...(slides.length?{lessonPosition:{page:referenceIndex+1,total:slides.length,mode:tracking,index:lessonMap,revision:referenceRevision}}:{}) };
   const contextRef = useRef(context); contextRef.current = context;
   const pagesRef=useRef(slides);pagesRef.current=slides;
   const referenceRef=useRef(reference);referenceRef.current=reference;
@@ -279,7 +280,7 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
                     feedback.uncertainty = turn.role === "teacher" ? "Teacher speech: this is context, not learner performance." : "Speaker unconfirmed. Confirm the caption label before using this as learner evidence.";
                     ctx.learner = turn.role === "teacher" ? "Rory" : "Speaker unclear";
                   }
-                  if(turn.context.lessonPosition?.mode==="auto" && contextRef.current.lessonPosition?.mode==="auto" && contextRef.current.lessonPosition.page===turn.context.lessonPosition.page){
+                  if(turn.context.lessonPosition?.mode==="auto" && contextRef.current.lessonPosition?.mode==="auto" && (contextRef.current.lessonPosition.revision||0)===(turn.context.lessonPosition.revision||0)){
                     const located=verifiedCoachPosition(parseCoachPosition(text),turn.caption,pagesRef.current);
                     if(located && located!==turn.context.lessonPosition.page){
                       setAiPage(located);setPositionNote(`AI reference follows page ${located} · estimated from the conversation. Displayed slides stay under your control.`);
@@ -364,7 +365,7 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
   function selectSlide(index: number) {
     if (index<0 || index>=slides.length) return;
     slideImage.current="";audience.current?.postMessage({type:"clear"});
-    setSlideIndex(index);setAiPage(null);setPositionNote("");setSource(slides[index]?.text||"");
+    setReferenceRevision(value=>value+1);setSlideIndex(index);setAiPage(null);setPositionNote("");setSource(slides[index]?.text||"");
   }
 
   function chooseSavedLesson(lesson: CoachLessonSelection) {
@@ -527,7 +528,7 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
             {!available && !checking && <p className="lc-hint">Live AI is not enabled. Rehearsal shows prepared examples without sending audio or using API credit.</p>}
             <p className="lc-hint">Text feedback only. Audio goes to OpenAI while connected. Each AI session ends after 15 minutes. Listening can continue beside PowerPoint while the private coach is visible; hiding both windows stops it. The lesson recorder below is separate.</p>
           </div>
-          {!!slides.length&&<section className="lc-panel lc-position" aria-label="AI lesson position"><h2>AI lesson reference · page {referenceIndex+1} of {slides.length}</h2><label>Lesson tracking<select value={tracking} onChange={event=>{setTracking(event.target.value as typeof tracking);setAiPage(null);setPositionNote("");}}><option value="auto">Automatic · follow the conversation</option><option value="manual">Use the displayed page</option></select></label><p className="lc-hint">{positionNote||`Using displayed page ${slideIndex+1} as the starting reference. The whole readable lesson is available for context.`}</p>{aiPage!==null&&aiPage!==slideIndex+1&&<button type="button" className="teacher-quiet-button" onClick={()=>selectSlide(aiPage-1)}>Show that page</button>}</section>}
+          {!!slides.length&&<section className="lc-panel lc-position" aria-label="AI lesson position"><h2>AI lesson reference · page {referenceIndex+1} of {slides.length}</h2><label>Lesson tracking<select value={tracking} onChange={event=>{setReferenceRevision(value=>value+1);setTracking(event.target.value as typeof tracking);setAiPage(null);setPositionNote("");}}><option value="auto">Automatic · follow the conversation</option><option value="manual">Use the displayed page</option></select></label><p className="lc-hint">{positionNote||`Using displayed page ${slideIndex+1} as the starting reference. The whole readable lesson is available for context.`}</p>{aiPage!==null&&aiPage!==slideIndex+1&&<button type="button" className="teacher-quiet-button" onClick={()=>selectSlide(aiPage-1)}>Show that page</button>}</section>}
           <div className="lc-panel lc-feedback" aria-live="polite" aria-atomic="true"><div className="lc-section-title"><h2>Your next teaching move</h2>{latest?.rehearsal && <span className="lc-badge">PREPARED EXAMPLE</span>}</div>
             {latest ? <><p className="lc-evidence-label">{latest.context.learner} · {latest.context.slide}</p>{latest.feedback.prompt && <div className="lc-prompt"><h3>Ask the learner</h3><p>{latest.feedback.prompt}</p></div>}<blockquote>“{latest.feedback.heard || "The words were not clear enough to quote."}”</blockquote><div className={`lc-feedback-pair ${!latest.feedback.strength?"lc-feedback-context":""}`}>{latest.feedback.strength && <div><h3>What worked</h3><p>{latest.feedback.strength}</p></div>}<div><h3>{latest.context.learner === "Lesson conversation" || latest.context.learner.includes("AI estimate") ? "Conversation support" : "Focus now"}</h3><p>{latest.feedback.focus}</p></div></div>{latest.feedback.correction && <div className="lc-correction"><h3>{latest.context.learner.includes("AI estimate") ? "Possible correction · check who spoke" : "Minimal correction"}</h3><p>{latest.feedback.correction}</p></div>}<div className="lc-next"><h3>Teach next</h3><p>{latest.feedback.next}</p></div>{latest.feedback.uncertainty && <p className="lc-hint">{latest.feedback.uncertainty}</p>}</> : <div className="lc-empty"><span aria-hidden>↳</span><h3>Space to think, while they speak.</h3><p>A faithful quote, one useful teaching point and a question you can ask next will appear here.</p><button type="button" className="lc-link" onClick={() => tryRehearsal(0)}>See an example</button></div>}
           </div>

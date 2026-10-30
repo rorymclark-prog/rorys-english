@@ -26,7 +26,8 @@ export function coachContext(input: unknown): CoachContext {
   if (value.lessonPosition !== undefined) {
     const position = value.lessonPosition as Record<string, unknown> | null;
     if (!position || typeof position !== "object" || !Number.isSafeInteger(position.page) || !Number.isSafeInteger(position.total) || Number(position.page) < 1 || Number(position.total) > 300 || Number(position.total) < Number(position.page) || (position.mode !== "auto" && position.mode !== "manual") || typeof position.index !== "string" || position.index.length > 40000) throw new Error("The lesson page map is invalid or too large.");
-    result.lessonPosition = {page:Number(position.page),total:Number(position.total),mode:position.mode as LessonPosition["mode"],index:position.index};
+    if(position.revision!==undefined&&(!Number.isSafeInteger(position.revision)||Number(position.revision)<0||Number(position.revision)>100000))throw new Error("The lesson reference revision is invalid.");
+    result.lessonPosition = {page:Number(position.page),total:Number(position.total),mode:position.mode as LessonPosition["mode"],index:position.index,revision:position.revision===undefined?0:Number(position.revision)};
   }
   return result;
 }
