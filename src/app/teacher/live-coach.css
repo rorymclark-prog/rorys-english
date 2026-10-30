@@ -208,3 +208,7 @@
 @media(max-width:420px){.lc-audio-signals{grid-template-columns:1fr}}
 @media(max-width:900px){.lc-is-live .lc-heading{flex-direction:row;align-items:center}.lc-is-live .lc-heading h1{font-size:1rem}.lc-is-live .lc-heading .teacher-eyebrow{display:none}.lc-is-live .lc-heading .lc-connection{font-size:.75rem;padding:.5rem .7rem}.lc-is-live .lc-audio-signals{grid-column:1;grid-row:auto;border-top:1px solid var(--lc-border);margin-top:.5rem;padding-top:.6rem}}
 @media(max-width:650px){.lc-is-live .lc-heading{flex-wrap:wrap;padding:.8rem 1rem;gap:.6rem}.lc-is-live .lc-heading h1 span{display:none}.lc-is-live .lc-heading .lc-connection{padding:.4rem .6rem}.lc-is-live .lc-heading .lc-connection small{display:inline;margin-left:.5rem}}
+
+.lc-speaker-correction{margin-top:.7rem}
+.lc-speaker-correction>summary{cursor:pointer;min-height:44px;align-content:center;font-size:.75rem;color:var(--lc-muted)}
+.lc-speaker-correction[open]>.lc-speaker-edit{margin-top:.35rem}

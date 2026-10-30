@@ -201,3 +201,44 @@ test('failed model-access checks keep the coach unavailable without sending audi
     assert.equal(result.status,503);assert.ok(!json.available);assert.equal(paidCalls,0);assert.ok(!JSON.stringify(json).includes('synthetic-key'));
   }
 });
+
+test('speaker estimates parse separately from feedback and malformed estimates safely stay unassigned',()=>{
+  const value={...shared.coachRehearsal[0],speaker:'learner',speakerConfidence:'high'};
+  for(const text of [JSON.stringify(value),JSON.stringify(value).slice(1,-1),'```json\n'+JSON.stringify(value)+'\n```']){
+    assert.equal(shared.parseCoachSpeaker(text).role,'learner');
+    assert.equal(shared.parseCoachSpeaker(text).confidence,'high');
+    assert.equal(shared.parseCoachFeedback(text).heard,value.heard);
+    assert.equal('speaker' in shared.parseCoachFeedback(text),false);
+  }
+  for(const extra of [{},{speaker:'administrator',speakerConfidence:'high'},{speaker:[],speakerConfidence:100}]){
+    assert.equal(shared.parseCoachSpeaker(JSON.stringify({...shared.coachRehearsal[0],...extra})).role,'unknown');
+  }
+  assert.equal(shared.parseCoachSpeaker(JSON.stringify({...value,speakerConfidence:'certain'})).confidence,'low');
+});
+
+test('only a high learner estimate can retain a tentative correction and conflicting quotes still suppress it',()=>{
+  const caption='Yesterday I go to the park with my brother.';
+  const feedback={...shared.coachRehearsal[0],heard:caption,prompt:'What did you enjoy at the park?',next:'Invite one detail about the park.'};
+  for(const [role,confidence] of [['teacher','high'],['mixed','high'],['unknown','low'],['learner','low']]){
+    const result=shared.automaticCoachFeedback(feedback,caption,{role,confidence});
+    assert.equal(result.correction,'');assert.equal(result.strength,'');
+    assert.equal(result.prompt,feedback.prompt);
+    assert.doesNotMatch(result.focus,/past simple/i);
+    assert.doesNotMatch(result.uncertainty,/Confirm who spoke/);
+  }
+  const result=shared.automaticCoachFeedback(feedback,caption,{role:'learner',confidence:'high'});
+  assert.equal(result.correction,feedback.correction);assert.equal(result.strength,'');
+  assert.match(result.uncertainty,/not confirmed learner evidence/);
+  const mismatch=shared.automaticCoachFeedback(feedback,'Yesterday I went to the park with my brother.',{role:'learner',confidence:'high'});
+  assert.equal(mismatch.correction,'');assert.match(mismatch.uncertainty,/Either may have misheard/);
+});
+
+test('fast and balanced session settings change endpoint timing without downgrading the audio model',()=>{
+  for(const [responseSpeed,milliseconds] of [['fast',650],['balanced',1100]]){
+    const session=service.coachSession({...body,context:{...context,responseSpeed}});
+    assert.equal(session.model,'gpt-realtime-2.1');
+    assert.equal(session.audio.input.turn_detection.silence_duration_ms,milliseconds);
+    assert.equal(session.audio.input.turn_detection.create_response,false);
+  }
+  for(const responseSpeed of [null,'fastest',100,{}])assert.throws(()=>shared.coachContext({...context,responseSpeed}));
+});

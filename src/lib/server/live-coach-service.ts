@@ -14,7 +14,7 @@ export function coachSession(body: Record<string, unknown>, model = "gpt-realtim
   const context = coachContext(body.context);
   return {
     type: "realtime", model, output_modalities: ["text"], instructions: coachInstructions(context), max_output_tokens: 700,
-    audio: { input: { noise_reduction: { type: "far_field" }, transcription: { model: "gpt-4o-transcribe", language: "en", prompt: "Transcribe faithfully, including grammatical errors, unfinished words and self-corrections. Do not rewrite into standard English." }, turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 400, silence_duration_ms: 1100, create_response: false, interrupt_response: false } } },
+    audio: { input: { noise_reduction: { type: "far_field" }, transcription: { model: "gpt-4o-transcribe", language: "en", prompt: "Transcribe faithfully, including grammatical errors, unfinished words and self-corrections. Do not rewrite into standard English." }, turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 400, silence_duration_ms: context.responseSpeed === "balanced" ? 1100 : 650, create_response: false, interrupt_response: false } } },
     tools: [], tool_choice: "none",
   };
 }
