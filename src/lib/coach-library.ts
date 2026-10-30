@@ -4,7 +4,7 @@ export type LibraryPack = { id: string; learner: LibraryLearner; title: string; 
 export type LibraryCatalogue = { edition: string; packs: LibraryPack[] };
 export type LibraryContext = { pack: Omit<LibraryPack, "files">; guide: string; teacherNotes: string; notesHistorical: boolean; edition: string };
 export type LibraryMaterial = { pack: Omit<LibraryPack, "files">; edition: string; name: string; type: string; size: number; data: ArrayBuffer; historical: boolean; warning: string };
-type LibraryRequest = { action: "catalogue" | "lesson"; learner: LibraryLearner; packId?: string; asset?: "context" | "pdf" | "powerpoint" };
+type LibraryRequest = { action: "catalogue" | "lesson"; learner: LibraryLearner; packId?: string; asset?: "context" | "pdf" | "powerpoint" | "teacher-notes" };
 type Pending = { resolve: (data: unknown) => void; reject: (error: Error) => void; timer: number };
 
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
@@ -27,11 +27,11 @@ export function readLibraryContext(value: unknown, learner: LibraryLearner, pack
   return value as LibraryContext;
 }
 
-export function readLibraryMaterial(value: unknown, learner: LibraryLearner, packId: string, asset: "pdf" | "powerpoint"): LibraryMaterial {
-  const mime = asset === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+export function readLibraryMaterial(value: unknown, learner: LibraryLearner, packId: string, asset: "pdf" | "powerpoint" | "teacher-notes"): LibraryMaterial {
+  const mime = asset === "powerpoint" ? "application/vnd.openxmlformats-officedocument.presentationml.presentation" : "application/pdf";
   let bytes = -1;
   try { bytes = Object.getOwnPropertyDescriptor(ArrayBuffer.prototype, "byteLength")!.get!.call(object(value) ? value.data : undefined); } catch { /* Not an ArrayBuffer. */ }
-  if (!object(value) || !packMetadata(value.pack, learner) || value.pack.id !== packId || !string(value.edition, 300) || !string(value.name, 500) || !value.name || value.type !== mime || value.size !== bytes || bytes <= 0 || bytes > (asset === "pdf" ? 25_000_000 : 64_000_000) || typeof value.historical !== "boolean" || !string(value.warning, 3000)) throw new Error("The saved file could not be verified or is too large to open here.");
+  if (!object(value) || !packMetadata(value.pack, learner) || value.pack.id !== packId || !string(value.edition, 300) || !string(value.name, 500) || !value.name || value.type !== mime || value.size !== bytes || bytes <= 0 || bytes > (asset === "powerpoint" ? 64_000_000 : 25_000_000) || typeof value.historical !== "boolean" || !string(value.warning, 3000)) throw new Error("The saved file could not be verified or is too large to open here.");
   return value as LibraryMaterial;
 }
 
