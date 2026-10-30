@@ -130,25 +130,51 @@ test('corrected speaker labels remove associated prior coaching from future requ
   assert.doesNotMatch(request.evidence, /learner: Explain/);
 });
 
-test('unassigned and teacher turns request neutral useful prompts without learner assessment or inferred identity', () => {
-  for (const role of ['unknown', 'teacher']) {
+test('automatic role estimation is requested for both room and online audio, while manual teacher turns remain context', () => {
+  for (const audioMode of ['room', 'online']) {
     const queue = new CoachTurnQueue();
-    queue.committed('conversation', context, role); queue.transcribed('conversation', 'We went to the park because it was sunny.', role);
+    queue.committed('automatic', { ...context, audioMode }, 'unknown'); queue.transcribed('automatic', 'Tell me what happened.', 'unknown');
     const event = nativeCoachEvent(queue.next());
-    assert.match(event.response.instructions, /neutral content follow-up/);
-    assert.match(event.response.instructions, /Keep strength and correction empty/);
-    assert.match(event.response.instructions, /Do not guess which person said a sentence/);
-    assert.match(event.response.instructions, /If speech overlaps/);
+    assert.match(event.response.instructions, /Hands-free automatic speaker mode/);
+    assert.match(event.response.instructions, /Never ask Rory to click a label/);
+    assert.match(event.response.instructions, /one item may contain both voices/);
+    assert.match(event.response.instructions, /Textbook role-play/);
+    assert.match(event.response.instructions, /speakerConfidence/);
+    assert.match(event.response.instructions, /never verified identity/);
   }
+  const queue = new CoachTurnQueue();
+  queue.committed('teacher', context, 'teacher'); queue.transcribed('teacher', 'Here is the rule.', 'teacher');
+  const event = nativeCoachEvent(queue.next());
+  assert.match(event.response.instructions, /teacher context, not learner evidence/);
+  assert.doesNotMatch(event.response.instructions, /Hands-free automatic speaker mode/);
 });
 
-test('online mixed audio is explicitly shared conversation, while confirmed single-speaker turns retain their role', () => {
-  for (const role of ['unknown', 'learner', 'teacher']) {
+test('automatic coaching includes bounded earlier audio for voice continuity without promoting model guesses', () => {
+  const queue = new CoachTurnQueue();
+  for (let i = 0; i < 10; i++) {
+    const id = `voice-${i}`;
+    queue.committed(id, context, 'unknown'); queue.transcribed(id, `Example ${i}`, 'unknown');
+    const request = queue.next();
+    queue.completed(identity(request));
+    queue.rememberSpeaker(id, { role: 'learner', confidence: 'high' });
+  }
+  queue.committed('current', context, 'unknown'); queue.transcribed('current', 'A new answer.', 'unknown');
+  const request = queue.next(), event = nativeCoachEvent(request);
+  assert.equal(request.turn.role, 'unknown');
+  assert.deepEqual(Array.from(request.voiceContext, item => item.id), ['voice-0', 'voice-1', 'voice-8', 'voice-9']);
+  assert.ok(request.voiceContext.every(item => item.role === 'unknown'));
+  assert.match(request.evidence, /unconfirmed AI estimate/);
+  assert.equal(event.response.input[0].id, 'current');
+  assert.deepEqual(Array.from(event.response.input.slice(2), item => item.id), ['voice-0', 'voice-1', 'voice-8', 'voice-9']);
+  queue.clear();assert.equal(queue.next(),null);
+});
+
+test('fast mode keeps the audio model and limits output; balanced mode permits fuller guidance', () => {
+  for (const responseSpeed of ['fast', 'balanced']) {
     const queue = new CoachTurnQueue();
-    queue.committed('online', { ...context, audioMode: 'online' }, role);
-    queue.transcribed('online', 'We ate lunch, and then we played a game.', role);
+    queue.committed('speed', { ...context, responseSpeed }, 'unknown'); queue.transcribed('speed', 'One answer.', 'unknown');
     const event = nativeCoachEvent(queue.next());
-    assert.equal(event.response.instructions.includes('one item may contain both voices'), role === 'unknown');
-    if(role === 'unknown')assert.match(event.response.instructions, /Never infer identity from voice/);
+    assert.equal(event.response.max_output_tokens, responseSpeed === 'fast' ? 900 : 1400);
+    assert.equal(event.response.instructions.includes('Fast mode:'), responseSpeed === 'fast');
   }
 });

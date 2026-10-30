@@ -1,6 +1,6 @@
-import type { CoachContext, CoachEntry } from "./live-coach";
+import type { CoachContext, CoachEntry, CoachSpeakerEstimate } from "./live-coach";
 
-export type CoachTurn = { id: string; at: string; role: "learner" | "teacher" | "ai" | "unknown"; text: string; rehearsal?: boolean; sourceTurnId?: string };
+export type CoachTurn = { id: string; at: string; role: "learner" | "teacher" | "ai" | "unknown"; text: string; rehearsal?: boolean; sourceTurnId?: string; speakerEstimate?: CoachSpeakerEstimate };
 export type LessonSnapshot = { context: CoachContext; turns: CoachTurn[]; entries: CoachEntry[] };
 export type ArchivedLesson = LessonSnapshot & {
   id: string; learnerCode: string; startedAt: string; updatedAt: string;
@@ -123,7 +123,7 @@ export function lessonNotes(lesson: ArchivedLesson): string {
   return ["# Private lesson record", `${lesson.context.learner} · ${lesson.startedAt}`, `Activity: ${lesson.context.task}`, `Objective: ${lesson.context.objective}`,
     "Teacher review required. Machine captions may mishear speech. Text cannot establish pronunciation. Prepared rehearsal is excluded.",
     `Teacher note / next lesson: ${lesson.teacherNote || "Not yet added."}`,
-    "## Conversation", ...lesson.turns.filter(turn => !turn.rehearsal).map(turn => `${turn.at} · ${name(turn.role)}\n${turn.text}`),
+    "## Conversation", ...lesson.turns.filter(turn => !turn.rehearsal).map(turn => `${turn.at} · ${turn.role === "unknown" && turn.speakerEstimate?.confidence === "high" && (turn.speakerEstimate.role === "teacher" || turn.speakerEstimate.role === "learner") ? `${turn.speakerEstimate.role === "teacher" ? "Rory" : lesson.context.learner} · AI estimate (unconfirmed)` : name(turn.role)}\n${turn.text}`),
     "## Coaching evidence", ...lesson.entries.filter(entry => !entry.rehearsal).map(entry => `${entry.at} · ${entry.context.slide}\n${Object.entries(entry.feedback).filter(([, value]) => value).map(([key, value]) => `${key}: ${value}`).join("\n")}`),
   ].join("\n\n");
 }

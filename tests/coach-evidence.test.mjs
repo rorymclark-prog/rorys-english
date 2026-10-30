@@ -104,7 +104,7 @@ function liveHarness({delayTyped=false,audioMode='room',speaker='learner'}={}){
       assert.equal(button('Start listening').props.disabled,true,'online capture cannot start before the call tab is connected');
       button('Connect call audio').props.onClick();await settle();
     }
-    find(node=>node.type==='select'&&node.props.value==='unknown').props.onChange({target:{value:speaker}});render();button('Start listening').props.onClick();await settle();
+    if(speaker!==null)find(node=>node.type==='select'&&node.props.value==='unknown').props.onChange({target:{value:speaker}});render();button('Start listening').props.onClick();await settle();
   }
   const event=value=>{dataChannel.onmessage({data:JSON.stringify(value)});render();};
   function responseStarted(responseId,turnId){
@@ -203,8 +203,9 @@ test('teacher and unassigned audio cannot display grammar coaching even when the
   h.find(node=>node.type==='select'&&node.props.value==='teacher').props.onChange({target:{value:'unknown'}});h.render();
   h.caption('unassigned-caption','Yesterday I go home.','unassigned-response');h.done('unassigned-response','Correct the past tense now');
   const unassigned=h.snapshot().entries[0];
-  assert.equal(unassigned.context.learner,'Speaker unclear');assert.match(unassigned.feedback.focus,/Confirm who spoke/);
-  for(const field of ['correction','strength','prompt','next'])assert.equal(unassigned.feedback[field],'');
+  assert.equal(unassigned.context.learner,'Lesson conversation');assert.doesNotMatch(unassigned.feedback.focus,/Confirm who spoke/);
+  for(const field of ['correction','strength'])assert.equal(unassigned.feedback[field],'');
+  assert.ok(unassigned.feedback.prompt);assert.ok(unassigned.feedback.next);
   assert.ok(!h.snapshot().turns.filter(item=>item.role==='ai').some(item=>item.text.includes('Correct the past tense now')));
 });
 
@@ -215,7 +216,7 @@ test('shared online conversation keeps useful prompts on both surfaces without a
   h.caption('mixed-one','I arrived with a chocolate cake. Zoe looked annoyed.','mixed-response');
   h.done('mixed-response','The learner needs a past-tense correction.',{prompt:'Why did Zoe look annoyed?',next:'Invite one detail about what happened before lunch.'});
   const first=h.snapshot().entries[0],ai=h.snapshot().turns.find(item=>item.role==='ai');
-  assert.equal(first.context.learner,'Shared lesson conversation');assert.equal(first.context.audioMode,'online');
+  assert.equal(first.context.learner,'Lesson conversation');assert.equal(first.context.audioMode,'online');
   assert.equal(first.feedback.heard,'I arrived with a chocolate cake. Zoe looked annoyed.');
   assert.equal(first.feedback.prompt,'Why did Zoe look annoyed?');assert.equal(first.feedback.next,'Invite one detail about what happened before lunch.');
   assert.equal(first.feedback.correction,'');assert.equal(first.feedback.strength,'');
@@ -260,4 +261,61 @@ test('independent microphone and call signal meters remain available when AI end
   h.archiveProps().onBusy(false);h.render();h.render();
   assert.equal(meter('My microphone signal').props.value,0);assert.equal(meter('Student call audio signal').props.value,0);
   assert.equal(h.audioRequests.length,1,'meter updates must not acquire additional audio devices');
+});
+
+test('default automatic and fast mode label alternating voices without manual clicks and preserve estimated provenance',async()=>{
+  const h=liveHarness({speaker:null});await h.start();
+  const connection=h.requests.find(request=>request.action==='connect');
+  assert.equal(connection.context.responseSpeed,'fast');
+  assert.ok(h.find(node=>node.type==='select'&&node.props.value==='unknown'));
+  h.caption('rory','What did you do yesterday?','rory-response');
+  h.done('rory-response','Correct the grammar.',{speaker:'teacher',speakerConfidence:'high',prompt:'Where did you go?',next:'Invite a detail about the place.'});
+  let snapshot=h.snapshot();
+  assert.equal(snapshot.turns[0].role,'unknown');assert.equal(snapshot.turns[0].speakerEstimate.role,'teacher');
+  assert.equal(snapshot.entries[0].feedback.correction,'');
+  assert.match(snapshot.entries[0].context.learner,/Rory · AI estimate/);
+  h.caption('student','Yesterday I go home.','student-response');
+  h.done('student-response','Past simple',{speaker:'learner',speakerConfidence:'high'});
+  snapshot=h.snapshot();
+  const student=snapshot.turns.find(turn=>turn.id==='student');
+  assert.equal(student.role,'unknown');assert.equal(student.speakerEstimate.role,'learner');
+  assert.equal(snapshot.entries[0].feedback.correction,'Yesterday I went home.');
+  assert.match(snapshot.entries[0].feedback.uncertainty,/not confirmed learner evidence/);
+  assert.equal(h.requests.filter(request=>request.action==='connect').length,1);
+  const request=h.sent().findLast(item=>item.type==='response.create');
+  assert.equal(request.response.input[2].id,'rory','earlier audio is sent for voice comparison');
+  assert.match(request.response.input[1].content[0].text,/unconfirmed AI estimate/);
+  h.button('Export notes').props.onClick();
+  assert.match(await h.downloads[0].text(),/Demo learner · AI estimate/);
+  const saved=archive.makeArchivedLesson('demo',snapshot);
+  assert.match(archive.lessonNotes(saved),/Rory · AI estimate \(unconfirmed\)/);
+  assert.equal(saved.turns.find(turn=>turn.id==='student').role,'unknown');
+  h.relabel('student','teacher');
+  assert.equal(h.snapshot().turns.find(turn=>turn.id==='student').speakerEstimate,undefined);
+  assert.ok(!h.snapshot().entries.some(entry=>entry.sourceTurnId==='student'));
+});
+
+test('an estimate can be cleared without confirming a speaker and late output cannot restore a corrected role',async()=>{
+  const h=liveHarness({speaker:null});await h.start();
+  h.caption('mixed','Tell me. Yesterday I go home.','mixed-response');
+  h.done('mixed-response','Correct now',{speaker:'mixed',speakerConfidence:'high'});
+  assert.equal(h.snapshot().entries[0].feedback.correction,'');
+  h.relabel('mixed','unknown');
+  assert.equal(h.snapshot().turns[0].speakerEstimate,undefined);assert.equal(h.snapshot().entries.length,0);
+  h.caption('late','That is the past tense.','late-response');h.relabel('late','teacher');
+  h.done('late-response','Wrong teacher attribution',{speaker:'learner',speakerConfidence:'high'});
+  assert.equal(h.snapshot().turns.find(turn=>turn.id==='late').role,'teacher');
+  assert.equal(h.snapshot().turns.find(turn=>turn.id==='late').speakerEstimate,undefined);
+  assert.equal(h.snapshot().entries.length,0);
+});
+
+test('response speed can change during the same listening session without restarting or opening a new microphone',async()=>{
+  const h=liveHarness({speaker:null});await h.start();
+  h.find(node=>node.type==='select'&&node.props.value==='fast').props.onChange({target:{value:'balanced'}});h.render();
+  let update=h.sent().findLast(item=>item.type==='session.update');
+  assert.equal(update.session.audio.input.turn_detection.silence_duration_ms,1100);
+  h.find(node=>node.type==='select'&&node.props.value==='balanced').props.onChange({target:{value:'fast'}});h.render();
+  update=h.sent().findLast(item=>item.type==='session.update');
+  assert.equal(update.session.audio.input.turn_detection.silence_duration_ms,650);
+  assert.equal(h.audioRequests.length,1);assert.equal(h.requests.filter(request=>request.action==='connect').length,1);
 });
