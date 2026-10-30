@@ -1,4 +1,26 @@
 /* A calm workspace, a clear listening console, and a warm next-question card. */
+.lc-companion-panel{margin:0 0 1.1rem}
+.lc-companion-panel h2{font-size:1rem;font-weight:800;line-height:1.45}
+.lc-companion-launcher{display:flex;gap:.5rem 1.2rem;flex-wrap:wrap;align-items:center}
+.lc-companion-launcher>.lc-hint,.lc-companion-launcher>[role=alert]{flex-basis:100%}
+.lc-cloud-library,.lc-saved-lessons{border:1px solid var(--lc-border);background:var(--lc-field);border-radius:14px;padding:1rem;margin:1.1rem 0}
+.lc-cloud-library h3,.lc-saved-lessons h3{font-size:1rem;font-weight:800;line-height:1.5}
+.lc-cloud-library .lc-section-title,.lc-saved-lessons .lc-section-title{flex-wrap:wrap;gap:.5rem}
+.lc-selected-lesson{padding:.9rem;border:1px solid var(--lc-border);border-radius:12px;background:var(--lc-wash);margin:.9rem 0;font-size:.875rem;overflow-wrap:anywhere}
+.lc-selected-lesson summary{font-weight:700;cursor:pointer;margin:.5rem 0}
+.lc-lesson-options{display:grid;gap:.7rem;max-height:30rem;overflow:auto;margin:1rem 0;padding:2px}
+.lc-lesson-option{display:grid;gap:.5rem;padding:.9rem;background:var(--lc-card);border:1px solid var(--lc-border);border-radius:12px;min-width:0}
+.lc-lesson-option.is-selected{border-color:var(--lc-accent);box-shadow:0 0 0 1px var(--lc-accent)}
+.lc-lesson-option strong{display:block;font-size:.875rem;line-height:1.5;overflow-wrap:anywhere}
+.lc-lesson-option small{display:block;font-size:.75rem;letter-spacing:.04em;color:var(--lc-muted);margin-bottom:.3rem}
+.lc-lesson-option p{font-size:.875rem;line-height:1.65;color:var(--lc-muted);margin-top:.3rem}
+.lc-lesson-links{display:flex;gap:.2rem 1rem;flex-wrap:wrap}
+.lc-app-library{margin:1rem 0}
+.lc-app-library>summary{cursor:pointer;font-weight:750;line-height:1.5;font-size:.875rem;padding:.7rem 0}
+.lc-powerpoint-reference{margin-bottom:1rem}
+.lc-powerpoint-reference h2{font-size:1rem;font-weight:800;overflow-wrap:anywhere;margin:.6rem 0}
+.lc-powerpoint-reference .lc-actions{margin:.8rem 0}
+.lc-powerpoint-reference pre,.lc-selected-lesson pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.875rem;line-height:1.8;max-height:24rem;overflow:auto;margin:.8rem 0}
 .live-coach{
   max-width:1600px;margin:0 auto;
   --lc-ink:#213b3b;--lc-muted:#536d6b;--lc-accent:#17665e;
@@ -212,3 +234,8 @@
 .lc-speaker-correction{margin-top:.7rem}
 .lc-speaker-correction>summary{cursor:pointer;min-height:44px;align-content:center;font-size:.75rem;color:var(--lc-muted)}
 .lc-speaker-correction[open]>.lc-speaker-edit{margin-top:.35rem}
+
+.lc-session-start>summary{cursor:pointer;min-height:44px;align-content:center;font-weight:800}
+.lc-session-start[open]>summary{margin-bottom:1rem}
+.lc-session-start h2{font-size:1rem;margin:1rem 0}
+.lc-position h2{font-size:1rem;margin-bottom:.7rem}

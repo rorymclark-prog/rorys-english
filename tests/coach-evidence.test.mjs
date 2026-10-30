@@ -16,6 +16,8 @@ function load(file,dependencies={},globals={}){
 const {correctCoachSpeaker}=load('src/lib/coach-evidence.ts');
 const archive=load('src/lib/coach-archive.ts'),coach=load('src/lib/live-coach.ts');
 const coachTurns=load('src/lib/coach-turns.ts',{'./live-coach':coach});
+const coachReference=load('src/lib/coach-reference.ts');
+const coachPosition=load('src/lib/coach-position.ts');
 const context={learner:'Demo learner',unit:'Practice',task:'Yesterday',objective:'Past forms',source:'',slide:'Slide 1'};
 const feedback={heard:'Yesterday I go home.',strength:'Clear message',focus:'STALE COACHING',correction:'Yesterday I went home.',prompt:'What happened next?',next:'Try again.',uncertainty:''};
 const turn=(id,role,text,extra={})=>({id,role,text,at:'2026-10-22T12:00:00Z',...extra});
@@ -55,6 +57,9 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 // Every request, audio stream and WebRTC event below is local to this test.
 function liveHarness({delayTyped=false,audioMode='room',speaker='learner'}={}){
   const hooks=[],effects=[],downloads=[],requests=[],audioRequests=[],responseRequests=new Map(),intervals=new Map();let cursor=0,ui,dataChannel,releaseTyped,timerSequence=0;
+  const documentListeners=new Map(),windowListeners=new Map(),visibility={hidden:false};
+  const companion={isOpen:false,visibilityRevision:0,visible:false};
+  const activeWhileHidden=()=>companion.isOpen&&companion.visible;
   let audioLevels={microphone:0,call:0};
   const same=(a,b)=>a&&b&&a.length===b.length&&a.every((value,index)=>Object.is(value,b[index]));
   const react={
@@ -76,13 +81,21 @@ function liveHarness({delayTyped=false,audioMode='room',speaker='learner'}={}){
   const component=load('src/components/views/LiveTeachingCoach.tsx',{
     react,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/live-coach':coach,'@/app/teacher/live-coach.css':{},
     '@/components/CoachSlidePresenter':{default:()=>null},'@/components/CoachLessonArchive':{default:Archive},
+    '@/components/CoachLessonPicker':{default:()=>null},
+    '@/components/CoachFolderLibrary':{default:()=>null},
+    '@/lib/coach-position':coachPosition,
+    '@/components/CoachLibraryConnection':{default:()=>null},
+    '@/components/CoachCompanion':{default:()=>null,useCoachCompanion:()=>({...companion,activeWhileHidden,close(){companion.isOpen=false;companion.visible=false;companion.visibilityRevision++;}})},
+    '@/lib/coach-lessons':{coachPdfResources:()=>[]},
+    '@/lib/coach-reference':coachReference,
+    '@/lib/coach-pptx':{readCoachPptxLocally:async()=>{throw Error('No presentation import in this audio fixture');}},
     '@/lib/coach-evidence':{correctCoachSpeaker},
     '@/lib/coach-turns':coachTurns,
     '@/lib/lesson-audio':{LessonAudioInput:class{async acquire(mode){audioRequests.push(mode);return microphone;}async connectCall(){return true;}levels(){return audioLevels;}close(){}disconnectCall(){}},releaseLessonAudio(){}},
   },{
     navigator:{mediaDevices:{getUserMedia:async()=>microphone}},RTCPeerConnection:Peer,
-    window:{RTCPeerConnection:Peer,addEventListener(){},removeEventListener(){}},
-    document:{addEventListener(){},removeEventListener(){},createElement:()=>({click(){}})},
+    window:{RTCPeerConnection:Peer,addEventListener(type,fn){windowListeners.set(type,fn);},removeEventListener(type){windowListeners.delete(type);}},
+    document:{get hidden(){return visibility.hidden;},addEventListener(type,fn){documentListeners.set(type,fn);},removeEventListener(type){documentListeners.delete(type);},createElement:()=>({click(){}})},
     URL:{createObjectURL:blob=>{downloads.push(blob);return 'blob:notes';},revokeObjectURL(){}},
     setInterval(fn,ms){const id=++timerSequence;intervals.set(id,{fn,ms});return id;},clearInterval(id){intervals.delete(id);},setTimeout:()=>1,clearTimeout(){},
     fetch:async(_url,options)=>{
@@ -96,7 +109,7 @@ function liveHarness({delayTyped=false,audioMode='room',speaker='learner'}={}){
   const find=predicate=>walk(predicate,ui),button=text=>find(node=>node.type==='button'&&node.props.children===text);
   const snapshot=()=>find(node=>node.type===Archive).props.snapshot;
   async function settle(){await tick();render();}
-  async function prepare(){render();await settle();find(node=>node.type==='input'&&node.props.type==='checkbox').props.onChange({target:{checked:true}});render();}
+  async function prepare(){render();await settle();find(node=>node.type==='select'&&node.props.value==='').props.onChange({target:{value:'demo'}});render();button('Conversation practice without a document').props.onClick();render();find(node=>node.type==='input'&&node.props.type==='checkbox').props.onChange({target:{checked:true}});render();}
   async function start(){
     await prepare();
     if(audioMode==='online'){
@@ -120,8 +133,37 @@ function liveHarness({delayTyped=false,audioMode='room',speaker='learner'}={}){
   }
   function relabel(id,role){const original=snapshot().turns.find(item=>item.id===id);const article=find(node=>node.type==='article'&&walk(child=>child.type==='p'&&child.props.children===original.text,node));const select=walk(node=>node.type==='select',article);assert.ok(select);select.props.onChange({target:{value:role}});render();}
   const pulse=ms=>{for(const timer of [...intervals.values()])if(timer.ms===ms)timer.fn();render();};
-  return {prepare,start,caption,done,responseStarted,event,relabel,snapshot,button,find,render,settle,downloads,requests,audioRequests,pulse,setAudioLevels:value=>{audioLevels=value;},archiveProps:()=>find(node=>node.type===Archive).props,sent:()=>dataChannel.sent,releaseTyped:()=>releaseTyped()};
+  return {prepare,initialize:async()=>{render();await settle();},start,startPrepared:async()=>{button('Start listening').props.onClick();await settle();},caption,done,responseStarted,event,relabel,snapshot,button,find,render,settle,downloads,requests,audioRequests,pulse,setAudioLevels:value=>{audioLevels=value;},archiveProps:()=>find(node=>node.type===Archive).props,sent:()=>dataChannel.sent,releaseTyped:()=>releaseTyped(),
+    setPageHidden(value){visibility.hidden=value;documentListeners.get('visibilitychange')?.();render();},
+    setCompanionVisibility(open,visible){companion.isOpen=open;companion.visible=visible;companion.visibilityRevision++;render();render();},
+    pagehide(){windowListeners.get('pagehide')?.();render();},
+  };
 }
+
+test('background listening requires a visible private companion and stops when it is hidden or closed',async()=>{
+  const alone=liveHarness();await alone.start();
+  alone.setPageHidden(true);
+  assert.ok(alone.button('Start listening'),'hiding the main page without a companion stops listening');
+  assert.equal(alone.button('End listening'),undefined);
+
+  const h=liveHarness();await h.start();
+  h.setCompanionVisibility(true,true);h.setPageHidden(true);
+  assert.ok(h.button('End listening'),'a visible private companion keeps the existing listening session active');
+  assert.equal(h.audioRequests.length,1,'opening the companion does not start another audio stream');
+  h.setCompanionVisibility(true,false);
+  assert.ok(h.button('Start listening'),'minimizing the companion while the main page is hidden stops listening');
+  assert.equal(h.button('End listening'),undefined);
+});
+
+test('closing the private companion or leaving the teaching page stops hidden listening',async()=>{
+  const h=liveHarness();await h.start();h.setCompanionVisibility(true,true);h.setPageHidden(true);
+  h.setCompanionVisibility(false,false);
+  assert.ok(h.button('Start listening'));
+
+  const leaving=liveHarness();await leaving.start();leaving.setCompanionVisibility(true,true);
+  leaving.pagehide();
+  assert.ok(leaving.button('Start listening'),'page exit still stops listening even if a companion was visible');
+});
 
 test('live captions link both coaching surfaces to their source and correction reaches archive props and exported notes',async()=>{
   const h=liveHarness();await h.start();
@@ -263,6 +305,7 @@ test('independent microphone and call signal meters remain available when AI end
   assert.equal(h.audioRequests.length,1,'meter updates must not acquire additional audio devices');
 });
 
+
 test('default automatic and fast mode label alternating voices without manual clicks and preserve estimated provenance',async()=>{
   const h=liveHarness({speaker:null});await h.start();
   const connection=h.requests.find(request=>request.action==='connect');
@@ -318,4 +361,70 @@ test('response speed can change during the same listening session without restar
   update=h.sent().findLast(item=>item.type==='session.update');
   assert.equal(update.session.audio.input.turn_detection.silence_duration_ms,650);
   assert.equal(h.audioRequests.length,1);assert.equal(h.requests.filter(request=>request.action==='connect').length,1);
+});
+
+
+test('uploaded PDF supplies the whole lesson and automatic reference tracking does not advance the visible slide',async()=>{
+ const h=liveHarness({speaker:null});await h.prepare();
+ const upload=h.find(node=>node.type==='input'&&node.props.accept==='.pptx,.pdf,.txt');
+ upload.props.onChange({target:{files:[{name:'Synthetic-School.pdf',size:1000,type:'application/pdf'}],value:'file'}});await h.settle();
+ assert.equal(h.button('Start listening').props.disabled,true,'indexing must finish before starting AI');
+ const presenter=h.find(node=>typeof node.props.onIndex==='function');assert.ok(presenter);
+ presenter.props.onLoaded(3);h.render();
+ const pages=[{number:1,text:'School lesson title.'},{number:2,text:'Morning routines timetable assembly registration playground.'},{number:3,text:'Volcano eruption molten lava crater science experiment.'}];
+ presenter.props.onIndex(pages);presenter.props.onContext(1,pages[0].text,'data:image/jpeg;base64,YQ==');h.render();
+ await h.startPrepared();
+ const connection=h.requests.find(request=>request.action==='connect');
+ assert.match(connection.context.lessonPosition.index,/PAGE 3: Volcano/);assert.match(connection.context.source,/School lesson title/);
+ h.caption('new-exercise','The volcano eruption sends molten lava from the crater.','where-response');
+ h.done('where-response','Discuss the eruption',{speaker:'learner',speakerConfidence:'high',lessonPage:'3',lessonConfidence:'high'});
+ assert.match(h.snapshot().context.slide,/slide 3/);assert.match(h.snapshot().context.source,/Volcano eruption/);
+ assert.equal(h.find(node=>typeof node.props.onIndex==='function').props.page,1,'AI reference never advances the teacher or student display');
+ h.caption('next-answer','The molten rocks are very hot.','next-response');
+ const request=h.sent().findLast(item=>item.type==='response.create');
+ assert.match(request.response.instructions,/current reference is page 3/);
+ assert.ok(!request.response.input[1].content.some(item=>item.type==='input_image'),'the stale cover image must not accompany a later reference');
+ h.done('next-response','Morning routines',{lessonPage:'2',lessonConfidence:'high'});
+ assert.equal(h.snapshot().context.lessonPosition.page,3,'unsupported page guesses cannot change the reference');
+
+});
+
+test('manual page changes made while feedback is pending cannot be overwritten by an old position estimate',async()=>{
+ const h=liveHarness({speaker:null});await h.prepare();
+ h.find(node=>node.type==='input'&&node.props.accept==='.pptx,.pdf,.txt').props.onChange({target:{files:[{name:'Lesson.pdf',size:100,type:'application/pdf'}],value:''}});await h.settle();
+ const presenter=h.find(node=>typeof node.props.onIndex==='function');
+ presenter.props.onLoaded(3);h.render();presenter.props.onIndex([{number:1,text:'Opening task'},{number:2,text:'School timetable morning routines'},{number:3,text:'Volcano eruption molten lava crater'}]);presenter.props.onContext(1,'Opening task','');h.render();
+ await h.startPrepared();h.caption('pending','Volcano eruption molten lava crater','pending-response');
+ h.find(node=>typeof node.props.onIndex==='function').props.onPage(2);h.render();
+ h.done('pending-response','Later exercise',{lessonPage:'3',lessonConfidence:'high'});
+ assert.equal(h.snapshot().context.lessonPosition.page,2);
+});
+
+
+test('the microphone cannot start before student and lesson selection, including direct handler invocation',async()=>{
+ const h=liveHarness({speaker:null});await h.initialize();
+ assert.equal(h.button('Start listening').props.disabled,true);
+ h.find(node=>node.type==='input'&&node.props.type==='checkbox').props.onChange({target:{checked:true}});h.render();
+ await h.startPrepared();assert.equal(h.requests.some(request=>request.action==='connect'),false);assert.equal(h.audioRequests.length,0);
+ h.find(node=>node.type==='select'&&node.props.value==='').props.onChange({target:{value:'demo'}});h.render();
+ await h.startPrepared();assert.equal(h.requests.some(request=>request.action==='connect'),false);
+ h.button('Conversation practice without a document').props.onClick();h.render();
+ h.find(node=>node.type==='input'&&node.props.type==='checkbox').props.onChange({target:{checked:true}});h.render();
+ await h.startPrepared();assert.equal(h.requests.some(request=>request.action==='connect'),true);
+});
+
+
+test('queued answers can move the AI reference in sequence while manual reference revisions remain protected',async()=>{
+ const h=liveHarness({speaker:null});await h.prepare();
+ h.find(node=>node.type==='input'&&node.props.accept==='.pptx,.pdf,.txt').props.onChange({target:{files:[{name:'Queued.pdf',size:100,type:'application/pdf'}],value:''}});await h.settle();
+ const presenter=h.find(node=>typeof node.props.onIndex==='function');
+ presenter.props.onLoaded(3);h.render();presenter.props.onIndex([{number:1,text:'Opening cover'},{number:2,text:'Timetable assembly registration morning playground'},{number:3,text:'Volcano eruption molten lava crater'}]);presenter.props.onContext(1,'Opening cover','');h.render();
+ await h.startPrepared();
+ h.caption('routine','Timetable assembly registration morning playground','routine-response');
+ h.caption('volcano','Volcano eruption molten lava crater');
+ h.done('routine-response','Routine',{lessonPage:'2',lessonConfidence:'high'});
+ assert.equal(h.snapshot().context.lessonPosition.page,2);
+ h.responseStarted('volcano-response','volcano');h.done('volcano-response','Volcano',{lessonPage:'3',lessonConfidence:'high'});
+ assert.equal(h.snapshot().context.lessonPosition.page,3);
+ assert.equal(h.find(node=>typeof node.props.onIndex==='function').props.page,1);
 });

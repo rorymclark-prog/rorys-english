@@ -1,4 +1,5 @@
-export type CoachContext = { learner: string; unit: string; task: string; objective: string; source: string; slide: string; audioMode?: "room" | "online"; responseSpeed?: "fast" | "balanced" };
+import type { LessonPosition } from "./coach-position";
+export type CoachContext = { learner: string; unit: string; task: string; objective: string; source: string; slide: string; audioMode?: "room" | "online"; responseSpeed?: "fast" | "balanced"; lessonPosition?: LessonPosition };
 export type CoachFeedback = { heard: string; strength: string; focus: string; correction: string; prompt: string; next: string; uncertainty: string };
 export type CoachEntry = { id: string; at: string; context: CoachContext; feedback: CoachFeedback; rehearsal?: boolean; sourceTurnId?: string };
 export type CoachSpeakerEstimate = { role: "learner" | "teacher" | "mixed" | "unknown"; confidence: "high" | "low" };
@@ -21,6 +22,12 @@ export function coachContext(input: unknown): CoachContext {
   if (value.responseSpeed !== undefined) {
     if (value.responseSpeed !== "fast" && value.responseSpeed !== "balanced") throw new Error("Choose fast or balanced coaching.");
     result.responseSpeed = value.responseSpeed;
+  }
+  if (value.lessonPosition !== undefined) {
+    const position = value.lessonPosition as Record<string, unknown> | null;
+    if (!position || typeof position !== "object" || !Number.isSafeInteger(position.page) || !Number.isSafeInteger(position.total) || Number(position.page) < 1 || Number(position.total) > 300 || Number(position.total) < Number(position.page) || (position.mode !== "auto" && position.mode !== "manual") || typeof position.index !== "string" || position.index.length > 40000) throw new Error("The lesson page map is invalid or too large.");
+    if(position.revision!==undefined&&(!Number.isSafeInteger(position.revision)||Number(position.revision)<0||Number(position.revision)>100000))throw new Error("The lesson reference revision is invalid.");
+    result.lessonPosition = {page:Number(position.page),total:Number(position.total),mode:position.mode as LessonPosition["mode"],index:position.index,revision:position.revision===undefined?0:Number(position.revision)};
   }
   return result;
 }
@@ -54,7 +61,7 @@ function coachResponseObject(text: string): Record<string, unknown> {
       const match = pair.exec(source);
       if (!match) throw new Error("Feedback was incomplete. Try the answer again.");
       const key: string = JSON.parse(match[1]);
-      if ((!Object.hasOwn(emptyFeedback, key) && key !== "speaker" && key !== "speakerConfidence") || keys.has(key)) throw new Error("Feedback was incomplete. Try the answer again.");
+      if ((!Object.hasOwn(emptyFeedback, key) && !["speaker", "speakerConfidence", "lessonPage", "lessonConfidence"].includes(key)) || keys.has(key)) throw new Error("Feedback was incomplete. Try the answer again.");
       keys.add(key); cursor = pair.lastIndex;
     }
     if (Object.keys(emptyFeedback).some(key => !keys.has(key))) throw new Error("Feedback was incomplete. Try the answer again.");
@@ -83,6 +90,11 @@ export function parseCoachSpeaker(text: string): CoachSpeakerEstimate {
     role: role === "learner" || role === "teacher" || role === "mixed" ? role : "unknown",
     confidence: value.speakerConfidence === "high" ? "high" : "low",
   };
+}
+
+export function parseCoachPosition(text: string): {page:number;confidence:string} {
+  const value=coachResponseObject(text);
+  return {page:typeof value.lessonPage === "string" && /^\d{1,3}$/.test(value.lessonPage)?Number(value.lessonPage):0,confidence:value.lessonConfidence === "high"?"high":"low"};
 }
 
 export function coachSpeakerLabel(turn: { role: string; speakerEstimate?: CoachSpeakerEstimate }, learner: string): string {

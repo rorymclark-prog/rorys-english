@@ -242,3 +242,14 @@ test('fast and balanced session settings change endpoint timing without downgrad
   }
   for(const responseSpeed of [null,'fastest',100,{}])assert.throws(()=>shared.coachContext({...context,responseSpeed}));
 });
+
+
+test('lesson maps are validated and estimated page fields never become feedback or confirmed completion',()=>{
+ const lessonPosition={page:1,total:3,mode:'auto',index:'PAGE 1: Cover\nPAGE 2: School\nPAGE 3: Volcano'};
+ assert.equal(shared.coachContext({...context,lessonPosition}).lessonPosition.index,lessonPosition.index);
+ for(const changed of [{page:0},{page:4},{total:301},{mode:['auto']},{index:'x'.repeat(40001)}])assert.throws(()=>shared.coachContext({...context,lessonPosition:{...lessonPosition,...changed}}));
+ const text=JSON.stringify({...shared.coachRehearsal[0],lessonPage:'3',lessonConfidence:'high'});
+ assert.equal(shared.parseCoachPosition(text).page,3);assert.equal(shared.parseCoachPosition(text).confidence,'high');
+ assert.equal('lessonPage' in shared.parseCoachFeedback(text),false);
+ assert.equal(shared.parseCoachPosition(JSON.stringify({...shared.coachRehearsal[0],lessonPage:3,lessonConfidence:'high'})).page,0);
+});
