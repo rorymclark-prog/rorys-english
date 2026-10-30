@@ -428,3 +428,14 @@ test('queued answers can move the AI reference in sequence while manual referenc
  assert.equal(h.snapshot().context.lessonPosition.page,3);
  assert.equal(h.find(node=>typeof node.props.onIndex==='function').props.page,1);
 });
+
+
+test('selecting a unit fills the teaching context with no text entry and leaves adjustments optional',async()=>{
+ const h=liveHarness({speaker:null});await h.prepare();
+ const picker=h.find(node=>typeof node.props.onSelect==='function'&&typeof node.props.onOpenPdf==='function');
+ picker.props.onSelect({id:'plan:demo:3',learnerCode:'demo',kind:'plan',title:'Unit 3 · School',unitLabel:'School book',task:'Unit 3 · School',objective:'Talk about routines and compare schools.',source:'School routines, timetables and comparisons.',files:[]});h.render();
+ assert.equal(h.find(node=>node.type==='details'&&String(node.props.className).includes('lc-context-settings')).props.open,undefined);
+ assert.equal(h.find(node=>node.type==='details'&&node.props.className==='lc-listening-settings').props.open,undefined);
+ await h.startPrepared();const request=h.requests.find(request=>request.action==='connect');
+ assert.equal(request.context.task,'Unit 3 · School');assert.equal(request.context.objective,'Talk about routines and compare schools.');assert.match(request.context.source,/School routines/);
+});
