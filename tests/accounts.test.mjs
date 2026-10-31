@@ -79,3 +79,12 @@ test('managed students can read and toggle only their own voice memory; preview 
  const f=setup();assert.equal((await accountService({...request,action:'learningMemoryEnabled',preview:true,enabled:false},f.deps)).ok,false);assert.equal(f.calls.length,0);
  assert.equal((await accountService({action:'learningMemory',code:'learner',session:'teacher-preview',preview:true},f.deps)).ok,true);
 });
+
+
+test('parent preview forwarding preserves its role restriction and refuses non-family reads or writes',async()=>{
+  for(const action of ['submissions','messages','learningMemory','teacherDashboard','teacherAccess','calendarLink','calendarRequest','ai','logout']){
+    const f=setup();assert.equal((await accountService({action,code:'parent-a',session:'teacher-session',parentPreview:true},f.deps)).ok,false);assert.equal(f.calls.length,0);
+  }
+  const f=setup(),body={action:'learningRecords',code:'parent-a',session:'teacher-session',preview:true,parentPreview:true};
+  assert.equal((await accountService(body,f.deps)).ok,true);assert.deepEqual(f.calls,[body]);
+});

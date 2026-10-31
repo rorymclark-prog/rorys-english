@@ -63,3 +63,30 @@ test('preview preserves learner drafts and queued work, while allowing separate 
   f.preview.endStudentPreview();progress.setTaskValue('learner','unit',1,'answer','student revision');
   assert.equal(f.localStorage.getItem('learner_unit_hw1_answer'),'student revision');
 });
+
+test('parent preview is scoped to one family route and uses Rory’s session for allowed reads only',async()=>{
+  const f=fixture(),parent=f.load('src/lib/parent-preview.ts');
+  assert.equal(parent.startParentPreview('parent-a'),false);
+  f.signIn();assert.equal(parent.startParentPreview('parent-a'),true);
+  assert.equal(parent.isParentPreview(),false);
+  f.window.location.pathname='/p/parent-a/';
+  assert.equal(parent.isParentPreview('parent-a'),true);
+  assert.equal(parent.isParentPreview('parent-b'),false);
+  assert.equal(f.preview.isStudentPreview(),false);
+  const api=f.load('src/lib/api.ts');
+  assert.equal((await api.authed('parent-a',{action:'learningRecords'})).ok,true);
+  assert.equal(f.sent[0].session,f.teacher.token);
+  assert.equal(f.sent[0].parentPreview,true);assert.equal(f.sent[0].preview,true);
+  assert.equal(f.sent[0].code,'parent-a');
+  for(const action of ['teacherDashboard','assignments','submissions','messages','learningMemory','submit','documentUpload','calendarRequest','calendarLink','teacherReview','ai','logout']){
+    assert.equal((await api.authed('parent-a',{action})).ok,false);
+    assert.equal((await api.request({action,code:'parent-a',session:f.teacher.token})).ok,false);
+  }
+  assert.equal(f.sent.length,1);
+  f.window.location.pathname='/p/parent-a/calendar/';assert.equal(parent.isParentPreview(),true);
+  f.teacher.expires=Date.now()-1;f.signIn();
+  assert.equal((await api.authed('parent-a',{action:'calendarLessons'})).authRequired,true);
+  assert.equal(parent.isParentPreview(),true);
+  assert.equal(f.sent.length,1);
+  parent.endParentPreview();assert.equal(parent.isParentPreview(),false);
+});

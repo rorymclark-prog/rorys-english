@@ -133,6 +133,16 @@ function doPost(e) {
     if(p.action==='firebaseLogin') return json_(firebaseLogin_(p));
     var s=session_(p.session);
     if(!s) return json_({ok:false,error:'Sign in again to continue.',authRequired:true});
+    // Authenticate as Rory first, then use the existing parent permissions and
+    // response filtering. No parent credential or new session is created.
+    if(p.parentPreview) {
+      var previewStudent=studentByAnyCode_(p.code);
+      var parentReads=['progress','resources','note','documents','document','documentFile','learningRecords','workFeedback','calendarLessons','calendarTestFile'];
+      if(s.role!=='teacher'||!previewStudent||p.code!==previewStudent.parentCode)return json_({ok:false,error:'Access denied'});
+      if(parentReads.indexOf(p.action)<0)return json_({ok:false,error:'Parent preview is read-only.'});
+      p.preview=true;
+      s={code:previewStudent.parentCode,role:'parent'};
+    }
     if(p.action==='logout') {CacheService.getScriptCache().remove('session_'+digest_(p.session));authProps_().deleteProperty(REMEMBERED_TEACHER_PREFIX_+digest_(p.session));authProps_().deleteProperty(REMEMBERED_STUDENT_PREFIX_+digest_(p.session));return json_({ok:true});}
     var teacher=s.role==='teacher', student=studentByAnyCode_(s.code);
     if(!teacher && (!student || p.code!==s.code)) return json_({ok:false,error:'Access denied'});

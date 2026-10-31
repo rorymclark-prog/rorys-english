@@ -9,6 +9,7 @@ export type Dependencies = {
 };
 const studentActions = new Set(["progress", "resources", "assignments", "note", "submissions", "ai", "submit", "event", "documents", "document", "documentFile", "documentUpload", "documentAnalyse", "documentChat", "documentPractice", "workFeedback", "workFeedbackAnalyse", "workPractice", "learningRecords", "learningMemory", "learningMemoryEnabled", "learningReply", "speakingSave", "speakingAnalyse", "speakingAttachAudio", "calendarLessons", "calendarTestFile", "calendarLink", "calendarRevoke", "calendarRequest", "calendarTestSave", "calendarTestCancel", "messages", "notifications", "messageSend", "messagesRead", "notificationsRead"]);
 export async function accountService(body: Record<string, unknown>, deps: Dependencies): Promise<Reply> {
+  if (body.parentPreview && !new Set(["progress","resources","note","documents","document","documentFile","learningRecords","workFeedback","calendarLessons","calendarTestFile"]).has(String(body.action))) return {ok:false,error:"Parent preview is read-only."};
   if (body.preview && !new Set(["progress","resources","assignments","note","submissions","documents","document","documentFile","learningRecords","workFeedback","learningMemory","calendarLessons", "calendarTestFile", "messages", "notifications"]).has(String(body.action))) return {ok:false,error:"Student preview is read-only."};
   // Legacy teacher/student codes stay compatible during the move.
   if (body.action !== "accountLogin" && body.authProvider !== "firebase") {

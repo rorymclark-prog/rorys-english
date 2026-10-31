@@ -1,5 +1,6 @@
 "use client";
 import { isStudentPreview, previewTeacherSession, PREVIEW_READS, PREVIEW_NOTICE } from "./student-preview";
+import { isParentPreview, PARENT_PREVIEW_READS, PARENT_PREVIEW_NOTICE } from "./parent-preview";
 import { readSession, sessionKey as key } from "./session-storage";
 
 const endpoint = process.env.NEXT_PUBLIC_SYNC_URL || "";
@@ -27,6 +28,7 @@ function storeSession(code: string, value: unknown, remember: boolean) {
   else { sessionStorage.setItem(key(code), raw); try { localStorage.removeItem(key(code)); } catch { /* nothing persisted */ } }
 }
 export async function request<T extends ApiResult>(body: Record<string, unknown>): Promise<T> {
+  if (isParentPreview() && !PARENT_PREVIEW_READS.has(String(body.action))) return {ok:false,error:PARENT_PREVIEW_NOTICE} as T;
   if (isStudentPreview() && !PREVIEW_READS.has(String(body.action))) return {ok:false,error:PREVIEW_NOTICE} as T;
   if (!endpoint) return { ok: false, error: "Can’t reach Rory’s server right now." } as T;
   // Google can briefly fail while redirecting to its JSON response. Retrying
@@ -95,11 +97,13 @@ export async function loginWithAccount(code: string): Promise<Session> {
   return result;
 }
 export async function authed<T extends ApiResult>(code: string, body: Record<string, unknown>): Promise<T> {
-  if (isStudentPreview(code)) {
+  if (isStudentPreview(code)||isParentPreview(code)) {
+    const parentPreview=isParentPreview(code);
+    if (parentPreview && !PARENT_PREVIEW_READS.has(String(body.action))) return {ok:false,error:PARENT_PREVIEW_NOTICE} as T;
     if (!PREVIEW_READS.has(String(body.action))) return {ok:false,error:PREVIEW_NOTICE} as T;
     const teacher = previewTeacherSession();
     if (!teacher) return {ok:false,authRequired:true,error:"Your teacher session has ended. Return to the teacher workspace to sign in."} as T;
-    return request<T>({...body,code,session:teacher.token,preview:true});
+    return request<T>({...body,code,session:teacher.token,preview:true,...(parentPreview?{parentPreview:true}:{})});
   }
   if (accountsEnabled && !code.includes("-fam-") && !String(body.action).startsWith("teacher")) {
     const { currentAccount } = await import("./account-auth");
