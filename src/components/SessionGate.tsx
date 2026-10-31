@@ -1,4 +1,5 @@
 "use client";
+import ParentSignIn from "./ParentSignIn";
 import { useEffect, useState } from "react";
 import { isStudentPreview, previewTeacherSession, endStudentPreview } from "@/lib/student-preview";
 import { isParentPreview, endParentPreview } from "@/lib/parent-preview";
@@ -63,6 +64,7 @@ export default function SessionGate({ code, children }: { code: string; children
   </main>;
   if (signedIn) return <>{children}</>;
   if (isStudentPreview(code)||isParentPreview(code)) return <main className="signin mx-auto max-w-md p-8"><h1 className="display text-2xl">Teacher sign-in needed</h1><p className="signin-lede">Your preview session has ended. Sign in to your teacher workspace to continue.</p><button className="signin-submit" onClick={()=>{endStudentPreview();endParentPreview();window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH||""}/teacher/`);}}>Back to teacher sign-in</button></main>;
+  if (code.includes("-fam-")) return <ParentSignIn code={code}/>;
   return <main className="signin mx-auto max-w-md px-6 py-12">
     <div aria-hidden className="signin-glow" />
     <p className="work-eyebrow">RORY’S ENGLISH</p>
