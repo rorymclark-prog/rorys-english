@@ -3,11 +3,23 @@
 // (Vercel/Netlify) and local dev.
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
-// Content-Security-Policy, shipped in Report-Only first. The browser reports
-// what it WOULD have blocked without blocking anything, so a week of quiet
-// console output is the evidence needed before switching the header name to
-// "Content-Security-Policy". Flip it there — the policy itself does not change.
+// Content-Security-Policy, enforced. It ran Report-Only from 24 Sep to 31 Oct;
+// a walk through the teacher, learner and parent pages found one real need it
+// did not cover (blob: frames for PDF previews), now added. Anything it blocks
+// from here on is reported to /api/csp-report and shows in the Vercel logs.
 //
+// Production talks to Apps Script through this app's own /api route. A local
+// .env that points straight at script.google.com (which redirects to
+// script.googleusercontent.com) is allowed too, so local builds keep working.
+const syncOrigins = (() => {
+  try {
+    const origin = new URL(process.env.NEXT_PUBLIC_SYNC_URL || "").origin;
+    return origin === "https://script.google.com" ? [origin, "https://script.googleusercontent.com"] : [origin];
+  } catch { return []; }
+})();
+// `next dev` needs eval for fast refresh, so development only reports.
+const enforceCsp = process.env.NODE_ENV === "production";
+
 // 'unsafe-inline' for scripts is not a shortcut: Next's own bootstrap and the
 // pre-paint theme script are both inline, and a nonce cannot be minted for a
 // statically pre-rendered page.
@@ -18,17 +30,18 @@ const csp = [
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",          // recorded homework audio
   "font-src 'self'",                 // next/font self-hosts; nothing external
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com",
-  "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com", // Google sign-in
+  ["connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com", ...syncOrigins].join(" "),
+  "frame-src 'self' blob: https://*.firebaseapp.com https://accounts.google.com", // PDF previews, Google sign-in
   "worker-src 'self'",               // the offline service worker
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",          // the app is never embedded anywhere
+  `report-uri ${basePath}/api/csp-report/`,  // trailingSlash: a 308 would drop the report
 ].join("; ");
 
 const securityHeaders = [
-  { key: "Content-Security-Policy-Report-Only", value: csp },
+  { key: enforceCsp ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only", value: csp },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
