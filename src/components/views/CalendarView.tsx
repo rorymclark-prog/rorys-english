@@ -3,6 +3,7 @@ import StatusRow from "@/components/StatusRow";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {fetchCalendar,calendarAction} from "@/lib/calendar-client";
 import {lessonDate,lessonTime,viennaDate,type CalendarData,type Lesson,type LessonRequest} from "@/lib/lesson-calendar";
+import {isParentPreview} from "@/lib/parent-preview";
 import {isStudentPreview,startStudentPreview} from "@/lib/student-preview";
 import Link from "next/link";
 import {getYearPlan} from "@/lib/year-plans";
@@ -18,7 +19,7 @@ export default function CalendarView({code,name,teacher=false,parent=false,stude
   const [filter,setFilter]=useState(""),[month,setMonth]=useState(""),[day,setDay]=useState(""),[showPast,setShowPast]=useState(false);
   const [draft,setDraft]=useState<LessonDraft|null>(null),[requestLesson,setRequestLesson]=useState<Lesson|null>(null),[cancelLesson,setCancelLesson]=useState<Lesson|null>(null),[showBreak,setShowBreak]=useState(false);
   const [link,setLink]=useState(""),[linkScope,setLinkScope]=useState(""),[copyStatus,setCopyStatus]=useState("");
-  const preview=isStudentPreview(code),alive=useRef(true);
+  const preview=isStudentPreview(code)||isParentPreview(code),alive=useRef(true);
   const refresh=useCallback(async()=>{try{const result=await fetchCalendar(code,teacher);if(!alive.current)return;if(result.ok){setData({ok:true,lessons:result.lessons||[],requests:result.requests||[],breaks:result.breaks||[],tests:result.tests||[]});setError("");}else setError(result.error||"Could not load the lesson calendar.");setLoaded(true);}catch{if(alive.current){setError("Could not load the lesson calendar. Reconnect and try again.");setLoaded(true);}}},[code,teacher]);
   useEffect(()=>{alive.current=true;setMonth(viennaDate().slice(0,7));void refresh();const focused=()=>void refresh();window.addEventListener("focus",focused);return()=>{alive.current=false;window.removeEventListener("focus",focused);};},[refresh]);
   // A link belongs to the exact selected scope; switching students must never

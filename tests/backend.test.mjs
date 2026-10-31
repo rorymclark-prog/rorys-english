@@ -404,3 +404,31 @@ test('test scopes and photos respect student, parent and read-only-preview bound
  for(const [code,session,preview] of [['parent-a',parent,false],['student-a',teacher,true]]){assert.equal(f.post({action:'calendarLessons',code,session,preview}).tests.length,1);assert.equal(f.post({action:'calendarTestFile',code,session,preview,id:p.id,index:0,expectedSequence:0}).file.data,scopePhoto.data);}
  assert.equal(f.post({action:'calendarTestFile',code:'student-a',id:p.id,index:0,expectedSequence:0}).authRequired,true);
 });
+
+test('parent preview requires teacher authentication and applies existing family readers',()=>{
+  const f=fixture(),teacher=f.teacher(),student=f.student(),parent=f.ctx.issueSession_('parent-a','parent').token;
+  for(const session of [undefined,'invalid',student,parent])assert.equal(f.post({action:'learningRecords',code:'parent-a',session,parentPreview:true}).ok,false);
+  for(const code of ['student-a','unknown'])assert.equal(f.post({action:'learningRecords',code,session:teacher,parentPreview:true}).ok,false);
+  for(const action of ['logout','submit','teacherReview','teacherAccess','teacherDashboard','learningMemory','assignments','messages','calendarRequest','calendarLink','documentUpload','ai'])assert.equal(f.post({action,code:'parent-a',session:teacher,parentPreview:true}).ok,false);
+  assert.equal(f.ctx.session_(teacher).role,'teacher','preview must not replace or revoke Rory’s session');
+  f.ctx.learningService_=(p,s)=>({ok:true,code:p.code,role:s.role,sessionCode:s.code,preview:p.preview});
+  const result=f.post({action:'learningRecords',code:'parent-a',session:teacher,parentPreview:true});
+  assert.equal(result.ok,true);assert.equal(result.role,'parent');assert.equal(result.sessionCode,'parent-a');assert.equal(result.preview,true);
+  assert.equal(f.post({action:'calendarLessons',code:'parent-a',session:teacher,parentPreview:true}).ok,true);
+});
+
+test('parent preview matches actual parent learning data and excludes private and held reviews',()=>{
+  const f=fixture();vm.runInContext(fs.readFileSync('apps-script/progress-sync/Learning.gs','utf8'),f.ctx);
+  f.ctx.reviewHeld_=v=>v==='held';
+  const row=(id,visibility,body,hold='')=>[id,'2026-10-01','2026-10-01','lesson',id,visibility,JSON.stringify(body),'Rory',hold];
+  f.ctx.learningRows_=(_code,replies)=>replies?[]:[row('private','teacher',{tutorPrivate:{notes:'private lesson notes'}}),row('shared','shared',{summary:'A shared recap',tutorPrivate:{notes:'hidden'},aiFeedbackModel:'private provider'}),row('held','shared',{summary:'Not released'},'held')];
+  const before=JSON.stringify([...f.props]);
+  const teacher=f.teacher(),parent=f.ctx.issueSession_('parent-a','parent').token;
+  const actual=f.post({action:'learningRecords',code:'parent-a',session:parent});
+  const preview=f.post({action:'learningRecords',code:'parent-a',session:teacher,parentPreview:true});
+  assert.deepEqual(JSON.parse(JSON.stringify(preview)),JSON.parse(JSON.stringify(actual)));
+  assert.deepEqual(Array.from(preview.records,r=>r.id),['shared']);
+  assert.equal(preview.records[0].body.tutorPrivate,undefined);
+  assert.equal(preview.records[0].body.aiFeedbackModel,undefined);
+  assert.equal(JSON.stringify([...f.props]),before,'preview must not write records or settings');
+});
