@@ -90,3 +90,8 @@ test('parent preview is scoped to one family route and uses Rory’s session for
   assert.equal(f.sent.length,1);
   parent.endParentPreview();assert.equal(parent.isParentPreview(),false);
 });
+
+test('parent course totals use only the parent read allowlist, without widening student preview',async()=>{
+ const f=fixture();f.signIn();const parent=f.load('src/lib/parent-preview.ts');parent.startParentPreview('parent-a');f.window.location.pathname='/p/parent-a/';const api=f.load('src/lib/api.ts');assert.equal((await api.authed('parent-a',{action:'parentPractice'})).ok,true);assert.equal(f.sent[0].parentPreview,true);assert.equal(f.sent[0].preview,true);
+ f.window.location.pathname='/s/learner/';f.preview.startStudentPreview('learner');assert.equal((await api.authed('learner',{action:'parentPractice'})).ok,false);assert.equal(f.sent.length,1);
+});

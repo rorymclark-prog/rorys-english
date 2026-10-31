@@ -432,3 +432,11 @@ test('parent preview matches actual parent learning data and excludes private an
   assert.equal(preview.records[0].body.aiFeedbackModel,undefined);
   assert.equal(JSON.stringify([...f.props]),before,'preview must not write records or settings');
 });
+
+test('parent practice read is learner-scoped and whitelists ring inputs without feedback or teacher fields',()=>{
+ const f=fixture(),parent=f.ctx.issueSession_('parent-a','parent').token,teacher=f.teacher();
+ f.ctx.reviewHeld_=()=>true;
+ f.ctx.submissions_=p=>{assert.equal(p.code,'student-a');return {ok:true,submissions:[{id:'work',unit:'u',task:'hw:1',submitted:'2026-10-20',title:'Writing',answers:{answer:'Original text'},feedback:'PRIVATE HELD COMMENT',prompts:{answer:'TASK'},processingToken:'PRIVATE TOKEN',reviewed:'not public'}]};};
+ const real=f.post({action:'parentPractice',code:'parent-a',session:parent}),preview=f.post({action:'parentPractice',code:'parent-a',session:teacher,parentPreview:true});assert.equal(real.ok,true);assert.equal(JSON.stringify(real),JSON.stringify(preview));assert.equal(real.submissions[0].answers.answer,'Original text');assert.doesNotMatch(JSON.stringify(real),/PRIVATE|prompts|reviewed|feedback/);
+ for(const p of [{code:'other',session:parent},{code:'student-a',session:f.student()},{code:'parent-a',session:teacher},{code:'parent-a'}])assert.equal(f.post({action:'parentPractice',...p}).ok,false);
+});

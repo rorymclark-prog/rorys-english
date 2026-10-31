@@ -33,7 +33,7 @@ export async function request<T extends ApiResult>(body: Record<string, unknown>
   if (!endpoint) return { ok: false, error: "Can’t reach Rory’s server right now." } as T;
   // Google can briefly fail while redirecting to its JSON response. Retrying
   // sign-in and reads is safe; writes and AI calls retain their explicit flow.
-  const retryable = new Set(["login", "accountLogin", "progress", "resources", "assignments", "note", "submissions", "teacherDashboard", "documents", "document", "documentFile", "learningRecords", "calendarLessons", "teacherCalendarLessons", "messages", "notifications", "teacherNotifications"]);
+  const retryable = new Set(["login", "accountLogin", "progress", "parentPractice", "resources", "assignments", "note", "submissions", "teacherDashboard", "documents", "document", "documentFile", "learningRecords", "calendarLessons", "teacherCalendarLessons", "messages", "notifications", "teacherNotifications"]);
   const attempts = retryable.has(String(body.action)) ? 2 : 1;
   // Did the service reply at all, even to refuse? Then this is not an outage.
   let answered = false;
@@ -100,7 +100,7 @@ export async function authed<T extends ApiResult>(code: string, body: Record<str
   if (isStudentPreview(code)||isParentPreview(code)) {
     const parentPreview=isParentPreview(code);
     if (parentPreview && !PARENT_PREVIEW_READS.has(String(body.action))) return {ok:false,error:PARENT_PREVIEW_NOTICE} as T;
-    if (!PREVIEW_READS.has(String(body.action))) return {ok:false,error:PREVIEW_NOTICE} as T;
+    if (!parentPreview && !PREVIEW_READS.has(String(body.action))) return {ok:false,error:PREVIEW_NOTICE} as T;
     const teacher = previewTeacherSession();
     if (!teacher) return {ok:false,authRequired:true,error:"Your teacher session has ended. Return to the teacher workspace to sign in."} as T;
     return request<T>({...body,code,session:teacher.token,preview:true,...(parentPreview?{parentPreview:true}:{})});
