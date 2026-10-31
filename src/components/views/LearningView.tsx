@@ -41,7 +41,7 @@ const card='rounded-card bg-surface p-5 shadow-card dark:bg-navy-raised dark:sha
 const button='rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40';
 const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Vienna'});
 
-const filterLabels:Partial<Record<FeedbackFilter,string>>={all:'All feedback',recorded:'Recorded lessons',chat:'Conversations',homework:'Homework',test:'Tests',rory:'Rory’s feedback'};
+const filterLabels:Partial<Record<FeedbackFilter,string>>={all:'All feedback',recorded:'Recorded lessons',chat:'Conversations',homework:'Homework',test:'Tests',rory:'Feedback'};
 export function chronologicalFeedback(records:LearningRecord[],filter:FeedbackFilter,linkedRecordId=''){
   return records.filter(record=>matchesFeedbackFilter(record,filter)||record.id===linkedRecordId)
     .slice().sort((a,b)=>b.date.localeCompare(a.date)||b.created.localeCompare(a.created)||a.id.localeCompare(b.id));
@@ -84,7 +84,7 @@ export default function LearningView({code,name,mode,initialFilter='all',showHea
   useReviewRefresh(()=>void refresh(),[...records.map(r=>r.feedbackAvailableAt),...replies.map(r=>r.feedbackAvailableAt)]);
   return <div className="learning-record space-y-5 py-4 text-navy dark:text-cream">
     {showHeader&&<header className={card}><p className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-amber">FEEDBACK & PRACTICE</p><h2 className="display mt-1 text-2xl">{mode==='teacher'?`${name}'s reviews`:mode==='parent'?`${name}'s learning`:'Feedback and next steps'}</h2><p className="mt-2 text-sm text-navy-soft dark:text-navy-mist">Writing, speaking, lessons and school tests. Open an entry to see what worked and what to try next.</p></header>}
-    <nav className="learning-filters refined-feedback-filters" aria-label="Filter learning records">{(['all','recorded','chat','homework','test','rory'] as const).map(key=><button key={key} type="button" aria-pressed={filter===key} onClick={()=>setFilter(key)}>{filterLabels[key]}</button>)}</nav>
+    <nav className="learning-filters refined-feedback-filters" aria-label="Filter learning records">{(['all','recorded','chat','homework','test'] as const).map(key=><button key={key} type="button" aria-pressed={filter===key} onClick={()=>setFilter(key)}>{filterLabels[key]}</button>)}</nav>
     {mode==='teacher'&&<TeacherReviewComposer code={code} disabled={disabled} onSaved={refresh}/>}
     {error&&<StatusRow kind="error" onRetry={()=>void refresh()}>{error}</StatusRow>}{message&&<p role="status" className="rounded-xl bg-green-50 p-3 text-sm text-green-800">{message}</p>}
     {!loading&&visibleRecords.length>0&&<section className="refined-feedback-overview" aria-label="Feedback overview"><div><p className="refined-feedback-kicker">{filterLabels[filter]||'Feedback'}</p><h3>{overviewRecord?'One useful next step':'Your saved feedback'}</h3><p className="refined-feedback-meta">{visibleRecords.length} saved {visibleRecords.length===1?'entry':'entries'} · latest {readableDate(visibleRecords[0].date)}</p></div>{overviewRecord?<div className="refined-feedback-next"><p><FeedbackText text={feedbackNextStep(overviewRecord)}/></p><a href={`#review-${overviewRecord.id}`} onClick={()=>setExpanded(current=>({...current,[overviewRecord.id]:true}))}>Open {assessmentDisplayLabel(overviewRecord.title)} <span aria-hidden="true">↗</span></a></div>:<p className="refined-feedback-meta">Open an entry to read its original work, feedback and saved practice.</p>}</section>}

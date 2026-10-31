@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAllParentCodes, getStudentByParentCode } from "@/lib/content";
-import BackButton from "@/components/BackButton";
+import ParentLanguageProvider from "@/components/ParentLanguage";
+import "../parent.css";
 import ThemeInit from "@/components/ThemeInit";
 import ParentPreviewBanner from "@/components/ParentPreviewBanner";
 import SessionGate from "@/components/SessionGate";
@@ -39,7 +40,7 @@ export default async function ParentLayout({
   return (
     <div className="mx-auto min-h-dvh max-w-md md:max-w-2xl">
       <ThemeInit />
-      <SessionGate code={code}><ParentPreviewBanner code={code} name={student.displayName}/><div className="px-5 pt-4"><BackButton home={`/p/${code}/`}/></div>{children}</SessionGate>
+      <ParentLanguageProvider><SessionGate code={code}><ParentPreviewBanner code={code} name={student.displayName}/>{children}</SessionGate></ParentLanguageProvider>
     </div>
   );
 }
