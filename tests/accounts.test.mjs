@@ -88,3 +88,8 @@ test('parent preview forwarding preserves its role restriction and refuses non-f
   const f=setup(),body={action:'learningRecords',code:'parent-a',session:'teacher-session',preview:true,parentPreview:true};
   assert.equal((await accountService(body,f.deps)).ok,true);assert.deepEqual(f.calls,[body]);
 });
+
+test('parent course practice reader is forwarded in parent preview but denied in student preview',async()=>{
+ const f=setup(),body={action:'parentPractice',code:'parent-a',session:'teacher-session',preview:true,parentPreview:true};await accountService(body,f.deps);assert.equal(f.calls.length,1);assert.equal(f.calls[0].parentPreview,true);
+ const student=setup();assert.equal((await accountService({...body,parentPreview:false},student.deps)).ok,false);assert.equal(student.calls.length,0);
+});

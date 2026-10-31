@@ -153,3 +153,8 @@ test('standalone originals count as completed writing without borrowing a textbo
 test('invalid or impossible retained performance dates cannot invent weekly credit',()=>{
  for(const performedOn of ['2026-02-30','2026-13-01','2026-05-11','not-a-date']){const s=source();attribute(s,[],[{id:'retained:original',unit:'unit10',availableBy:'2026-05-10',performedOn,title:'Original writing',sourceRef:'verified:original',note:'Keep uncertainty.'}]);const p=progress(s,'unit','unit10');assert.equal(p.writing,1);assert.equal(p.selected[0].availableBy,true);assert.equal(p.selected[0].week,'');}
 });
+
+test('family and student course codes give identical totals from the same learner evidence',()=>{
+ const s=source();s.records.push(chat());s.submissions=[{id:'writing',unit,task:'hw:1',title:'Writing',submitted:'2026-10-20',answers:{text:'My original writing attempt.'}}];
+ const scope={kind:'course',id:'2026–27'},student=r.ringProgress(s,code,scope,today),parent=r.ringProgress(s,'ferdi-fam-3p9k',scope,today);assert.equal(JSON.stringify(parent),JSON.stringify(student));assert.equal(catalog.practiceCourse('valentin-fam-8w2d').title,catalog.practiceCourse('valentin-q9m2').title);
+});

@@ -137,7 +137,7 @@ function doPost(e) {
     // response filtering. No parent credential or new session is created.
     if(p.parentPreview) {
       var previewStudent=studentByAnyCode_(p.code);
-      var parentReads=['progress','resources','note','documents','document','documentFile','learningRecords','workFeedback','calendarLessons','calendarTestFile'];
+      var parentReads=['progress','parentPractice','resources','note','documents','document','documentFile','learningRecords','workFeedback','calendarLessons','calendarTestFile'];
       if(s.role!=='teacher'||!previewStudent||p.code!==previewStudent.parentCode)return json_({ok:false,error:'Access denied'});
       if(parentReads.indexOf(p.action)<0)return json_({ok:false,error:'Parent preview is read-only.'});
       p.preview=true;
@@ -146,8 +146,8 @@ function doPost(e) {
     if(p.action==='logout') {CacheService.getScriptCache().remove('session_'+digest_(p.session));authProps_().deleteProperty(REMEMBERED_TEACHER_PREFIX_+digest_(p.session));authProps_().deleteProperty(REMEMBERED_STUDENT_PREFIX_+digest_(p.session));return json_({ok:true});}
     var teacher=s.role==='teacher', student=studentByAnyCode_(s.code);
     if(!teacher && (!student || p.code!==s.code)) return json_({ok:false,error:'Access denied'});
-    var reads=['progress','resources','assignments','note','submissions','documents','document','documentFile','learningRecords','learningMemory','workFeedback','calendarLessons','calendarTestFile','messages','notifications'];
-    var permitted=s.role==='parent'?['progress','resources','note','documents','document','documentFile','learningRecords','workFeedback','calendarLessons','calendarTestFile','calendarLink','calendarRevoke','calendarRequest']:reads.concat(['learningMemoryEnabled','ai','submit','event','documentUpload','documentAnalyse','documentChat','documentPractice','workFeedbackAnalyse','workPractice','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio','calendarTestSave','calendarTestCancel','messageSend','messagesRead','notificationsRead','calendarLink','calendarRevoke','calendarRequest']);
+    var reads=['progress','parentPractice','resources','assignments','note','submissions','documents','document','documentFile','learningRecords','learningMemory','workFeedback','calendarLessons','calendarTestFile','messages','notifications'];
+    var permitted=s.role==='parent'?['progress','parentPractice','resources','note','documents','document','documentFile','learningRecords','workFeedback','calendarLessons','calendarTestFile','calendarLink','calendarRevoke','calendarRequest']:reads.concat(['learningMemoryEnabled','ai','submit','event','documentUpload','documentAnalyse','documentChat','documentPractice','workFeedbackAnalyse','workPractice','learningReply','speakingSave','speakingAnalyse','speakingAttachAudio','calendarTestSave','calendarTestCancel','messageSend','messagesRead','notificationsRead','calendarLink','calendarRevoke','calendarRequest']);
     if(!teacher && permitted.indexOf(p.action)<0) return json_({ok:false,error:'Access denied'});
     if(p.preview && reads.indexOf(p.action)<0)return json_({ok:false,error:'Student preview is read-only.'});
     if(['workFeedback','workFeedbackAnalyse','workPractice','teacherWorkCheck','teacherFeedbackAudit'].indexOf(p.action)>=0)return json_(workFeedbackService_(p,s));
@@ -161,6 +161,12 @@ function doPost(e) {
     p.teacherSecret=teacher?authProps_().getProperty(TEACHER_PASSWORD_PROP):'';
     if(p.action==='teacherAccess') return json_(setAccess_(p));
     if(p.action==='teacherResources') return json_(publishResources_(p));
+    if(p.action==='parentPractice') {
+      var familyStudent=studentByAnyCode_(p.code);
+      if(!familyStudent||s.role!=='parent'||s.code!==familyStudent.parentCode)return json_({ok:false,error:'Access denied'});
+      var familyWork=submissions_({code:familyStudent.code,preview:true},s);
+      return json_({ok:true,submissions:familyWork.submissions.map(function(work){return {id:work.id,task:work.task,unit:work.unit,submitted:work.submitted,title:work.title,answers:work.answers};})});
+    }
     if(p.action==='submissions') return json_(submissions_(p,s));
     if(p.action==='submit') return json_(submit_(p));
     if(p.action==='teacherReview') return json_(review_(p));

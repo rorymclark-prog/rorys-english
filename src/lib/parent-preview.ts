@@ -1,7 +1,7 @@
 // A teacher can inspect the real family routes without signing in as a parent.
 import { previewTeacherSession } from "./student-preview";
 export const PARENT_PREVIEW_KEY = "re_teacher_parent_preview_v1";
-export const PARENT_PREVIEW_READS = new Set(["progress", "resources", "note", "documents", "document", "documentFile", "learningRecords", "workFeedback", "calendarLessons", "calendarTestFile"]);
+export const PARENT_PREVIEW_READS = new Set(["progress", "parentPractice", "resources", "note", "documents", "document", "documentFile", "learningRecords", "workFeedback", "calendarLessons", "calendarTestFile"]);
 export const PARENT_PREVIEW_NOTICE = "Parent preview is read-only. Return to your teacher workspace to make changes.";
 export function isParentPreview(code?: string): boolean {
   if (typeof window === "undefined") return false;
