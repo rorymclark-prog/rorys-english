@@ -7,11 +7,13 @@ import React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import {renderToStaticMarkup} from 'react-dom/server';
 
+const pureModules=Object.fromEntries(['practice-history','writing-labels','parent-language'].map(name=>{const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/'+name+'.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Intl,Date});return ['@/lib/'+name,exports];}));
+
 function componentHarness(file,mocks,props){
  const states=[],refs=[],deps=[],effects=[],listeners=new Map();let cursor=0,refCursor=0,effectCursor=0;
  const react={...React,useState(initial){const index=cursor++;if(!(index in states))states[index]=typeof initial==='function'?initial():initial;return [states[index],next=>{states[index]=typeof next==='function'?next(states[index]):next;}];},useRef(initial){return refs[refCursor++]??(refs[refCursor-1]={current:initial});},useEffect(fn,next){const index=effectCursor++,old=deps[index];if(!old||next.some((value,i)=>value!==old[i])){deps[index]=next;effects.push(fn);}}};
  const exports={},window={addEventListener:(event,fn)=>listeners.set(event,fn),removeEventListener:event=>listeners.delete(event)};
- vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>name==='react'?react:name==='react/jsx-runtime'?jsxRuntime:mocks[name]||(()=>{throw Error(name);})(),window,Intl,Date,Error,encodeURIComponent});
+ vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>name==='react'?react:name==='react/jsx-runtime'?jsxRuntime:mocks[name]||pureModules[name]||(()=>{throw Error(name);})(),window,Intl,Date,Error,encodeURIComponent});
  const cleanups=[];
  function render(){cursor=refCursor=effectCursor=0;const tree=exports.default(props);while(effects.length){const cleanup=effects.shift()();if(cleanup)cleanups.push(cleanup);}return tree;}
  return {render,html:()=>renderToStaticMarkup(render()),event:name=>listeners.get(name)?.(),unmount:()=>cleanups.forEach(fn=>fn()),props};
