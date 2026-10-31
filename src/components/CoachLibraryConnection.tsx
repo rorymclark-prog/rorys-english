@@ -7,13 +7,14 @@ import { CoachLibraryClient, COACH_LIBRARY_ORIGIN, libraryReference, readLibrary
 export type CoachCloudLesson = { learnerCode: string; packId: string; title: string; unitLabel: string; task: string; objective: string; reference: string; guide: string; teacherNotes: string; notesHistorical: boolean; edition: string };
 export type CoachCloudMaterialMeta = { learnerCode: string; packId: string; title: string; focus: string; historical: boolean; warning: string; edition: string; guide?: string; teacherNotes?: string; notesHistorical?: boolean };
 
-export default function CoachLibraryConnection({ code, name, studentId, blocked = false, selectedId = "", onSelect, onOpenPdf, onOpenPowerPoint, onBusyChange, materials = false }: {
+export default function CoachLibraryConnection({ code, name, studentId, blocked = false, selectedId = "", onSelect, onOpenPdf, onOpenPowerPoint, onBusyChange, materials = false, autoOpenPowerPoint = false }: {
   code: string;
   name: string;
   studentId?: string;
   blocked?: boolean;
   selectedId?: string;
   materials?: boolean;
+  autoOpenPowerPoint?: boolean;
   onBusyChange?: (busy: boolean) => void;
   onSelect: (selection: CoachCloudLesson) => void;
   onOpenPdf: (file: File, meta: CoachCloudMaterialMeta) => void | Promise<void>;
@@ -62,7 +63,17 @@ export default function CoachLibraryConnection({ code, name, studentId, blocked 
       if (scope.current !== owner || revision.current !== current) return;
       if (asset === "context") {
         const context = readLibraryContext(data, learner, pack.id);
+        let powerpoint: { file: File; historical: boolean; warning: string } | undefined;
+        if (autoOpenPowerPoint) {
+          setBusy("Opening the lesson PowerPoint…");
+          const value = await connection.request({ action: "lesson", learner, packId: pack.id, asset: "powerpoint" });
+          const material = readLibraryMaterial(value, learner, pack.id, "powerpoint");
+          if (material.edition !== context.edition) throw new Error("The lesson edition changed while opening. Refresh the library and choose it again.");
+          powerpoint = { file: new File([material.data], material.name, { type: material.type }), historical: material.historical, warning: material.warning };
+        }
+        if (scope.current !== owner || revision.current !== current) return;
         onSelect({ learnerCode: owner, packId: pack.id, title: context.pack.title, unitLabel: `${learner} · ${context.edition}`, task: context.pack.title.slice(0, 500), objective: context.pack.focus.slice(0, 700), reference: libraryReference(context), guide: context.guide, teacherNotes: context.teacherNotes, notesHistorical: context.notesHistorical, edition: context.edition });
+        if (powerpoint) await onOpenPowerPoint(powerpoint.file, { learnerCode: owner, packId: pack.id, title: context.pack.title, focus: context.pack.focus, historical: powerpoint.historical, warning: powerpoint.warning, edition: context.edition, guide: context.guide, teacherNotes: context.teacherNotes, notesHistorical: context.notesHistorical });
         setSelected({ code: owner, packId: pack.id, title: pack.title, historical: context.notesHistorical });
       } else {
         const material = readLibraryMaterial(data, learner, pack.id, asset);
@@ -79,13 +90,13 @@ export default function CoachLibraryConnection({ code, name, studentId, blocked 
   const packs = activeCatalogue?.packs.filter(pack => matchesCoachLesson(query, pack.title, pack.focus, pack.format)) || [];
   return <section className="lc-cloud-library" aria-label={`${name}’s complete lesson library`}>
     <div className="lc-section-title"><h3>{name}’s complete lesson library</h3><span className="lc-badge">SAVED LESSON PACKS</span></div>
-    <p className="lc-hint">{materials ? "Choose a prepared lesson to open its current notes, slide preview or editable PowerPoint here." : "Connect your private library to select a prepared lesson and use its delivery guide as AI reference."}</p>
+    <p className="lc-hint">{materials ? "Choose a prepared lesson to open its current notes, slide preview or editable PowerPoint here." : autoOpenPowerPoint ? "Choose a prepared lesson to load its PowerPoint and matching teacher notes together." : "Connect your private library to select a prepared lesson and use its delivery guide as AI reference."}</p>
     <div className="lc-actions"><button type="button" className="teacher-quiet-button" disabled={blocked || !!busy || !learner} onClick={() => void connect()}>{connected ? "Refresh lesson library" : "Connect private lesson library ↗"}</button><a className="lc-link" href={COACH_LIBRARY_ORIGIN} target="_blank" rel="noopener noreferrer">Open lesson library ↗</a></div>
     {busy && <p className="lc-hint" role="status">{busy}{busy.startsWith("Connecting") ? " Sign in in the library window if asked, then keep it open until the lessons appear." : ""}</p>}
     {error && <p className="lc-error" role="alert">{error}</p>}
     {!learner && <p className="lc-hint">The complete library is currently available for Ferdi and Valentin.</p>}
     {activeSelected && <div className="lc-selected-lesson" role="status"><strong>Saved reference: {activeSelected.title}</strong><p className="lc-hint">{activeSelected.historical ? "The current delivery guide is used for guidance. Older teacher notes and supporting PDFs may differ from the revised lesson." : "Saved preparation is available as reference. Check the current activity against the original material."}</p></div>}
-    {activeCatalogue && <><label>Find a saved lesson<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search lesson, unit or teaching format…"/></label><p className="lc-hint">{activeCatalogue.edition} · {activeCatalogue.packs.length} packs for {name}{!connected ? " · reconnect to open another lesson" : ""}</p><div className="lc-lesson-options">{packs.map(pack => <article className={`lc-lesson-option ${activeSelected?.packId === pack.id ? "is-selected" : ""}`} key={pack.id}><div><small>{pack.format}</small><strong>{pack.title}</strong><p>{pack.focus}</p></div><div className="lc-actions"><button type="button" className="teacher-quiet-button" disabled={blocked || !!busy || !connected} onClick={() => void openPack(pack, "context")}>{materials ? "Open teacher notes" : "Use lesson guidance"}</button>{pack.files.some(file => file.type === "pptx") && <button type="button" className="teacher-quiet-button" disabled={blocked || !!busy || !connected} onClick={() => void openPack(pack, "powerpoint")}>{materials ? "Download editable PowerPoint" : "Use current PowerPoint text"}</button>}{materials && pack.files.some(file => file.name === "Teacher_Notes.pdf") && <button type="button" className="lc-link" disabled={blocked || !!busy || !connected} onClick={() => void openPack(pack, "teacher-notes")}>Open teacher guide PDF</button>}{pack.files.some(file => file.type === "pdf") && <button type="button" className="lc-link" disabled={blocked || !!busy || !connected} onClick={() => void openPack(pack, "pdf")}>{materials ? "Open slide preview" : "Open supporting PDF"}</button>}</div></article>)}</div>{!packs.length && <p className="lc-hint">No lessons match that search.</p>}</>}
+    {activeCatalogue && <><label>Find a saved lesson<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search lesson, unit or teaching format…"/></label><p className="lc-hint">{activeCatalogue.edition} · {activeCatalogue.packs.length} packs for {name}{!connected ? " · reconnect to open another lesson" : ""}</p><div className="lc-lesson-options">{packs.map(pack => <article className={`lc-lesson-option ${activeSelected?.packId === pack.id ? "is-selected" : ""}`} key={pack.id}><div><small>{pack.format}</small><strong>{pack.title}</strong><p>{pack.focus}</p></div><div className="lc-actions"><button type="button" className="teacher-quiet-button" disabled={blocked || !!busy || !connected} onClick={() => void openPack(pack, "context")}>{materials ? "Open teacher notes" : autoOpenPowerPoint ? "Open lesson" : "Use lesson guidance"}</button>{!autoOpenPowerPoint && pack.files.some(file => file.type === "pptx") && <button type="button" className="teacher-quiet-button" disabled={blocked || !!busy || !connected} onClick={() => void openPack(pack, "powerpoint")}>{materials ? "Download editable PowerPoint" : "Use current PowerPoint text"}</button>}{materials && pack.files.some(file => file.name === "Teacher_Notes.pdf") && <button type="button" className="lc-link" disabled={blocked || !!busy || !connected} onClick={() => void openPack(pack, "teacher-notes")}>Open teacher guide PDF</button>}{pack.files.some(file => file.type === "pdf") && <button type="button" className="lc-link" disabled={blocked || !!busy || !connected} onClick={() => void openPack(pack, "pdf")}>{materials ? "Open slide preview" : "Open supporting PDF"}</button>}</div></article>)}</div>{!packs.length && <p className="lc-hint">No lessons match that search.</p>}</>}
     <p className="lc-hint">The private library opens separately. Keep its window open while selecting files; closing it leaves the current lesson reference in place. PDFs show static slide and answer views; use PowerPoint for interactive reveals, audio and video.</p>
   </section>;
 }
