@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { readTeacherView, teacherViewHref, type TeacherSection, type TeacherView } from "@/lib/teacher-route";
 import {
   addStudent,
   analyseWriting,
@@ -45,8 +46,7 @@ type LoadState = "idle" | "loading" | "ok" | "error";
 export default function TeacherDashboardView({initialCalendar=false,initialLive=false,activeUnits={},lessonLibraries={}}:{initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>;lessonLibraries?:Record<string,CoachLearnerLibrary>}) {
   const [inboxTab,setInboxTab]=useState<"messages"|"notifications"|null>(null);
   const [inboxCode,setInboxCode]=useState("__teacher__");
-  const [initialSection,setInitialSection]=useState<string|undefined>();
-  useEffect(()=>{const q=new URLSearchParams(window.location.search),tab=q.get("inbox");if(tab==="messages"||tab==="notifications"){setInboxTab(tab);setInboxCode(q.get("student")||"__teacher__");}else if(q.get("student")){setSelectedCode(q.get("student"));setInitialSection(q.get("section")||undefined);const record=q.get("record");if(record&&/^[A-Za-z0-9_-]{16,100}$/.test(record))setRecordingReviewId(record);if(q.get("section")==="calendar")setShowCalendar(true);}},[]);
+  const [section,setSection]=useState<TeacherSection>("overview");
   const [liveTeaching, setLiveTeaching] = useState(initialLive);
   const [showCalendar,setShowCalendar]=useState(initialCalendar);
   const [testingVoice, setTestingVoice] = useState(false);
@@ -60,6 +60,33 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
   const [showFullProgress, setShowFullProgress] = useState(false);
   const [addingStudent, setAddingStudent] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  /** Shows a view without touching history: on first load and on Back/Forward. */
+  function applyView(view:TeacherView){
+    setInboxTab(view.kind==="inbox"?view.tab:null);
+    setInboxCode(view.kind==="inbox"&&view.student?view.student:"__teacher__");
+    setShowCalendar(view.kind==="calendar");
+    setLiveTeaching(view.kind==="live");
+    setTestingVoice(view.kind==="voice");
+    setShowFullProgress(view.kind==="progress");
+    setSelectedCode(view.kind==="student"||view.kind==="progress"?view.student:view.kind==="calendar"?view.student??null:null);
+    setSection(view.kind==="student"?view.section:"overview");
+    setRecordingReviewId(view.kind==="student"?view.record:undefined);
+  }
+  /** Moves to a view and writes it into the address, so Back, refresh and
+   * bookmarks come back to the same place. */
+  function go(view:TeacherView,{keepScroll=false}:{keepScroll?:boolean}={}){
+    const href=teacherViewHref(view,process.env.NEXT_PUBLIC_BASE_PATH||"");
+    if(href!==window.location.pathname+window.location.search)window.history.pushState(null,"",href);
+    applyView(view);
+    if(!keepScroll)window.scrollTo({top:0});
+  }
+  useEffect(()=>{
+    const fromAddress=()=>applyView(readTeacherView(window.location.search,window.location.pathname));
+    fromAddress();
+    window.addEventListener("popstate",fromAddress);
+    return()=>window.removeEventListener("popstate",fromAddress);
+  },[]);
 
   const [input, setInput] = useState("");
   const [authing, setAuthing] = useState(false);
@@ -131,12 +158,12 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
 
   if(inboxTab&&loadState==="ok")return <div className="teacher-workspace"><header className="teacher-topbar"><a className="teacher-quiet-button" href="/teacher/">← Students & teaching</a><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header><InboxView code={inboxCode} name="Rory" teacherToken={secret} students={(students||[]).map(s=>({code:s.code,name:s.name}))} initialTab={inboxTab}/></div>;
 
-  if (liveTeaching && loadState === "ok") return <LiveTeachingCoach initialLearner={selectedCode||undefined} token={secret} learners={(students || []).map(s => ({ code: s.code, name: s.name, unit: activeUnits[s.code]?.title, focusNote: s.focusNote, library: lessonLibraries[s.code] }))} onBack={() => setLiveTeaching(false)}/>;
+  if (liveTeaching && loadState === "ok") return <LiveTeachingCoach initialLearner={selectedCode||undefined} token={secret} learners={(students || []).map(s => ({ code: s.code, name: s.name, unit: activeUnits[s.code]?.title, focusNote: s.focusNote, library: lessonLibraries[s.code] }))} onBack={() => go({kind:"home"})}/>;
 
-  if (showCalendar && loadState === "ok") return <div className="teacher-workspace"><header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(false)}>← Students & teaching</button><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header><CalendarView code="__teacher__" name="Rory" teacher students={(students||[]).map(s=>({code:s.code,name:s.name}))}/></div>;
+  if (showCalendar && loadState === "ok") return <div className="teacher-workspace"><header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={()=>go(selectedCode?{kind:"student",student:selectedCode,section}:{kind:"home"})}>← Students & teaching</button><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header><CalendarView code="__teacher__" name="Rory" teacher students={(students||[]).map(s=>({code:s.code,name:s.name}))}/></div>;
 
   if (testingVoice) return <div className="teacher-workspace">
-    <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => setTestingVoice(false)}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header>
+    <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => go({kind:"home"})}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header>
     <VoiceStudio code="__teacher__" lines={[]} teacherTest practiceOptions={studentRoster.map(s => ({ code: s.code, name: s.displayName, unit: s.units.find(u => u.active)?.title }))} />
   </div>;
 
@@ -149,7 +176,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
         fetchCode={selected.code}
         displayName={selected.name}
         mode="teacher"
-        onBack={() => setShowFullProgress(false)}
+        onBack={() => go({kind:"student",student:selected.code,section})}
       /></div>
     );
   }
@@ -162,10 +189,11 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
         secret={secret}
         student={selected}
         initialReviewId={recordingReviewId}
-        initialSection={initialSection}
+        section={section}
+        onSection={(next) => go({kind:"student",student:selected.code,section:next},{keepScroll:true})}
         unit={activeUnits[selected.code]||null}
-        onBack={() => {setSelectedCode(null);setRecordingReviewId(undefined);}}
-        onViewProgress={() => setShowFullProgress(true)}
+        onBack={() => go({kind:"home"})}
+        onViewProgress={() => go({kind:"progress",student:selected.code})}
         onPatch={(patch) => patchStudent(selected.code, patch)}
       />
     );
@@ -178,8 +206,8 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
         <div className="flex items-center gap-2">
           <InboxLink teacher/>
           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
-          <button type="button" disabled={loadState !== "ok"} className="teacher-quiet-button" onClick={() => setLiveTeaching(true)}>Live teaching</button>
-          <button type="button" className="teacher-quiet-button" onClick={()=>setShowCalendar(true)}>Calendar</button><QuickAppearance/><AppMenu teacher/>
+          <button type="button" disabled={loadState !== "ok"} className="teacher-quiet-button" onClick={() => go({kind:"live"})}>Live teaching</button>
+          <button type="button" className="teacher-quiet-button" onClick={()=>go({kind:"calendar"})}>Calendar</button><QuickAppearance/><AppMenu teacher/>
         </div>
       </header>
       <main>
@@ -194,14 +222,14 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
         {loadState === "error" && <div className="teacher-empty" role="alert"><ChartIcon/><h2>Let’s try that again</h2><p>Your students’ records could not be loaded.</p><button className="teacher-primary" onClick={()=>setRefreshKey(k=>k+1)}>Reload students</button></div>}
         {loadState === "ok" && students && <>
           <div className="inbox-home-actions"><a className="teacher-primary" href="/teacher/?inbox=notifications">Notifications & recent activity</a><a className="teacher-quiet-button" href="/teacher/?inbox=messages">Messages →</a></div>
-          <RecordedLessonLinks students={students} onOpen={(code,id)=>{setRecordingReviewId(id);setSelectedCode(code);}}/>
+          <RecordedLessonLinks students={students} onOpen={(code,id)=>go({kind:"student",student:code,section:"learning",record:id})}/>
           <div className="teacher-section-heading"><div><p className="teacher-eyebrow">ONE STEP AT A TIME</p><h2>Your students <span>{students.length}</span></h2></div><button type="button" onClick={()=>setAddingStudent(true)} className="teacher-quiet-button">+ Add student</button></div>
           <div className="teacher-student-grid">
             {students.length===0 && <div className="teacher-empty"><BookIcon/><h2>Your classroom starts here</h2><p>Add your first student to get started.</p></div>}
-            {students.map(student=><StudentCard key={student.code} student={student} onOpen={()=>setSelectedCode(student.code)}/>)}
+            {students.map(student=><StudentCard key={student.code} student={student} onOpen={()=>go({kind:"student",student:student.code,section:"overview"})}/>)}
           </div>
-          <section className="teacher-voice-tool"><MessageIcon/><div><h2>Speaking partner test</h2><p>Try a conversation before a lesson. Your test stays separate from student work.</p></div><button type="button" className="teacher-primary" onClick={() => setTestingVoice(true)}>Test voice</button></section>
-          <TeachingProgress students={students} onOpen={setSelectedCode}/>
+          <section className="teacher-voice-tool"><MessageIcon/><div><h2>Speaking partner test</h2><p>Try a conversation before a lesson. Your test stays separate from student work.</p></div><button type="button" className="teacher-primary" onClick={() => go({kind:"voice"})}>Test voice</button></section>
+          <TeachingProgress students={students} onOpen={(code)=>go({kind:"student",student:code,section:"overview"})}/>
           <div className="teacher-bottom-note"><CheckSquareIcon/><p>Review the work. Celebrate the effort. Choose the next step.<small>Open a learner’s dashboard for current homework, saved activity and dated assessments.</small></p></div>
           {generatedAt && <p className="teacher-updated">Records updated {generatedAt}</p>}
         </>}
@@ -283,7 +311,8 @@ function TeacherStudentPanel({
   onViewProgress,
   onPatch,
   initialReviewId,
-  initialSection,
+  section,
+  onSection,
   unit,
 }: {
   secret: string;
@@ -292,10 +321,11 @@ function TeacherStudentPanel({
   onViewProgress: () => void;
   onPatch: (patch: Partial<TeacherStudent>) => void;
   initialReviewId?:string;
-  initialSection?:string;
+  section:TeacherSection;
+  onSection:(section:TeacherSection)=>void;
   unit:Unit|null;
 }) {
-  const [section, setSection] = useState<"overview" | "review" | "assign" | "assess" | "documents" | "learning" | "teaching">(initialReviewId?"learning":(["overview","review","documents","learning"].includes(initialSection||"")?initialSection as "overview"|"review"|"documents"|"learning":"overview"));
+  const setSection=onSection;
   const [note, setNote] = useState(student.focusNote);
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
