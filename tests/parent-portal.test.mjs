@@ -32,3 +32,21 @@ test('uploaded work displays the complete saved analysis and optional released f
  const held=german(React.createElement(ParentFeedback.ParentDocumentFeedback,{document:{...doc,reviewPending:true},code:'parent-a'}));assert.doesNotMatch(held,/A specific teacher follow-up/);assert.match(held,/Saved practice feedback/);
  assert.equal(feedback.familyFeedbackText('Good work. Rory has not reviewed this. Try again.'),'Good work.  Try again.');
 });
+
+test('parent writing option uses the student sentence table and full colour versions with every saved check',()=>{
+ const checks={spelling:'ok',grammar:'Use the past simple.',wordChoice:'ok',punctuation:'ok',flow:'The time reference is clear.',taskFit:'The printed task was not supplied.'};
+ const writing={original:'Yesterday I go home. I enjoy music.',corrected:'Yesterday I went home. I enjoy music.',model:'Yesterday I returned home. Music is one of my interests.',targetLevel:'B1',modelNotes:['A more varied opening.'],comparisons:[{original:'Yesterday I go home.',corrected:'Yesterday I went home.',improved:'Yesterday I returned home.',note:'Use a completed past form. Rory has not reviewed this.',checks},{original:'I enjoy music.',corrected:'I enjoy music.',improved:'Music is one of my interests.',note:'A clear sentence.',checks}],practice:['Describe a different journey.']};
+ const before=JSON.stringify(writing),html=german(React.createElement(ParentFeedback.ParentWriting,{writing})),text=html.replace(/<[^>]+>/g,'');
+ assert.match(html,/<details class="parent-full-corrections"><summary>/);assert.doesNotMatch(html,/<details class="parent-full-corrections" open/);
+ assert.match(text,/Vollständige Schreibkorrektur anzeigen/);assert.match(html,/class="sentence-feedback-table"/);assert.match(html,/writing-versions/);
+ for(const label of ['Rechtschreibung','Grammatik','Wortwahl','Zeichensetzung','Verknüpfung / Lesefluss','Erfüllung der Aufgabe'])assert.ok(text.includes(label));
+ for(const colour of ['sentence-red','sentence-green','sentence-blue'])assert.ok(html.includes(colour));
+ for(const value of ['Yesterday I go home.','Yesterday I went home.','Yesterday I returned home.','Music is one of my interests.','A more varied opening.','Describe a different journey.'])assert.ok(text.includes(value));
+ assert.match(text,/B1/);assert.match(html,/Änderung erklären:/);assert.doesNotMatch(html,/<textarea|<input|Save|has not reviewed/);assert.equal(JSON.stringify(writing),before);
+ const english=renderToStaticMarkup(React.createElement(ParentFeedback.ParentWriting,{writing}));assert.match(english,/Show full writing corrections/);assert.match(english,/Sentence by sentence/);assert.match(english,/Checks &amp; explanation/);
+});
+test('parent worksheet option shows the same task, original answer, correction and explanation without editing controls',()=>{
+ const document={id:'synthetic-worksheet-0001',title:'Worksheet',created:'2026-10-30',files:[],feedback:'',analysis:{summary:'Saved worksheet feedback.',strengths:[],retry:'Try a new sentence.',corrections:[],transcription:'We was late.',coverage:'complete',uncertainties:[],answerReview:[{label:'1',prompt:'We ___ late.',response:'was',status:'needs-change',correction:'were',note:'We takes were.'},{label:'2',prompt:'Unclear scan',response:'[unclear]',status:'uncertain',correction:'',note:'Compare the original page.'}]}};
+ const html=german(React.createElement(ParentFeedback.ParentDocumentFeedback,{document,code:'parent-a'}));
+ assert.match(html,/Vollständige Arbeitsblattkorrekturen anzeigen/);assert.match(html,/doc-worksheet-answers/);assert.match(html,/URSPRÜNGLICHE ANTWORT/);assert.match(html,/KORREKTUR/);assert.match(html,/We takes were/);assert.match(html,/Lesart muss bestätigt werden/);assert.doesNotMatch(html,/<textarea|<input|Check my answer/);
+});

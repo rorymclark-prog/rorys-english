@@ -5,7 +5,7 @@ import {assessmentDisplayLabel} from './feedback-source';
 import {skillEntries,domainProgress,skillDomains,type SkillDomain} from './skill-progress';
 // Display-only removal of retired workflow notices, never the student's original work.
 export function familyFeedbackText(value:string|undefined):string{
- return assessmentDisplayLabel(value).replace(/(?:This (?:remains|is) )?(?:AI )?practice feedback awaiting Rory[’']s review\.?/gi,'').replace(/Rory has not (?:yet )?(?:reviewed|approved|provided|added)[^.!?]*(?:[.!?]|$)/gi,'').replace(/(?:Draft\s*[·—–:-]\s*)?Rory(?:[’']s)? review (?:is )?pending\.?/gi,'').replace(/(?:the )?full lesson analysis is private and awaits Rory[’']s review\.?/gi,'').replace(/Rory[’']s feedback/gi,'Feedback').trim();
+ return assessmentDisplayLabel(value).replace(/(?:This (?:remains|is) )?(?:AI )?practice feedback awaiting Rory[’']s review\.?/gi,'').replace(/Rory has not (?:yet )?(?:reviewed|approved|provided|added)[^.!?]*(?:[.!?]|$)/gi,'').replace(/(?:Draft\s*[·—–:-]\s*)?Rory(?:[’']s)? review (?:is )?pending\.?/gi,'').replace(/(?:the )?full lesson analysis is private and awaits Rory[’']s review\.?/gi,'').replace(/Rory can add the reason for this change\.?/gi,'').replace(/Rory[’']s feedback/gi,'Feedback').trim();
 }
 export function familyRecordReview(body:LearningBody):{reviews:PlainReview[];additional:string}{
  const snapshot=readLessonSnapshot(body.lessonSnapshot);
