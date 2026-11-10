@@ -34,9 +34,13 @@
 .dark .work-type-filters button[aria-pressed="true"]{background:var(--re-accent);color:var(--re-onaccent);border-color:var(--re-accent)}
 .dark .refined-library .doc-list-icon{color:var(--re-accent);background:var(--re-soft)}
 .dark .refined-library .doc-list-item.is-selected{background:var(--re-soft);box-shadow:inset 3px 0 var(--re-accent)}
-.doc-workspace-divider{display:none}
+.doc-workspace-divider,.doc-workspace-layout-control{display:none}
 @media(min-width:761px){
+ .doc-workspace-layout-control{display:block;position:sticky;top:1rem;z-index:5;width:max-content;margin:0 0 .8rem auto}
+ .doc-workspace-layout-control .doc-secondary{background:var(--re-surface);box-shadow:0 2px 8px var(--re-line)}
  .refined-library .doc-workspace.doc-workspace-resizable{grid-template-columns:clamp(180px,var(--doc-library-width,33.5%),min(520px,50%,calc(100% - 384px))) 24px minmax(0,1fr);gap:0}
+ .refined-library .doc-workspace.doc-workspace-resizable.is-library-hidden{grid-template-columns:minmax(0,1fr)}
+ .refined-library .is-library-hidden>.doc-library,.refined-library .is-library-hidden>.doc-workspace-divider{display:none}
  .doc-workspace-divider{display:flex;justify-content:center;position:relative;align-self:stretch;min-height:100px;cursor:col-resize;touch-action:none;outline:none}
  .doc-workspace-divider::before{content:"";position:absolute;top:0;bottom:0;left:11px;width:2px;background:var(--re-line);border-radius:2px}
  .doc-workspace-grip{position:sticky;top:45vh;align-self:flex-start;margin-top:32px;display:grid;place-items:center;width:18px;height:44px;border:1px solid var(--re-line);border-radius:8px;background:var(--re-surface);color:var(--re-muted);font-size:1.25rem;line-height:1;z-index:1}

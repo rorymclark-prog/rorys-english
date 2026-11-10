@@ -3,6 +3,7 @@
 import {Children, cloneElement, isValidElement, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode} from 'react';
 
 const STORAGE_KEY = 're_document_library_width_v1';
+const HIDDEN_KEY = 're_document_library_hidden_v1';
 const DEFAULT_SHARE = 0.335;
 const HANDLE_WIDTH = 24;
 
@@ -14,10 +15,12 @@ export default function DocumentWorkspace({children, resizable}: {children: Reac
   const [share, setShare] = useState(DEFAULT_SHARE);
   const [width, setWidth] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [libraryHidden, setLibraryHidden] = useState(false);
   const libraryId = useId();
 
   useEffect(() => {
     try {
+      setLibraryHidden(localStorage.getItem(HIDDEN_KEY) === 'true');
       const saved = Number(localStorage.getItem(STORAGE_KEY));
       if (Number.isFinite(saved) && saved >= 0.1 && saved <= 0.5) {
         shareRef.current = saved;
@@ -48,6 +51,11 @@ export default function DocumentWorkspace({children, resizable}: {children: Reac
     shareRef.current = DEFAULT_SHARE;
     setShare(DEFAULT_SHARE);
     save(DEFAULT_SHARE);
+  }
+  function toggleLibrary() {
+    const hidden = !libraryHidden;
+    setLibraryHidden(hidden);
+    try { localStorage.setItem(HIDDEN_KEY, String(hidden)); } catch { /* Optional preference. */ }
   }
   function start(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0 || !workspace.current) return;
@@ -82,7 +90,9 @@ export default function DocumentWorkspace({children, resizable}: {children: Reac
 
   const panes = Children.toArray(children);
   const library = resizable && isValidElement<{id?: string}>(panes[0]) ? cloneElement(panes[0], {id: libraryId}) : panes[0];
-  return <div ref={workspace} className={`doc-workspace${resizable ? ' doc-workspace-resizable' : ''}${dragging ? ' is-resizing' : ''}`} style={{'--doc-library-width': `${share * 100}%`} as CSSProperties}>
+  return <>
+    {resizable && <div className="doc-workspace-layout-control"><button type="button" className="doc-secondary" aria-controls={libraryId} aria-expanded={!libraryHidden} onClick={toggleLibrary}>{libraryHidden ? 'Show saved work' : 'Hide saved work'}</button></div>}
+    <div ref={workspace} className={`doc-workspace${resizable ? ' doc-workspace-resizable' : ''}${libraryHidden ? ' is-library-hidden' : ''}${dragging ? ' is-resizing' : ''}`} style={{'--doc-library-width': `${share * 100}%`} as CSSProperties}>
     {resizable ? <>
       {library}
       <div className="doc-workspace-divider" role="separator" aria-label="Resize saved-work list" aria-orientation="vertical" aria-controls={libraryId} aria-valuemin={Math.round(minimum)} aria-valuemax={Math.round(maximum)} aria-valuenow={pixels} aria-valuetext={`${pixels} pixels. Drag left for more review space. Use arrow keys to resize; Enter or double-click to reset.`} tabIndex={0} title="Drag left for more review space · double-click to reset" onPointerDown={start} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={finish} onKeyDown={key} onDoubleClick={reset}>
@@ -90,5 +100,5 @@ export default function DocumentWorkspace({children, resizable}: {children: Reac
       </div>
       {panes.slice(1)}
     </> : children}
-  </div>;
+  </div></>;
 }
