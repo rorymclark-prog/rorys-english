@@ -1,0 +1,59 @@
+[
+  {
+    "week": 1,
+    "title": "Multiplication check · show your working",
+    "due": "",
+    "estimatedMinutes": 15,
+    "description": "Try the first five questions on your own, without a calculator or AI answers. Save your working, even if you are unsure. If you get stuck, explain where and move on; do not keep struggling to finish a timer. The last question is optional. Rory will use the actual work to plan what to practise next.",
+    "objectives": [
+      "Show how you multiply two- and three-digit numbers.",
+      "Identify which steps need practice, including place value and carrying."
+    ],
+    "source": "Original starting check requested by Rory on 12 November 2026; not a textbook task, diagnosis or formal grade.",
+    "tasks": [
+      {
+        "id": "kashi-multiplication-check-1",
+        "type": "written",
+        "prompt": "24 × 3 = ? Show your working and explain briefly how you got your answer.",
+        "lines": 5
+      },
+      {
+        "id": "kashi-multiplication-check-2",
+        "type": "written",
+        "prompt": "47 × 6 = ? Show your working and explain briefly how you got your answer.",
+        "lines": 5
+      },
+      {
+        "id": "kashi-multiplication-check-3",
+        "type": "written",
+        "prompt": "36 × 24 = ? Show your working and explain briefly how you got your answer.",
+        "lines": 5
+      },
+      {
+        "id": "kashi-multiplication-check-4",
+        "type": "written",
+        "prompt": "128 × 4 = ? Show your working and explain briefly how you got your answer.",
+        "lines": 5
+      },
+      {
+        "id": "kashi-multiplication-check-5",
+        "type": "written",
+        "prompt": "203 × 16 = ? Show your working and explain briefly how you got your answer.",
+        "lines": 5
+      },
+      {
+        "id": "kashi-multiplication-check-6",
+        "type": "written",
+        "prompt": "Optional stretch, only if you feel comfortable: 124 × 112 = ? Show your working and explain briefly how you got your answer.",
+        "lines": 5
+      },
+      {
+        "id": "kashi-multiplication-reflection",
+        "type": "written",
+        "prompt": "Which question felt easiest or hardest? Tell Rory how long this took and whether you used any help. A blank or an unfinished attempt is useful information too.",
+        "lines": 3
+      }
+    ],
+    "subject": "maths"
+  }
+]

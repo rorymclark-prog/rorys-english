@@ -26,6 +26,8 @@ export interface HomeworkTask {
 }
 
 export interface HomeworkWeek {
+  /** Non-English supplementary checks keep their subject visible. */
+  subject?: "english" | "maths";
   week: number;
   title: string;
   /** ISO date YYYY-MM-DD; empty means no deadline assigned. */

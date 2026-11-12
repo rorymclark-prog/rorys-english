@@ -1,0 +1,59 @@
+[
+  {
+    "week": 1,
+    "title": "Session 1 · Your first writing sample",
+    "due": "",
+    "estimatedMinutes": 15,
+    "description": "Start here. Save your own first attempt before asking for corrections. This is a starting sample, not a formal test. If the writing takes longer, stop at a sensible point and tell Rory.",
+    "objectives": [
+      "Share your own ideas in complete sentences.",
+      "Save a first writing sample so Rory can plan useful spelling and writing practice."
+    ],
+    "source": "Rory’s original supplementary English practice, 12 November 2026; not a textbook task.",
+    "tasks": [
+      {
+        "id": "kashi-start-conversation",
+        "type": "voice",
+        "prompt": "Spend about 3 minutes talking about a hobby, game, film or sport you enjoy. Open Speak and choose Build sentences or Everyday conversation. Explain what you enjoy, describe something that happened recently, and give a reason for your opinion. Use your own ideas. Save the conversation before returning here. This conversation helps you gather ideas; it does not test your spelling."
+      },
+      {
+        "id": "kashi-start-writing-original",
+        "type": "written",
+        "prompt": "Now write 80–120 words about a small problem you solved or an enjoyable day. Say what happened, why it mattered and what you would do next time. Real or invented details are fine. Use your own words without asking an AI to write it for you. Save your first attempt before getting corrections. If that is too much, write 5–6 sentences and tell Rory. You may attach clear photos of handwriting instead.",
+        "lines": 10
+      },
+      {
+        "id": "kashi-start-reflection",
+        "type": "written",
+        "prompt": "What felt easy, and what would you like help with? Tell Rory if you used spelling suggestions, a dictionary or any other help.",
+        "lines": 3
+      }
+    ]
+  },
+  {
+    "week": 2,
+    "title": "Session 2 · Spelling and a better draft",
+    "due": "",
+    "estimatedMinutes": 15,
+    "description": "Do this after saving Session 1. Keep your original writing. Use any feedback that is available; if it is not ready, choose words you are unsure of rather than assuming they are wrong. We will choose later lessons from what your work shows.",
+    "objectives": [
+      "Practise five useful words from your own writing.",
+      "Improve a paragraph while keeping the original and revision separate."
+    ],
+    "source": "Rory’s original supplementary English practice, 12 November 2026; selected targets will come from Kashi’s own saved work.",
+    "tasks": [
+      {
+        "id": "kashi-personal-word-log",
+        "type": "written",
+        "prompt": "Choose five useful words from your first paragraph that you are unsure how to spell, or use words identified in your feedback. Check each spelling. Read it, cover it, write it from memory, then check it again. Below, list the five words and write one new sentence using each. Tell Rory which words you had to correct.",
+        "lines": 10
+      },
+      {
+        "id": "kashi-first-revision",
+        "type": "written",
+        "prompt": "Re-read your first paragraph. Check sentence endings, capitals, clear word order and the five spellings you practised. Use any feedback to improve it in your own words. Paste or write your revised paragraph here, leaving Session 1 unchanged. Then add one sentence explaining what you changed. An AI may explain a correction, but should not write the paragraph for you.",
+        "lines": 10
+      }
+    ]
+  }
+]
