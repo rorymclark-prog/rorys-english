@@ -42,6 +42,8 @@ export interface HomeworkWeek {
 
 /** Unit metadata as stored in students.json. */
 export interface UnitMeta {
+  /** Additional current work shown alongside the active unit on Today. */
+  homePlacement?: "current";
   id: string;
   title: string;
   active: boolean;
