@@ -150,7 +150,8 @@
 .lc-no-slide pre{font:inherit;font-size:.875rem;white-space:pre-wrap;overflow-wrap:anywhere;padding:1rem;background:var(--lc-field);border-radius:10px;width:100%}
 .lc-commentary{background:var(--lc-card)}
 .lc-commentary form{border-top:1px solid var(--lc-border);padding-top:.6rem;margin-top:1rem}
-.lc-talk-feed{max-height:440px;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:.8rem;padding:.2rem}
+.lc-talk-feed{max-height:440px;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:.8rem;padding:.2rem .2rem 1rem}
+.lc-talk-feed>*{flex-shrink:0}
 .lc-turn{border:1px solid var(--lc-border);border-left:3px solid var(--lc-muted);border-radius:12px;padding:1rem;background:var(--lc-field)}
 .lc-turn-teacher{border-left-color:var(--lc-warm-muted)}
 .lc-turn-learner{border-left-color:var(--lc-accent)}
@@ -208,3 +209,11 @@
 .lc-session-start[open]>summary{margin-bottom:1rem}
 .lc-session-start h2{font-size:1rem;margin:1rem 0}
 .lc-position h2{font-size:1rem;margin-bottom:.7rem}
+
+/* Once started, the setup area is one summary row that can be reopened. */
+.lc-setup-collapsed{display:none}
+.lc-setup-summary{display:flex;align-items:center;justify-content:space-between;gap:.5rem 1rem;flex-wrap:wrap;padding:.4rem 1.1rem;margin-bottom:1rem}
+.lc-setup-summary p{font-size:.875rem;line-height:1.5;color:var(--lc-muted);overflow-wrap:anywhere;min-width:0}
+.lc-setup-summary strong{color:var(--lc-ink)}
+/* Conversation practice has no slides, so the coach column takes the full width. */
+.lc-grid.lc-grid-solo{grid-template-columns:minmax(0,1fr)}

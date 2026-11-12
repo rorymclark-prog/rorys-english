@@ -31,3 +31,16 @@ test("empty teacher home blocks fold to one line and filled ones still render as
   assert.match(progress,/<section className="re-card mt-6"/);
   assert.match(read("src/app/visual-refresh/teacher.css"),/\.home-fold>summary\{[^}]*min-height:44px/);
 });
+
+test("live teaching folds its setup once started, uses the full width without slides and shows the last commentary turn",()=>{
+  const tsx=read("src/components/views/LiveTeachingCoach.tsx"),css=read("src/app/teacher/live-coach.css");
+  assert.match(tsx,/const started = phase !== "idle" \|\| rehearsalIndex > 0/);
+  assert.match(tsx,/lc-setup-summary/);assert.match(tsx,/aria-expanded=\{!setupHidden\}/);
+  assert.match(css,/\.lc-setup-collapsed\{display:none\}/);
+  assert.match(tsx,/view==="setup"&&!pdfFile\?"lc-grid lc-grid-solo"/);
+  assert.match(css,/\.lc-grid\.lc-grid-solo\{grid-template-columns:minmax\(0,1fr\)\}/);
+  assert.match(tsx,/feed\.scrollTop = feed\.scrollHeight/);
+  assert.match(css,/\.lc-talk-feed>\*\{flex-shrink:0\}/);
+  // the live start logic is untouched
+  assert.match(tsx,/async function start\(/);
+});
