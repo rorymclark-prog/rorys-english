@@ -108,3 +108,7 @@ Four separate steps, each with its own rollback area.
 - **Four teacher tabs (`teacher-tabs`).** One student's workspace shows Dashboard, Work, Teach and Results. The seven sections and their `?section=` addresses are unchanged; `TEACHER_GROUPS` and `TEACHER_FIND_SECTIONS` in `src/lib/find.ts` are the only list, and the workspace draws tabs and the row of pages from it. A tab opens on its first page; a tab with one page shows no second row.
 - **Needs you today (`needs-you`).** The teacher home opens with one list from `teacherNotifications` and the student summaries: unread messages, feedback to check, new work, then students with no saved activity for seven days. One row per student per kind, oldest wait first, six rows at most. A failed check says so and never reads as all clear. The list marks nothing as read.
 - **Dashboard folds (`dashboard-folds`).** A block of the learning dashboard with nothing in it is hidden, not unmounted, and named as a button in a "Nothing here yet" bar; Show all opens every block. Lesson brief and Practice overview always show. New styles use `--re-*` tokens only.
+
+## Homework that has not opened · 13 November 2026
+
+A homework week with a future `availableFrom` shows one `week-notice` line, "This homework opens on <date>" (Vienna date, `lessonDate`), and the existing Back to homework link, instead of the week's tasks. `isHomeworkReleased` in `src/lib/homework-release.ts` is the single release rule.

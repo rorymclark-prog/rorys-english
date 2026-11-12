@@ -9,11 +9,15 @@ import {buildHomeworkIcs,downloadIcs,parseDueDate} from "@/lib/ics";
 import {guidedSpeakingForHomework} from "@/lib/guided-speaking";
 import HomeworkAudioRecorder from "@/components/HomeworkAudioRecorder";
 import {readableDate} from "@/lib/clarity";
+import {isHomeworkReleased} from "@/lib/homework-release";
+import {lessonDate,viennaDate} from "@/lib/lesson-calendar";
 import Screen from "@/components/Screen";
 import {ClockIcon,MessageIcon,PencilIcon} from "@/components/Icons";
 import {MicrophoneIcon} from "@/components/LearningVisuals";
 export default function HomeworkWeekView({unitId,week,backHref,archived=false}:{unitId:string;week:HomeworkWeek;backHref:string;archived?:boolean}) {
   const {studentId,code}=useStudent();
+  // A week that has not opened yet is hidden from the lists; it must not open from its address either.
+  if(week.availableFrom&&!isHomeworkReleased(week,viennaDate()))return <Screen title="Homework" subtitle={week.title}><div className="week-page"><Link href={`/s/${code}/homework/`} className="week-back">← Back to homework</Link><p className="week-notice" role="status"><strong>This homework opens on {lessonDate(week.availableFrom)}.</strong> Come back then. Nothing is lost.</p></div></Screen>;
   const due=parseDueDate(week.due);
   const guided=guidedSpeakingForHomework(code,unitId,week.week);
   const voiceTask=week.tasks.find(task=>task.type==="voice");
