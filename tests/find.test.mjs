@@ -107,9 +107,22 @@ test("the teacher can find a student, a place, or a place for a student", () => 
   assert.deepEqual(plain(find.findMatches("marking", teacher).map(e => e.label)), ["Ferdi · Work to review", "Valentin · Work to review"]);
 });
 
-test("the teacher places in Find match the workspace's own sections and names", () => {
+test("the teacher places in Find are the workspace's own sections, under four tabs", () => {
   const route = read("src/lib/teacher-route.ts").match(/TEACHER_SECTIONS=\[([^\]]*)\]/)[1].replace(/"/g, "").split(",");
-  assert.deepEqual(plain(find.TEACHER_FIND_SECTIONS.map(s => s.section)), route);
+  assert.deepEqual(plain(find.TEACHER_FIND_SECTIONS.map(s => s.section)).sort(), route.slice().sort(), "every address still has exactly one place");
+  assert.deepEqual(plain(find.TEACHER_GROUPS.map(g => g.label)), ["Dashboard", "Work", "Teach", "Results"]);
+  const groups = plain(find.TEACHER_GROUPS.map(g => g.id));
+  for (const place of find.TEACHER_FIND_SECTIONS) assert.ok(groups.includes(place.group), `${place.section} sits under a tab`);
+  for (const id of groups) assert.ok(find.TEACHER_FIND_SECTIONS.some(s => s.group === id), `the ${id} tab is not empty`);
+  // Places under one tab sit together, so a tab opens on its first place.
+  const order = plain(find.TEACHER_FIND_SECTIONS.map(s => s.group));
+  assert.deepEqual(order.filter((g, i) => g !== order[i - 1]), groups);
+  assert.deepEqual(plain(find.teacherGroupOf("documents")), { group: "work", places: plain(find.TEACHER_FIND_SECTIONS.filter(s => s.group === "work")) });
+  assert.equal(find.teacherGroupOf("review").places[0].section, "review", "Work opens on what is waiting");
+  assert.equal(find.teacherGroupOf("not-a-section").group, "dashboard");
+  // The workspace draws its tabs and pages from this list, not from its own copy.
   const view = read("src/components/views/TeacherDashboardView.tsx");
-  for (const place of find.TEACHER_FIND_SECTIONS) assert.ok(view.includes(`<span>${place.label}<small>${place.hint}</small>`), `"${place.label}" is no longer the name on the teacher tile`);
+  assert.match(view, /TEACHER_GROUPS\.map\(/);
+  assert.match(view, /here\.places\.map\(/);
+  assert.doesNotMatch(view, /<span>Learning dashboard<small>/, "no hand-written copy of the section names");
 });

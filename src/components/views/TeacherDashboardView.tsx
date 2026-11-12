@@ -13,7 +13,7 @@ import {
   type WritingAssessment,
   type TeacherStudent,
 } from "@/lib/remote";
-import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon, FileIcon, MessageIcon, PencilIcon, TargetIcon } from "@/components/Icons";
+import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon, MessageIcon, TargetIcon } from "@/components/Icons";
 import ProgressView from "./ProgressView";
 import TeacherInsights from "./TeacherInsights";
 import type {Unit} from "@/lib/types";
@@ -37,6 +37,9 @@ import InboxView from "./InboxView";
 import InboxLink from "@/components/InboxLink";
 import LiveTeachingCoach from "./LiveTeachingCoach";
 import type { CoachLearnerLibrary } from "@/lib/coach-lessons";
+import { TEACHER_FIND_SECTIONS, TEACHER_GROUPS, teacherGroupOf, type TeacherGroup } from "@/lib/find";
+
+const groupIcons:Record<TeacherGroup,typeof ChartIcon>={dashboard:ChartIcon,work:CheckSquareIcon,teach:BookIcon,results:TargetIcon};
 
 // One-time removal of the old persisted password; only expiring tokens remain.
 const STORAGE_KEY = "re_teacher_secret";
@@ -378,6 +381,7 @@ function TeacherStudentPanel({
   }
 
   const s = student.summary;
+  const here=teacherGroupOf(section);
 
   return (
     <div className="teacher-workspace">
@@ -391,15 +395,12 @@ function TeacherStudentPanel({
           <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ChartIcon/><span>Saved progress & feedback <span aria-hidden>↗</span></span></button>
         </section>
         <div className="mb-4 flex justify-end"><a className="teacher-quiet-button" href={`/teacher/?inbox=messages&student=${student.code}`}>Message {student.name} →</a><StudentPreviewButton code={student.code} name={student.name}/></div>
-        <nav className="teacher-section-nav" aria-label="Student workspace sections">
-          <button type="button" aria-pressed={section === "overview"} onClick={()=>setSection("overview")}><ChartIcon/><span>Learning dashboard<small>Homework, activity & assessment</small></span></button>
-          <button type="button" aria-pressed={section === "teaching"} onClick={()=>setSection("teaching")}><BookIcon/><span>Teaching materials<small>PowerPoints & teacher notes</small></span></button>
-          <button type="button" aria-pressed={section === "learning"} onClick={()=>setSection("learning")}><MessageIcon/><span>Feedback & lesson notes<small>Saved reviews & practice</small></span></button>
-          <button type="button" aria-pressed={section === "documents"} onClick={()=>setSection("documents")}><FileIcon/><span>Documents<small>Scan, upload & discuss</small></span></button>
-          <button type="button" aria-pressed={section === "review"} onClick={()=>setSection("review")}><CheckSquareIcon/><span>Work to review<small>New answers & uploaded work</small></span></button>
-          <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><PencilIcon/><span>Assign homework<small>Set the next step</small></span></button>
-          <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><TargetIcon/><span>School results<small>Tests & writing checkpoints</small></span></button>
+        <nav className="teacher-section-nav teacher-group-nav" aria-label="Student workspace sections">
+          {TEACHER_GROUPS.map(group=>{const Icon=groupIcons[group.id],first=TEACHER_FIND_SECTIONS.find(place=>place.group===group.id)!;return <button key={group.id} type="button" aria-pressed={here.group===group.id} onClick={()=>setSection(here.group===group.id?section:first.section)}><Icon/><span>{group.label}<small>{group.hint}</small></span></button>;})}
         </nav>
+        {here.places.length>1&&<div className="teacher-sub-nav" role="group" aria-label="Pages in this tab">
+          {here.places.map(place=><button key={place.section} type="button" aria-pressed={section===place.section} onClick={()=>setSection(place.section)}>{place.label}</button>)}
+        </div>}
         {section === "overview" && <TeacherInsights code={student.code} name={student.name} unit={unit} onReview={()=>setSection("review")} onNotes={()=>setSection("learning")}/>}
         {section === "teaching" && <TeachingFilesView key={student.code} code={student.code} name={student.name}/>}
         {section === "documents" && <DocumentsView key={student.code} code={student.code} name={student.name} teacher/>}

@@ -10,6 +10,15 @@
 .teacher-voice-tool p{color:var(--re-muted);font-size:.72rem;line-height:1.5;margin-top:3px}
 .teacher-voice-tool button{flex-shrink:0}
 @media(max-width:700px){.teacher-workspace .teacher-section-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.teacher-workspace .teacher-section-nav button{min-height:65px;flex-direction:row;align-items:center;text-align:left;gap:9px;padding:10px}.teacher-voice-tool{flex-wrap:wrap}.teacher-voice-tool button{width:100%}}
+/* Four tabs over the seven places, then the pages inside the open tab (12 Nov). */
+.teacher-workspace .teacher-group-nav{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px}
+.teacher-workspace .teacher-group-nav button{min-height:64px;align-items:center}
+.teacher-sub-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px;padding:6px;border:1px solid var(--re-line);border-radius:14px;background:var(--re-soft)}
+.teacher-sub-nav button{min-height:44px;padding:8px 16px;border-radius:10px;font-size:.875rem;font-weight:750;color:var(--re-muted)}
+.teacher-sub-nav button[aria-pressed=true]{background:var(--re-surface);color:var(--re-ink);box-shadow:0 0 0 1px var(--re-line)}
+.teacher-sub-nav button:focus-visible{outline:3px solid var(--re-accent);outline-offset:2px}
+.teacher-workspace .teacher-group-nav+:not(.teacher-sub-nav){margin-top:22px}
+@media(max-width:700px){.teacher-workspace .teacher-group-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.teacher-sub-nav button{flex:1 1 auto}}
 
 /* Dated marks and vocabulary demonstration coverage. */
 .skill-progress-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}

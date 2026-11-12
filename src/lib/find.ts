@@ -82,16 +82,35 @@ export function studentFindEntries(code:string,sections:readonly (FindPage&{more
   ];
 }
 
-/** The seven places inside one student's teacher workspace, with the words Rory might type for each. */
-export const TEACHER_FIND_SECTIONS=[
-  {section:'overview',label:'Learning dashboard',hint:'Homework, activity & assessment',words:'overview summary progress rings'},
-  {section:'teaching',label:'Teaching materials',hint:'PowerPoints & teacher notes',words:'slides powerpoint pptx lesson plan files prepare'},
-  {section:'learning',label:'Feedback & lesson notes',hint:'Saved reviews & practice',words:'recorded lesson transcript brief records history'},
-  {section:'documents',label:'Documents',hint:'Scan, upload & discuss',words:'photo essay handwriting worksheet file pdf saved work writing'},
-  {section:'review',label:'Work to review',hint:'New answers & uploaded work',words:'mark marking correct submissions answers homework check'},
-  {section:'assign',label:'Assign homework',hint:'Set the next step',words:'set task new assignment give'},
-  {section:'assess',label:'School results',hint:'Tests & writing checkpoints',words:'grades marks noten schularbeit test exam assessment checkpoint'},
+/** The four tabs of one student's teacher workspace. Each opens on its first place below. */
+export const TEACHER_GROUPS=[
+  {id:'dashboard',label:'Dashboard',hint:'Where they are now'},
+  {id:'work',label:'Work',hint:'Review, files & homework'},
+  {id:'teach',label:'Teach',hint:'Materials & lesson notes'},
+  {id:'results',label:'Results',hint:'Tests & checkpoints'},
 ] as const;
+export type TeacherGroup=typeof TEACHER_GROUPS[number]['id'];
+
+/**
+ * The seven places inside one student's teacher workspace, in tab order, with
+ * the tab each sits under and the words Rory might type for it. The addresses
+ * (`?section=…`) are unchanged, so older links and notifications still land.
+ */
+export const TEACHER_FIND_SECTIONS=[
+  {section:'overview',group:'dashboard',label:'Learning dashboard',hint:'Homework, activity & assessment',words:'overview summary progress rings'},
+  {section:'review',group:'work',label:'Work to review',hint:'New answers & uploaded work',words:'mark marking correct submissions answers homework check'},
+  {section:'documents',group:'work',label:'Documents',hint:'Scan, upload & discuss',words:'photo essay handwriting worksheet file pdf saved work writing'},
+  {section:'assign',group:'work',label:'Assign homework',hint:'Set the next step',words:'set task new assignment give'},
+  {section:'teaching',group:'teach',label:'Teaching materials',hint:'PowerPoints & teacher notes',words:'slides powerpoint pptx lesson plan files prepare'},
+  {section:'learning',group:'teach',label:'Feedback & lesson notes',hint:'Saved reviews & practice',words:'recorded lesson transcript brief records history'},
+  {section:'assess',group:'results',label:'School results',hint:'Tests & writing checkpoints',words:'grades marks noten schularbeit test exam assessment checkpoint'},
+] as const;
+
+/** The tab a place sits under, and the places that share it. */
+export function teacherGroupOf(section:string){
+  const place=TEACHER_FIND_SECTIONS.find(s=>s.section===section)||TEACHER_FIND_SECTIONS[0];
+  return {group:place.group as TeacherGroup,places:TEACHER_FIND_SECTIONS.filter(s=>s.group===place.group)};
+}
 
 /** Everything Rory can look for: the workspace pages, each student, and each place inside each student. */
 export function teacherFindEntries(students:readonly {code:string;name:string}[]):FindEntry[]{
