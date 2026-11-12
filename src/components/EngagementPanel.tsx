@@ -16,7 +16,7 @@ import {engagementEvents,engagementTotals,periodRange,shiftDay,type EngagementPe
 const periods:{id:EngagementPeriod;label:string}[]=[{id:'day',label:'Day'},{id:'week',label:'Week'},{id:'month',label:'Month'},{id:'semester',label:'Semester'},{id:'year',label:'School year'}];
 const dateLabel=(date:string)=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Vienna'}).format(new Date(date+'T12:00:00Z'));
 const minutes=(value:number)=>value===0?'0':value<1?'<1':String(Math.round(value*10)/10);
-export default function EngagementPanel({code,teacher=false,source,sourceError='',compact=false,onRefresh,onWeeklySummary}:{code:string;teacher?:boolean;source?:EngagementSource;sourceError?:string;compact?:boolean;onRefresh?:()=>Promise<void>;onWeeklySummary?:(state:WeeklySummaryState)=>void}){
+export default function EngagementPanel({code,teacher=false,source,sourceError='',compact=false,summaryOnly=false,onRefresh,onWeeklySummary}:{code:string;teacher?:boolean;source?:EngagementSource;sourceError?:string;compact?:boolean;/** Load and report the week through onWeeklySummary, and draw nothing. */summaryOnly?:boolean;onRefresh?:()=>Promise<void>;onWeeklySummary?:(state:WeeklySummaryState)=>void}){
  const [historyOpen,setHistoryOpen]=useState(!compact);
  const [data,setData]=useState<EngagementSource|null>(source||null),[breaks,setBreaks]=useState<{from:string;to:string}[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[calendarError,setCalendarError]=useState(''),[calendarReady,setCalendarReady]=useState(false),[period,setPeriod]=useState<EngagementPeriod>('week'),[anchor,setAnchor]=useState(viennaDay()),[retry,setRetry]=useState(0);
  useEffect(()=>{let live=true;setError('');setCalendarReady(false);setLoading(true);
@@ -34,6 +34,7 @@ export default function EngagementPanel({code,teacher=false,source,sourceError='
   if(!calendarReady||!practiceCourse(code)){onWeeklySummary({status:'unavailable'});return;}
   onWeeklySummary({status:'ready',progress:ringProgress(data,code,{kind:'week',id:ringWeek(today)},today,breaks)});
  },[loading,error,sourceError,data,calendarReady,code,today,breaks,onWeeklySummary]);
+ if(summaryOnly)return null;
  if(loading)return <section className="engagement-panel engagement-loading" role="status" aria-busy="true"><h2>{teacher?'Practice overview':'Your practice'}</h2><p>Checking your saved work…</p><div className="engagement-skeleton" aria-hidden="true"><span/><div><i/><i/><i/></div></div><p className="engagement-note">Including earlier uploads and conversations.</p></section>;
  if(error||sourceError||!data)return <StatusRow kind="error" onRetry={()=>{if(onRefresh)void onRefresh();else setRetry(n=>n+1);}}>{error||sourceError||'Activity is unavailable.'}</StatusRow>;
  const events=engagementEvents(data,today),range=periodRange(period,anchor),total=engagementTotals(events,range.from,range.to);

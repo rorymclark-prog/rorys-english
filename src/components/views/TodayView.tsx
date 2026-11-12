@@ -5,8 +5,8 @@ import Link from "next/link";
 import type {Unit} from "@/lib/types";
 import {useStudent} from "@/components/StudentContext";
 import {fetchNote,fetchAssignments,fetchSubmissions,type Submission,rowToAssignment,isCurrentAssignment,type Assignment} from "@/lib/remote";
-import {ChevronRightIcon,MessageIcon} from "@/components/Icons";
-import {MicrophoneIcon,RepeatIcon} from "@/components/LearningVisuals";
+import {ChevronRightIcon} from "@/components/Icons";
+import {RepeatIcon} from "@/components/LearningVisuals";
 import {isFerdiSpeakingHomework} from "@/lib/speaking-homework";
 import {readableDate,submissionStatus,isCompletedAssignment} from "@/lib/clarity";
 import {LatestLessonPractice} from "@/components/LessonPractice";
@@ -69,7 +69,7 @@ export default function TodayView({unit,units}:{unit:Unit|null;units?:Unit[]}){
       {hero.action&&<Link className="re-button" href={hero.href} aria-label={`${heroButton}: ${hero.title}`}>{heroButton}</Link>}
       {loaded&&!error&&more>0&&<Link className="today-hero-more" href="#additional-work-title">{more} more {more===1?"task":"tasks"} below <ChevronRightIcon/></Link>}
       </div>
-      <WeeklyPracticeSummary state={weeklySummary}/>
+      <WeeklyPracticeSummary state={weeklySummary} href={`${base}/progress/#weekly-practice`}/>
     </section>
     {loaded&&!error&&additionalSteps.length>0&&<section aria-labelledby="additional-work-title">
       <h2 id="additional-work-title" className="week-form-heading">Other current tasks</h2>
@@ -84,12 +84,11 @@ export default function TodayView({unit,units}:{unit:Unit|null;units?:Unit[]}){
     <LatestLessonPractice code={code} compact/>
     <div className="today-rows">
       <NextLesson code={code} row/>
-      <Link className="today-row" href={`${base}/speak/`}><MicrophoneIcon/><span><strong>Speak</strong><small>A short conversation, saved for Rory</small></span><ChevronRightIcon/></Link>
-      <Link className="today-row" href={`${base}/progress/`}><MessageIcon/><span><strong>Feedback</strong><small>What worked and what to try next</small></span><ChevronRightIcon/></Link>
       <Link className="today-row" href={`${base}/study/`}><RepeatIcon/><span><strong>Practice desk</strong><small>A few optional exercises from your own feedback</small></span><ChevronRightIcon/></Link>
     </div>
     {!isStudentPreview(code)&&<MomentumStrip studentId={studentId}/>}
-    <div id="weekly-practice"><EngagementPanel code={code} compact onWeeklySummary={setWeeklySummary}/></div>
+    {/* The full rings and history live on Feedback. This loads the week for the summary above and draws nothing. */}
+    <EngagementPanel code={code} summaryOnly onWeeklySummary={setWeeklySummary}/>
     <YearPlanNotice code={code} note={note}/>
   </main>;
 }

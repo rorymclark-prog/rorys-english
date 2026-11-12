@@ -10,6 +10,7 @@ import { isStudentPreview } from "@/lib/student-preview";
 import {SharedSkillProgress} from '@/components/SkillProgressPanel';
 import LearningView from "./LearningView";
 import DocumentsView from "./DocumentsView";
+import EngagementPanel from "@/components/EngagementPanel";
 
 type Mode = "student" | "parent" | "teacher";
 
@@ -115,7 +116,7 @@ export default function ProgressView({
       </header>
 
       <main className="re-screen-main progress-page">
-        {mode==='student'?<nav className="refined-progress-jumps" aria-label="Feedback and progress sections"><a href="#feedback-stream">Feedback & next steps</a><a href="#measured-progress" onClick={()=>setMeasuredOpen(true)}>Measured progress <span aria-hidden="true">↗</span></a></nav>:<SharedSkillProgress code={fetchCode} teacher={mode==="teacher"}/>}
+        {mode==='student'?<nav className="refined-progress-jumps" aria-label="Feedback and progress sections"><a href="#feedback-stream">Feedback & next steps</a><a href="#weekly-practice">This week’s practice</a><a href="#measured-progress" onClick={()=>setMeasuredOpen(true)}>Measured progress <span aria-hidden="true">↗</span></a></nav>:<SharedSkillProgress code={fetchCode} teacher={mode==="teacher"}/>}
         {state === "loading" && (
           <div className="mt-4 space-y-3">
             <div className="h-20 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark" />
@@ -154,6 +155,7 @@ export default function ProgressView({
           </>
         )}
 
+        {mode==='student'&&<div id="weekly-practice" className="progress-weekly-practice"><EngagementPanel code={fetchCode} compact/></div>}
         {mode==='student'&&<details id="measured-progress" className="refined-feedback-support refined-measured-progress" open={measuredOpen} onToggle={event=>{if(event.target===event.currentTarget)setMeasuredOpen(event.currentTarget.open);}}><summary>Measured progress <span>Checked skills, vocabulary and dated evidence</span></summary><SharedSkillProgress code={fetchCode}/></details>}
 
         {/* Links shelf — dashboards / resources the tutor adds */}

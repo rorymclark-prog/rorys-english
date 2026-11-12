@@ -61,3 +61,6 @@
  .refined-sentence-review .sentence-table-scroll{border:1px solid var(--re-line);border-radius:.75rem}
 }
 @media(prefers-reduced-motion:reduce){.refined-feedback-filters button,.sentence-reading-controls button,.refined-feedback-open>span{transition:none}}
+
+/* The weekly rings and activity history, moved here from Today (12 Nov). */
+.progress-weekly-practice{scroll-margin-top:6rem;margin-top:1.5rem}

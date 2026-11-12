@@ -28,7 +28,7 @@ function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,c
     '@/lib/remote':{isCurrentAssignment:a=>/^2026-(09|10|11|12)-|^2027-(01|02|03|04|05|06|07|08)-/.test(a.date)},
     '@/lib/clarity':clarity,'@/lib/speaking-homework':speaking,'@/lib/student-preview':{isStudentPreview:()=>true},
     '@/lib/today-task':todayTask,'@/lib/calendar-client':{},'@/lib/lesson-calendar':{viennaDate:()=> '2026-10-22'},'@/lib/engagement':{},
-    '@/components/Icons':{ChevronRightIcon:empty,MessageIcon:empty},'@/components/LearningVisuals':{MicrophoneIcon:empty,RepeatIcon:empty,TopicArt:empty},
+    '@/components/Icons':{ChevronRightIcon:empty},'@/components/LearningVisuals':{RepeatIcon:empty},
     '@/components/LessonPractice':{LatestLessonPractice:empty},
     ...Object.fromEntries(['NextLesson','YearPlanNotice','EngagementPanel','StatusRow','MomentumStrip','WeeklyPracticeSummary'].map(name=>[`@/components/${name}`,{default:empty}])),
   }).default;
@@ -112,7 +112,7 @@ test('progress sharing is disabled and guarded in teacher preview, while normal 
       react:{...React,useState:value=>[value,()=>{}],useEffect:()=>{}},'react/jsx-runtime':jsxRuntime,'next/link':link,
       '@/lib/remote':{},'@/components/Icons':{},'@/lib/storage':{buildProgressSummary:()=>{summaries++;return 'My progress';}},
       '@/lib/student-preview':{isStudentPreview:()=>preview},'@/components/SkillProgressPanel':{SharedSkillProgress:empty},
-      './LearningView':{default:empty},'./DocumentsView':{default:empty},
+      './LearningView':{default:empty},'./DocumentsView':{default:empty},'@/components/EngagementPanel':{default:empty},
     },{navigator:{share:async data=>{shared.push(data);}}}).default;
     const button=findShareButton(view({fetchCode:'student',studentCode:'student',studentId:'student',displayName:'Student',mode:'student'}));
     assert.ok(button);assert.equal(button.props.disabled,preview);
