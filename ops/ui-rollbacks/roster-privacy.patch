@@ -1,0 +1,768 @@
+diff --git b/design/MODERN-2026-SPEC.md a/design/MODERN-2026-SPEC.md
+index 8417171..8f7ff5f 100644
+--- b/design/MODERN-2026-SPEC.md
++++ a/design/MODERN-2026-SPEC.md
+@@ -108,7 +108,3 @@ Four separate steps, each with its own rollback area.
+ - **Four teacher tabs (`teacher-tabs`).** One student's workspace shows Dashboard, Work, Teach and Results. The seven sections and their `?section=` addresses are unchanged; `TEACHER_GROUPS` and `TEACHER_FIND_SECTIONS` in `src/lib/find.ts` are the only list, and the workspace draws tabs and the row of pages from it. A tab opens on its first page; a tab with one page shows no second row.
+ - **Needs you today (`needs-you`).** The teacher home opens with one list from `teacherNotifications` and the student summaries: unread messages, feedback to check, new work, then students with no saved activity for seven days. One row per student per kind, oldest wait first, six rows at most. A failed check says so and never reads as all clear. The list marks nothing as read.
+ - **Dashboard folds (`dashboard-folds`).** A block of the learning dashboard with nothing in it is hidden, not unmounted, and named as a button in a "Nothing here yet" bar; Show all opens every block. Lesson brief and Practice overview always show. New styles use `--re-*` tokens only.
+-
+-## Homework that has not opened · 13 November 2026
+-
+-A homework week with a future `availableFrom` shows one `week-notice` line, "This homework opens on <date>" (Vienna date, `lessonDate`), and the existing Back to homework link, instead of the week's tasks. `isHomeworkReleased` in `src/lib/homework-release.ts` is the single release rule.
+diff --git b/scripts/check-roster-privacy.mjs a/scripts/check-roster-privacy.mjs
+deleted file mode 100644
+index 25fb8cc..0000000
+--- b/scripts/check-roster-privacy.mjs
++++ /dev/null
+@@ -1,45 +0,0 @@
+-// After `npm run build`: does any public static asset contain the roster?
+-//
+-// Reads content/students.json and greps .next/static for the key name
+-// "parentCode" and for every student's code and parent code. Display names are
+-// reported for information only (first names also appear in release notes and
+-// course copy on purpose). Prints only counts and file names, never the values.
+-// Exits 1 if a code, parent code or the parentCode key is found, so it can gate a deploy.
+-import { readFileSync, readdirSync, statSync } from "node:fs";
+-import { join } from "node:path";
+-
+-const root = process.cwd();
+-const students = JSON.parse(readFileSync(join(root, "content", "students.json"), "utf-8"));
+-const staticDir = join(root, ".next", "static");
+-
+-function* walk(dir) {
+-  for (const name of readdirSync(dir)) {
+-    const p = join(dir, name);
+-    if (statSync(p).isDirectory()) yield* walk(p);
+-    else if (/\.(js|css|json|html|txt|map)$/.test(name)) yield p;
+-  }
+-}
+-
+-// The bare word also appears as a property name in app code (menu, teacher tools), which is fine;
+-// what must not appear is the key holding a string value, i.e. roster data.
+-const probes = [{ label: 'key parentCode with a string value', pattern: /["']?parentCode["']?\s*:\s*["'`]/ }];
+-const info = [{ label: "word parentCode as a code property (info only)", needle: "parentCode" }];
+-students.forEach((s, i) => {
+-  probes.push({ label: `student ${i + 1} code`, needle: s.code });
+-  if (s.parentCode) probes.push({ label: `student ${i + 1} parentCode`, needle: s.parentCode });
+-  info.push({ label: `student ${i + 1} displayName (info only)`, needle: s.displayName });
+-});
+-
+-let total = 0;
+-const hits = new Map([...probes, ...info].map((p) => [p.label, new Set()]));
+-for (const file of walk(staticDir)) {
+-  const text = readFileSync(file, "utf-8");
+-  for (const p of [...probes, ...info]) if (p.pattern ? p.pattern.test(text) : p.needle && text.includes(p.needle)) hits.get(p.label).add(file.slice(root.length + 1));
+-}
+-for (const p of [...probes, ...info]) {
+-  const files = [...hits.get(p.label)];
+-  if (probes.includes(p)) total += files.length;
+-  console.log(`${p.label}: ${files.length} file(s)${files.length ? " -> " + files.join(", ") : ""}`);
+-}
+-console.log(total ? `FAIL: ${total} match(es) in .next/static` : "OK: roster not found in .next/static");
+-process.exit(total ? 1 : 0);
+diff --git b/src/app/api/voice/route.ts a/src/app/api/voice/route.ts
+index 3bffec3..4e7dbab 100644
+--- b/src/app/api/voice/route.ts
++++ a/src/app/api/voice/route.ts
+@@ -74,15 +74,7 @@ export async function POST(request: Request) {
+     }else if(body.topic==="lesson")throw new Error("Choose a learner with a saved practice plan.");
+     config = voiceConfiguration(body, unit ? { title: unit.title, vocabulary: "voiceVocabulary" in unit ? unit.voiceVocabulary : undefined } : null,lessonPractice,learningMemory?memoryInput(learningMemory):undefined);
+   }
+-  catch (error) {
+-    // The learning context comes from the backend (Apps Script). When that is slow or down it is not
+-    // the student's mistake: say so with a 503 and keep the 400 for requests that are really invalid.
+-    if (error instanceof ProgressTransportError) {
+-      console.error("Live voice learning context unavailable", { stage: error.stage, status: error.status });
+-      return Response.json({ error: "Speaking practice is briefly unavailable. Try again in a minute." }, { status: 503, headers });
+-    }
+-    return Response.json({ error: "Choose a topic and try connecting your microphone again." }, { status: 400, headers });
+-  }
++  catch { return Response.json({ error: "Choose a topic and try connecting your microphone again." }, { status: 400, headers }); }
+   // Per-instance burst protection, not an account-wide spending limit.
+   const now = Date.now(); const recent = (attempts.get(uid) || []).filter(t => now - t < 3600000);
+   if (recent.length >= 4 || recent.some(t => now - t < 30000)) return Response.json({ error: "Please wait before starting another conversation." }, { status: 429, headers });
+diff --git b/src/app/teacher/calendar/page.tsx a/src/app/teacher/calendar/page.tsx
+index cc4342e..1daaea2 100644
+--- b/src/app/teacher/calendar/page.tsx
++++ a/src/app/teacher/calendar/page.tsx
+@@ -1,7 +1,7 @@
+-import {getAllStudents,getBundle,getTeacherRoster} from "@/lib/content";
++import {getAllStudents,getBundle} from "@/lib/content";
+ import "../teacher.css";
+ import {SettingsProvider} from "@/components/SettingsContext";
+ import {themeScript} from "@/lib/appearance";
+ import TeacherDashboardView from "@/components/views/TeacherDashboardView";
+ export const metadata={title:"Calendar — Rory’s English",robots:{index:false,follow:false}};
+-export default function TeacherCalendarPage(){return <div className="min-h-dvh re-teacher-shell"><script dangerouslySetInnerHTML={{__html:themeScript("__teacher__")}}/><SettingsProvider studentId="__teacher__"><TeacherDashboardView roster={getTeacherRoster()} activeUnits={Object.fromEntries(getAllStudents().map(s=>[s.code,getBundle(s.code)?.activeUnit||null]))} initialCalendar/></SettingsProvider></div>;}
++export default function TeacherCalendarPage(){return <div className="min-h-dvh re-teacher-shell"><script dangerouslySetInnerHTML={{__html:themeScript("__teacher__")}}/><SettingsProvider studentId="__teacher__"><TeacherDashboardView activeUnits={Object.fromEntries(getAllStudents().map(s=>[s.code,getBundle(s.code)?.activeUnit||null]))} initialCalendar/></SettingsProvider></div>;}
+diff --git b/src/app/teacher/live/page.tsx a/src/app/teacher/live/page.tsx
+index da56afc..fc73c15 100644
+--- b/src/app/teacher/live/page.tsx
++++ a/src/app/teacher/live/page.tsx
+@@ -1,10 +1,10 @@
+ import type { Metadata } from "next";
+-import { getAllStudents, getBundle, getCoachLibraries, getTeacherRoster } from "@/lib/content";
++import { getAllStudents, getBundle, getCoachLibraries } from "@/lib/content";
+ import { SettingsProvider } from "@/components/SettingsContext";
+ import TeacherDashboardView from "@/components/views/TeacherDashboardView";
+ import { themeScript } from "@/lib/appearance";
+ import "../teacher.css";
+ export const metadata: Metadata = { title: "Live teaching — Rory’s English", robots: { index: false, follow: false } };
+ export default function LiveTeachingPage() {
+-  return <div className="min-h-dvh re-teacher-shell"><script dangerouslySetInnerHTML={{ __html: themeScript("__teacher__") }}/><SettingsProvider studentId="__teacher__"><TeacherDashboardView roster={getTeacherRoster()} initialLive lessonLibraries={getCoachLibraries()} activeUnits={Object.fromEntries(getAllStudents().map(s => [s.code, getBundle(s.code)?.activeUnit || null]))}/></SettingsProvider></div>;
++  return <div className="min-h-dvh re-teacher-shell"><script dangerouslySetInnerHTML={{ __html: themeScript("__teacher__") }}/><SettingsProvider studentId="__teacher__"><TeacherDashboardView initialLive lessonLibraries={getCoachLibraries()} activeUnits={Object.fromEntries(getAllStudents().map(s => [s.code, getBundle(s.code)?.activeUnit || null]))}/></SettingsProvider></div>;
+ }
+diff --git b/src/app/teacher/page.tsx a/src/app/teacher/page.tsx
+index 09e90f0..b9362db 100644
+--- b/src/app/teacher/page.tsx
++++ a/src/app/teacher/page.tsx
+@@ -1,4 +1,4 @@
+-import {getAllStudents,getBundle,getCoachLibraries,getTeacherRoster} from "@/lib/content";
++import {getAllStudents,getBundle,getCoachLibraries} from "@/lib/content";
+ import type { Metadata } from "next";
+ import "./teacher.css";
+ import { SettingsProvider } from "@/components/SettingsContext";
+@@ -19,7 +19,7 @@ export const metadata: Metadata = {
+ export default function TeacherPage() {
+   return (
+     <div className="min-h-dvh re-teacher-shell">
+-      <script dangerouslySetInnerHTML={{ __html: themeScript("__teacher__") }} /><SettingsProvider studentId="__teacher__"><TeacherDashboardView roster={getTeacherRoster()} lessonLibraries={getCoachLibraries()} activeUnits={Object.fromEntries(getAllStudents().map(s=>[s.code,getBundle(s.code)?.activeUnit||null]))} /></SettingsProvider>
++      <script dangerouslySetInnerHTML={{ __html: themeScript("__teacher__") }} /><SettingsProvider studentId="__teacher__"><TeacherDashboardView lessonLibraries={getCoachLibraries()} activeUnits={Object.fromEntries(getAllStudents().map(s=>[s.code,getBundle(s.code)?.activeUnit||null]))} /></SettingsProvider>
+     </div>
+   );
+ }
+diff --git b/src/components/AppMenu.tsx a/src/components/AppMenu.tsx
+index 7c53f06..9ec2895 100644
+--- b/src/components/AppMenu.tsx
++++ a/src/components/AppMenu.tsx
+@@ -11,14 +11,12 @@ import {studentNavigation} from "@/lib/student-navigation";
+ import {studentFindIndex,teacherFindIndex} from "@/lib/find-index";
+ import {localDate} from "@/lib/local-date";
+ import FindBox from "./FindBox";
+-import {useOptionalStudent} from "./StudentContext";
+-import {useTeacherRoster} from "./TeacherRoster";
++import roster from "../../content/students.json";
+ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:boolean}) {
+   const dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null);
+   const [panel,setPanel]=useState<"menu"|"settings"|"news"|"preview"|"parent-preview">("menu");
+   const [unread,setUnread]=useState(false),[open,setOpen]=useState(false);
+   const titleId=useId();
+-  const roster=useTeacherRoster(),studentId=useOptionalStudent()?.studentId||"";
+   const preview=isStudentPreview(code);
+   const seenKey=`re_news_seen_${teacher||preview?"teacher":code}`;
+   useEffect(()=>{try{setUnread(localStorage.getItem(seenKey)!==LATEST_RELEASE);}catch{setUnread(true);}},[seenKey]);
+@@ -32,7 +30,7 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
+   // The five sections are the tab bar, always on screen on a phone, so the menu
+   // lists only the pages inside them, under the tab they belong to.
+   const menuGroups=code?studentNavigation.filter(section=>section.more.length).map(section=>({label:section.label,links:section.more.map(item=>({label:item.label,hint:item.hint,href:`/s/${code}/${item.suffix}`}))})):[];
+-  const findEntries=useCallback(()=>teacher?teacherFindIndex(roster):code?studentFindIndex(code,localDate(),studentId):[],[teacher,code,roster,studentId]);
++  const findEntries=useCallback(()=>teacher?teacherFindIndex():code?studentFindIndex(code,localDate()):[],[teacher,code]);
+   return <>
+     <button ref={trigger} type="button" className="app-menu-trigger" aria-label="Open menu" aria-haspopup="dialog" aria-expanded={open} onClick={()=>{setPanel("menu");dialog.current?.showModal();setOpen(true);}}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menu</span>{unread&&<span className="app-news-dot" aria-label="New updates"/>}</button>
+     <dialog ref={dialog} aria-labelledby={titleId} className="app-menu-dialog" onClose={()=>{setOpen(false);trigger.current?.focus();}} onClick={e=>{if(e.target===dialog.current){const rect=dialog.current.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)close();}}}>
+@@ -46,8 +44,8 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
+         {preview?<button type="button" className="app-menu-link w-full" onClick={()=>{endStudentPreview();window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH||""}/teacher/`);}}>Back to teacher workspace<span aria-hidden>↗</span></button>:<button type="button" className="app-menu-link w-full" onClick={async()=>{close();await logout(teacher?"__teacher__":code||"");}}>Sign out<span aria-hidden>↗</span></button>}
+       </div>}
+       {panel==="settings"&&<><AppearanceSettings/><p className="mt-6 text-sm leading-relaxed text-navy-soft dark:text-navy-mist">Microphone and camera access is controlled by your device. Choose Allow when prompted; this app cannot grant permission silently or prevent iOS from asking again.</p></>}
+-      {panel==="preview"&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Open the same pages your student sees. Preview is read-only, so their answers and progress stay unchanged.</p>{roster.map(s=><StudentPreviewButton key={s.code} code={s.code} name={s.name} onOpen={close}/>)}</div>}
+-      {panel==="parent-preview"&&teacher&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Choose a student to see their parent’s learning overview and calendar. Preview is read-only and shows the same shared information parents see.</p>{roster.map(s=><ParentPreviewButton key={s.parentCode} code={s.parentCode} name={s.name} roster={roster} onOpen={close}/>)}</div>}
++      {panel==="preview"&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Open the same pages your student sees. Preview is read-only, so their answers and progress stay unchanged.</p>{roster.map(s=><StudentPreviewButton key={s.code} code={s.code} name={s.displayName} onOpen={close}/>)}</div>}
++      {panel==="parent-preview"&&teacher&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Choose a student to see their parent’s learning overview and calendar. Preview is read-only and shows the same shared information parents see.</p>{roster.map(s=><ParentPreviewButton key={s.parentCode} code={s.parentCode} name={s.displayName} onOpen={close}/>)}</div>}
+       {panel==="news"&&<div className="space-y-6">{RELEASE_NOTES.map(note=><article key={`${note.date}-${note.title}`} className="rounded-2xl bg-black/5 p-4 dark:bg-white/5"><p className="text-xs text-navy-soft dark:text-navy-mist">{note.date}</p><h3 className="my-2 font-bold">{note.title}</h3><ul className="list-disc space-y-2 pl-4 text-sm leading-relaxed">{note.items.map(item=><li key={item}>{item}</li>)}</ul></article>)}</div>}
+     </dialog>
+   </>;
+diff --git b/src/components/ParentPreviewBanner.tsx a/src/components/ParentPreviewBanner.tsx
+index 930baa9..087e691 100644
+--- b/src/components/ParentPreviewBanner.tsx
++++ a/src/components/ParentPreviewBanner.tsx
+@@ -1,10 +1,10 @@
+ "use client";
+ import {useParentLanguage} from "./ParentLanguage";
+-import { endParentPreview, isParentPreview, parentPreviewRoster } from "@/lib/parent-preview";
++import { endParentPreview, isParentPreview } from "@/lib/parent-preview";
+ import ParentPreviewButton from "./ParentPreviewButton";
++import roster from "../../content/students.json";
+ export default function ParentPreviewBanner({code,name}:{code:string;name:string}) {
+   const {t}=useParentLanguage();
+   if(!isParentPreview(code))return null;
+-  const others=parentPreviewRoster().filter(student=>student.code!==code);
+-  return <aside className="m-5" aria-label="Parent preview"><div className="preview-banner"><div><strong>{t(`Viewing as ${name}’s parent`,`Elternvorschau für ${name}`)}</strong><p>{t("Read-only preview · the same shared information parents see.","Schreibgeschützte Vorschau · dieselben Informationen wie im Elternbereich.")}</p></div><button type="button" onClick={()=>{endParentPreview();window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH||""}/teacher/`);}}>{t("Exit preview ↗","Vorschau beenden ↗")}</button></div><details className="mt-3"><summary className="cursor-pointer text-sm font-bold">{t("View another student’s parent page","Elternbereich des anderen Schülers ansehen")}</summary>{others.map(student=><ParentPreviewButton key={student.code} code={student.code} name={student.name}/>)}</details></aside>;
++  return <aside className="m-5" aria-label="Parent preview"><div className="preview-banner"><div><strong>{t(`Viewing as ${name}’s parent`,`Elternvorschau für ${name}`)}</strong><p>{t("Read-only preview · the same shared information parents see.","Schreibgeschützte Vorschau · dieselben Informationen wie im Elternbereich.")}</p></div><button type="button" onClick={()=>{endParentPreview();window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH||""}/teacher/`);}}>{t("Exit preview ↗","Vorschau beenden ↗")}</button></div><details className="mt-3"><summary className="cursor-pointer text-sm font-bold">{t("View another student’s parent page","Elternbereich des anderen Schülers ansehen")}</summary>{roster.filter(student=>student.parentCode!==code).map(student=><ParentPreviewButton key={student.parentCode} code={student.parentCode} name={student.displayName}/>)}</details></aside>;
+ }
+diff --git b/src/components/ParentPreviewButton.tsx a/src/components/ParentPreviewButton.tsx
+index cfc8b8b..d246f40 100644
+--- b/src/components/ParentPreviewButton.tsx
++++ a/src/components/ParentPreviewButton.tsx
+@@ -2,11 +2,11 @@
+ import {useParentLanguage} from "./ParentLanguage";
+ import { useState } from "react";
+ import { startParentPreview } from "@/lib/parent-preview";
+-export default function ParentPreviewButton({code,name,roster,onOpen}:{code:string;name:string;roster?:{code:string;name:string}[];onOpen?:()=>void}) {
++export default function ParentPreviewButton({code,name,onOpen}:{code:string;name:string;onOpen?:()=>void}) {
+   const {t}=useParentLanguage();
+   const [error,setError]=useState("");
+   return <div><button type="button" className="app-menu-link w-full" onClick={()=>{
+-    if(!startParentPreview(code,roster)){setError("Please sign in to your teacher account again first.");return;}
++    if(!startParentPreview(code)){setError("Please sign in to your teacher account again first.");return;}
+     onOpen?.();window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/p/${code}/`);
+   }}>{t(`View as ${name}’s parent`,`Elternbereich für ${name} ansehen`)}<span aria-hidden="true">↗</span></button>{error&&<p role="alert" className="mt-2 text-sm text-bad dark:text-bad-bright">{error}</p>}</div>;
+ }
+diff --git b/src/components/StudentContext.tsx a/src/components/StudentContext.tsx
+index 94e91df..753baee 100644
+--- b/src/components/StudentContext.tsx
++++ a/src/components/StudentContext.tsx
+@@ -15,11 +15,6 @@ export function StudentProvider({ value, children }: { value: StudentCtx; childr
+   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+ }
+ 
+-/** For shared chrome (menu) that also renders in the teacher workspace, where there is no student. */
+-export function useOptionalStudent(): StudentCtx | null {
+-  return useContext(Ctx);
+-}
+-
+ export function useStudent(): StudentCtx {
+   const v = useContext(Ctx);
+   if (!v) throw new Error("useStudent must be used inside <StudentProvider>");
+diff --git b/src/components/StudentNavigation.tsx a/src/components/StudentNavigation.tsx
+index 3737344..fa6b05b 100644
+--- b/src/components/StudentNavigation.tsx
++++ a/src/components/StudentNavigation.tsx
+@@ -15,11 +15,11 @@ import {localDate} from '@/lib/local-date';
+ // The desktop sidebar: the same five sections as the phone's tab bar, each
+ // with its own pages underneath, and Find above them.
+ export default function StudentNavigation(){
+-  const {code,displayName,studentId}=useStudent();
++  const {code,displayName}=useStudent();
+   const path=usePathname();
+   const base=`/s/${code}`;
+   const here=navPlace(path,base);
+-  const entries=useCallback(()=>studentFindIndex(code,localDate(),studentId),[code,studentId]);
++  const entries=useCallback(()=>studentFindIndex(code,localDate()),[code]);
+   return <aside className="re-sidebar">
+     <Link href={`${base}/`} className="re-brand"><span>r.</span><div>Rory’s English<small>A LITTLE EVERY LESSON.</small></div></Link>
+     <FindBox entries={entries} placeholder="Find" shortcut/>
+diff --git b/src/components/TeacherRoster.tsx a/src/components/TeacherRoster.tsx
+deleted file mode 100644
+index 635575a..0000000
+--- b/src/components/TeacherRoster.tsx
++++ /dev/null
+@@ -1,17 +0,0 @@
+-"use client";
+-import { createContext, useContext } from "react";
+-
+-/** What the teacher workspace needs to know about every student, and no more.
+- *  Handed down by the /teacher routes (never imported from content/students.json
+- *  by client code, which would put the whole roster in public JavaScript). */
+-export interface TeacherRosterEntry { code: string; parentCode: string; name: string; }
+-
+-const Ctx = createContext<TeacherRosterEntry[]>([]);
+-
+-export function TeacherRosterProvider({ roster, children }: { roster: TeacherRosterEntry[]; children: React.ReactNode }) {
+-  return <Ctx.Provider value={roster}>{children}</Ctx.Provider>;
+-}
+-
+-export function useTeacherRoster(): TeacherRosterEntry[] {
+-  return useContext(Ctx);
+-}
+diff --git b/src/components/views/HomeworkWeekView.tsx a/src/components/views/HomeworkWeekView.tsx
+index 2dc7664..ad80e88 100644
+--- b/src/components/views/HomeworkWeekView.tsx
++++ a/src/components/views/HomeworkWeekView.tsx
+@@ -9,15 +9,11 @@ import {buildHomeworkIcs,downloadIcs,parseDueDate} from "@/lib/ics";
+ import {guidedSpeakingForHomework} from "@/lib/guided-speaking";
+ import HomeworkAudioRecorder from "@/components/HomeworkAudioRecorder";
+ import {readableDate} from "@/lib/clarity";
+-import {isHomeworkReleased} from "@/lib/homework-release";
+-import {lessonDate,viennaDate} from "@/lib/lesson-calendar";
+ import Screen from "@/components/Screen";
+ import {ClockIcon,MessageIcon,PencilIcon} from "@/components/Icons";
+ import {MicrophoneIcon} from "@/components/LearningVisuals";
+ export default function HomeworkWeekView({unitId,week,backHref,archived=false}:{unitId:string;week:HomeworkWeek;backHref:string;archived?:boolean}) {
+   const {studentId,code}=useStudent();
+-  // A week that has not opened yet is hidden from the lists; it must not open from its address either.
+-  if(week.availableFrom&&!isHomeworkReleased(week,viennaDate()))return <Screen title="Homework" subtitle={week.title}><div className="week-page"><Link href={`/s/${code}/homework/`} className="week-back">← Back to homework</Link><p className="week-notice" role="status"><strong>This homework opens on {lessonDate(week.availableFrom)}.</strong> Come back then. Nothing is lost.</p></div></Screen>;
+   const due=parseDueDate(week.due);
+   const guided=guidedSpeakingForHomework(code,unitId,week.week);
+   const voiceTask=week.tasks.find(task=>task.type==="voice");
+@@ -29,7 +25,7 @@ export default function HomeworkWeekView({unitId,week,backHref,archived=false}:{
+     <Link href={backHref} className="week-back">← Back to homework</Link>
+     <section className={`week-summary ${speaking?"is-speaking":"is-writing"}`}><span className="week-summary-icon"><Icon/></span><div><p className="work-eyebrow">{archived?"OPTIONAL REVISION":taskLabel.toUpperCase()}</p><h2>What you’ll do</h2>{week.description&&<p>{week.description}</p>}<div className="week-facts"><span><ClockIcon/> {week.estimatedMinutes?`About ${week.estimatedMinutes} minutes`:"Work at your own pace"}</span><span>{week.due?`Due ${readableDate(week.due)}`:"No deadline set"}</span>{week.availableFrom&&<span>Available from {readableDate(week.availableFrom)}</span>}</div></div></section>
+     {archived&&<p className="week-notice">Previous-year archive · optional revision, not current homework.</p>}
+-    {guided?<div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-800 dark:bg-navy-raised"><strong>{studentId==="ferdi"?"Step 1 · Speak once":"Conversation practice · speak with your AI partner"}</strong><p className="mt-1">Chat {week.week} takes about {guided.duration} and is saved when you end it. No transcript to copy or paste.</p><Link className="mt-3 inline-block font-bold text-indigo-700 underline dark:text-amber" href={`/s/${code}/speak/?guided=${guided.id}`}>Open Chat {week.week} →</Link></div>:week.tasks.some(task=>task.type==="voice")&&<Link className="inline-block rounded-xl border p-3 font-semibold underline" href={`/s/${code}/speak/`}>Open Speaking studio →</Link>}
++    {guided?<div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-800 dark:bg-navy-raised"><strong>{code==="ferdi-7h3k"?"Step 1 · Speak once":"Conversation practice · speak with your AI partner"}</strong><p className="mt-1">Chat {week.week} takes about {guided.duration} and is saved when you end it. No transcript to copy or paste.</p><Link className="mt-3 inline-block font-bold text-indigo-700 underline dark:text-amber" href={`/s/${code}/speak/?guided=${guided.id}`}>Open Chat {week.week} →</Link></div>:week.tasks.some(task=>task.type==="voice")&&<Link className="inline-block rounded-xl border p-3 font-semibold underline" href={`/s/${code}/speak/`}>Open Speaking studio →</Link>}
+     {guided?.purpose&&<p className="week-notice"><strong>Why this chat? </strong>{guided.purpose}</p>}
+     {voiceTask&&!archived&&<HomeworkAudioRecorder code={code} studentId={studentId} unitId={unitId} week={week.week} title={week.title} prompt={voiceTask.prompt}/>}
+     {week.objectives&&<section className="week-objectives"><div className="ux-panel-heading"><MessageIcon/><h2>What to focus on</h2></div><ul>{week.objectives.map(o=><li key={o}>{o}</li>)}</ul></section>}
+diff --git b/src/components/views/TeacherDashboardView.tsx a/src/components/views/TeacherDashboardView.tsx
+index f86b406..c3a9b8b 100644
+--- b/src/components/views/TeacherDashboardView.tsx
++++ a/src/components/views/TeacherDashboardView.tsx
+@@ -33,7 +33,7 @@ import AppMenu from "@/components/AppMenu";
+ import ProfileAvatar from "@/components/ProfileAvatar";
+ import QuickAppearance from "@/components/QuickAppearance";
+ import StudentPreviewButton from "@/components/StudentPreviewButton";
+-import { TeacherRosterProvider, type TeacherRosterEntry } from "@/components/TeacherRoster";
++import studentRoster from "../../../content/students.json";
+ import InboxView from "./InboxView";
+ import InboxLink from "@/components/InboxLink";
+ import LiveTeachingCoach from "./LiveTeachingCoach";
+@@ -47,13 +47,7 @@ const STORAGE_KEY = "re_teacher_secret";
+ 
+ type LoadState = "idle" | "loading" | "ok" | "error";
+ 
+-/** The /teacher routes pass `roster` (code, parentCode, name per student): the one place client code
+- *  learns who the students are, because the static JavaScript must not carry content/students.json. */
+-export default function TeacherDashboardView({roster=[],...rest}:{roster?:TeacherRosterEntry[];initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>;lessonLibraries?:Record<string,CoachLearnerLibrary>}) {
+-  return <TeacherRosterProvider roster={roster}><TeacherWorkspace roster={roster} {...rest}/></TeacherRosterProvider>;
+-}
+-
+-function TeacherWorkspace({roster,initialCalendar=false,initialLive=false,activeUnits={},lessonLibraries={}}:{roster:TeacherRosterEntry[];initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>;lessonLibraries?:Record<string,CoachLearnerLibrary>}) {
++export default function TeacherDashboardView({initialCalendar=false,initialLive=false,activeUnits={},lessonLibraries={}}:{initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>;lessonLibraries?:Record<string,CoachLearnerLibrary>}) {
+   const [inboxTab,setInboxTab]=useState<"messages"|"notifications"|null>(null);
+   const [inboxCode,setInboxCode]=useState("__teacher__");
+   const [section,setSection]=useState<TeacherSection>("overview");
+@@ -175,7 +169,7 @@ function TeacherWorkspace({roster,initialCalendar=false,initialLive=false,active
+ 
+   if (testingVoice) return <div className="teacher-workspace">
+     <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => go({kind:"home"})}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header>
+-    <VoiceStudio code="__teacher__" lines={[]} teacherTest practiceOptions={roster.map(s => ({ code: s.code, name: s.name, unit: activeUnits[s.code]?.title }))} />
++    <VoiceStudio code="__teacher__" lines={[]} teacherTest practiceOptions={studentRoster.map(s => ({ code: s.code, name: s.displayName, unit: s.units.find(u => u.active)?.title }))} />
+   </div>;
+ 
+   const selected = selectedCode ? students?.find((x) => x.code === selectedCode) ?? null : null;
+@@ -238,7 +232,7 @@ function TeacherWorkspace({roster,initialCalendar=false,initialLive=false,active
+           <div className="teacher-section-heading"><div><p className="teacher-eyebrow">ONE STEP AT A TIME</p><h2>Your students <span>{students.length}</span></h2></div><button type="button" onClick={()=>setAddingStudent(true)} className="teacher-quiet-button">+ Add student</button></div>
+           <div className="teacher-student-grid">
+             {students.length===0 && <div className="teacher-empty"><BookIcon/><h2>Your classroom starts here</h2><p>Add your first student to get started.</p></div>}
+-            {students.map(student=><StudentCard key={student.code} student={student} unitTitle={activeUnits[student.code]?.title} onOpen={()=>go({kind:"student",student:student.code,section:"overview"})}/>)}
++            {students.map(student=><StudentCard key={student.code} student={student} onOpen={()=>go({kind:"student",student:student.code,section:"overview"})}/>)}
+           </div>
+           <section className="teacher-voice-tool"><MessageIcon/><div><h2>Speaking partner test</h2><p>Try a conversation before a lesson. Your test stays separate from student work.</p></div><button type="button" className="teacher-primary" onClick={() => go({kind:"voice"})}>Test voice</button></section>
+           <TeachingProgress students={students} onOpen={(code)=>go({kind:"student",student:code,section:"overview"})}/>
+@@ -306,9 +300,10 @@ function PasswordGate({
+   );
+ }
+ 
+-function StudentCard({ student, unitTitle, onOpen }: { student: TeacherStudent; unitTitle?: string; onOpen: () => void }) {
++function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () => void }) {
++  const unit = studentRoster.find(entry=>entry.code===student.code)?.units.find(unit=>unit.active);
+   return <button type="button" onClick={onOpen} className={`teacher-student-card ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`} aria-label={`Open ${student.name}’s teaching workspace`}>
+-    <div className="teacher-card-heading"><ProfileAvatar code={student.code} name={student.name} className="teacher-avatar"/><div><h3>{student.name}</h3><p>{unitTitle || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
++    <div className="teacher-card-heading"><ProfileAvatar code={student.code} name={student.name} className="teacher-avatar"/><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
+     <div className="teacher-focus"><span>{student.focusNote ? "CURRENT FOCUS" : "NEXT STEP"}</span><p>{student.focusNote || "Open their workspace to review answers or assign a little practice."}</p></div>
+     <div className="teacher-card-footer"><span>Saved work, practice & feedback</span><strong>Open learning dashboard <span aria-hidden>↗</span></strong></div>
+   </button>;
+diff --git b/src/lib/content.ts a/src/lib/content.ts
+index d7460d2..d43dd3e 100644
+--- b/src/lib/content.ts
++++ a/src/lib/content.ts
+@@ -26,11 +26,6 @@ export function getAllStudents(): Student[] {
+   return readJson<Student[]>(path.join(CONTENT_DIR, "students.json"));
+ }
+ 
+-/** Minimum the teacher workspace needs for every student (code, parent code, name). */
+-export function getTeacherRoster(): { code: string; parentCode: string; name: string }[] {
+-  return getAllStudents().map((s) => ({ code: s.code, parentCode: s.parentCode ?? "", name: s.displayName }));
+-}
+-
+ export function getStudentByCode(code: string): Student | undefined {
+   return getAllStudents().find((s) => s.code === code);
+ }
+diff --git b/src/lib/find-index.ts a/src/lib/find-index.ts
+index eac8a16..f027f06 100644
+--- b/src/lib/find-index.ts
++++ a/src/lib/find-index.ts
+@@ -2,6 +2,7 @@
+ // what may be found live in find.ts; this file only fetches the data.
+ import ferdi from '../../content/ferdi/units.json';
+ import valentin from '../../content/valentin/units.json';
++import roster from '../../content/students.json';
+ import {practiceCatalog} from './practice-catalog';
+ import {studentNavigation} from './student-navigation';
+ import {studentFindEntries,teacherFindEntries,type FindEntry} from './find';
+@@ -9,13 +10,12 @@ import {studentFindEntries,teacherFindEntries,type FindEntry} from './find';
+ type UnitFiles={title:string;resources?:{title:string}[]};
+ const unitFiles:Record<string,UnitFiles[]>={ferdi,valentin};
+ 
+-// The student id comes from the page's own student context, so this file never
+-// needs the roster (which must stay out of public browser code).
+-export function studentFindIndex(code:string,today:string,student:string):FindEntry[]{
++export function studentFindIndex(code:string,today:string):FindEntry[]{
++  const student=roster.find(s=>s.code===code)?.id||'';
+   const files=(unitFiles[student]||[]).flatMap(unit=>(unit.resources||[]).map(r=>({title:r.title,unit:unit.title})));
+   return studentFindEntries(code,studentNavigation,practiceCatalog(code),files,today);
+ }
+ 
+-export function teacherFindIndex(roster:{code:string;name:string}[]):FindEntry[]{
+-  return teacherFindEntries(roster.map(s=>({code:s.code,name:s.name})));
++export function teacherFindIndex():FindEntry[]{
++  return teacherFindEntries(roster.map(s=>({code:s.code,name:s.displayName})));
+ }
+diff --git b/src/lib/guided-speaking.ts a/src/lib/guided-speaking.ts
+index 1107da4..e2fa123 100644
+--- b/src/lib/guided-speaking.ts
++++ a/src/lib/guided-speaking.ts
+@@ -1,7 +1,6 @@
+ export type GuidedSpeaking = {
+   id: string;
+-  /** Which learner this conversation is for. Matched against the start of their code ("<learner>-…"), so no sign-in code is written into public browser code. */
+-  learner: string;
++  studentCode: string;
+   unitId: string;
+   week: number;
+   topic: "story" | "unit";
+@@ -18,7 +17,7 @@ export type GuidedSpeaking = {
+ 
+ const conversations: GuidedSpeaking[] = [
+   {
+-    id: "ferdi-chat-1", learner: "ferdi", unitId: "english-in-context5-unit01-2026", week: 1,
++    id: "ferdi-chat-1", studentCode: "ferdi-7h3k", unitId: "english-in-context5-unit01-2026", week: 1,
+     topic: "story", unitLabel: "FAMILY LIFE", title: "Tell a family day-out story.", savedTitle: "Family life · Chat 1: story",
+     focus: "Tell a family day-out story in order, using past verbs.", cue: "First → then → finally",
+     prompt: "Tell me about a family day out when a small plan changed. Who was there, what happened, and how did it end? A real or invented family is fine.", duration: "12–15 minutes",
+@@ -26,7 +25,7 @@ const conversations: GuidedSpeaking[] = [
+     instructions: "Invite a short real or imaginary family day-out story in which a small plan changed. Start by asking who went on the day out. Keep the family connection clear: a holiday or climbing trip is only an example if it involves the family. A completely invented family is welcome; do not press for private family details. Help the learner use past verbs, first, then, finally and because. Ask one simple follow-up at a time. Explain briefly that this is oral rehearsal for their own 5–7-sentence written story. Treat model sentences as short starters, not a script; do not dictate or write the finished homework.",
+   },
+   {
+-    id: "ferdi-chat-2", learner: "ferdi", unitId: "english-in-context5-unit01-2026", week: 2,
++    id: "ferdi-chat-2", studentCode: "ferdi-7h3k", unitId: "english-in-context5-unit01-2026", week: 2,
+     topic: "unit", unitLabel: "FAMILY LIFE", title: "Talk about family life.", savedTitle: "Family life · Chat 2: usually and now",
+     focus: "Describe a usual routine, a past weekend and a reason.", cue: "Usually → last weekend → because",
+     prompt: "Tell me what your family usually does, what happened last weekend, and one thing you liked or would change. An invented family is fine.", duration: "12–15 minutes",
+@@ -34,14 +33,14 @@ const conversations: GuidedSpeaking[] = [
+     instructions: "Rehearse the existing family-life email without writing it for the learner. Ask one question at a time: what a real or invented family usually does, what happened on a past weekend, and one thing they like or would change with a because reason. Help with present simple for routines and past verbs for the weekend only when needed. Invite their own new example after a short hint. A fictional family is welcome; do not request private details.",
+   },
+   {
+-    id: "valentin-chat-2", learner: "valentin", unitId: "way2go8-unit01-2026", week: 2,
++    id: "valentin-chat-2", studentCode: "valentin-q9m2", unitId: "way2go8-unit01-2026", week: 2,
+     topic: "unit", unitLabel: "HEALTHY AND HAPPY", title: "Discuss healthy habits.", savedTitle: "Healthy and happy · Chat 2: healthy habits",
+     focus: "Explain choices and respond to a challenge.", cue: "Habit → reason → example → challenge",
+     prompt: "Discuss two realistic habits that could help someone through a busy school week. Give reasons, examples and one possible obstacle. You can speak about an imaginary student.", duration: "8–10 minutes",
+     instructions: "Discuss two general healthy habits for a busy school week. Ask for a reason and concrete example for each, then raise one realistic obstacle and invite a response. Encourage linking phrases and a balanced view. Do not request personal medical information or give individual medical advice. Do not turn the exchange into a memorised monologue.",
+   },
+   {
+-    id: "valentin-chat-3", learner: "valentin", unitId: "way2go8-unit01-2026", week: 3,
++    id: "valentin-chat-3", studentCode: "valentin-q9m2", unitId: "way2go8-unit01-2026", week: 3,
+     topic: "unit", unitLabel: "HEALTHY AND HAPPY", title: "Discuss a school wellbeing idea.", savedTitle: "Healthy and happy · Chat 3: school proposal",
+     focus: "Make a proposal and respond politely.", cue: "Proposal → benefits → concern → response",
+     prompt: "Suggest one realistic school wellbeing activity. Your partner will ask how it could work and raise one concern. Respond politely, then ask a question back.", duration: "8–10 minutes",
+@@ -50,9 +49,9 @@ const conversations: GuidedSpeaking[] = [
+ ];
+ 
+ export function guidedSpeaking(studentCode: string, id: string | null | undefined): GuidedSpeaking | null {
+-  return conversations.find(chat => studentCode.startsWith(`${chat.learner}-`) && chat.id === id) || null;
++  return conversations.find(chat => chat.studentCode === studentCode && chat.id === id) || null;
+ }
+ 
+ export function guidedSpeakingForHomework(studentCode: string, unitId: string, week: number): GuidedSpeaking | null {
+-  return conversations.find(chat => studentCode.startsWith(`${chat.learner}-`) && chat.unitId === unitId && chat.week === week) || null;
++  return conversations.find(chat => chat.studentCode === studentCode && chat.unitId === unitId && chat.week === week) || null;
+ }
+diff --git b/src/lib/homework-release.ts a/src/lib/homework-release.ts
+deleted file mode 100644
+index ec236c1..0000000
+--- b/src/lib/homework-release.ts
++++ /dev/null
+@@ -1,6 +0,0 @@
+-// One rule for "has this homework week opened yet?", shared by the Homework
+-// list, Find, Today and the week page itself. Dates are YYYY-MM-DD; `today`
+-// must be the Vienna date (viennaDate()), not a device-local or UTC one.
+-export function isHomeworkReleased(week: { availableFrom?: string }, today: string): boolean {
+-  return !week.availableFrom || week.availableFrom <= today;
+-}
+diff --git b/src/lib/parent-preview.ts a/src/lib/parent-preview.ts
+index 41146d4..f5f611c 100644
+--- b/src/lib/parent-preview.ts
++++ a/src/lib/parent-preview.ts
+@@ -1,9 +1,6 @@
+ // A teacher can inspect the real family routes without signing in as a parent.
+ import { previewTeacherSession } from "./student-preview";
+ export const PARENT_PREVIEW_KEY = "re_teacher_parent_preview_v1";
+-// The other families the teacher can switch to while previewing. Stored when the teacher starts a
+-// preview from the workspace, so the public parent pages never have to carry the whole roster.
+-export const PARENT_PREVIEW_ROSTER_KEY = "re_teacher_parent_preview_roster_v1";
+ export const PARENT_PREVIEW_READS = new Set(["progress", "parentPractice", "resources", "note", "documents", "document", "documentFile", "learningRecords", "workFeedback", "calendarLessons", "calendarTestFile"]);
+ export const PARENT_PREVIEW_NOTICE = "Parent preview is read-only. Return to your teacher workspace to make changes.";
+ export function isParentPreview(code?: string): boolean {
+@@ -14,21 +11,10 @@ export function isParentPreview(code?: string): boolean {
+     return !!selected && (!code || code === selected) && (window.location.pathname === root || window.location.pathname.startsWith(`${root}/`));
+   } catch { return false; }
+ }
+-export function startParentPreview(code: string, roster?: { code: string; name: string }[]): boolean {
++export function startParentPreview(code: string): boolean {
+   if (!previewTeacherSession()) return false;
+-  try {
+-    sessionStorage.setItem(PARENT_PREVIEW_KEY, code);
+-    if (roster) sessionStorage.setItem(PARENT_PREVIEW_ROSTER_KEY, JSON.stringify(roster.map(({ code, name }) => ({ code, name }))));
+-    return true;
+-  } catch { return false; }
+-}
+-
+-export function parentPreviewRoster(): { code: string; name: string }[] {
+-  try {
+-    const list = JSON.parse(sessionStorage.getItem(PARENT_PREVIEW_ROSTER_KEY) || "[]");
+-    return Array.isArray(list) ? list.filter((entry) => entry && typeof entry.code === "string" && typeof entry.name === "string") : [];
+-  } catch { return []; }
++  try { sessionStorage.setItem(PARENT_PREVIEW_KEY, code); return true; } catch { return false; }
+ }
+ export function endParentPreview() {
+-  try { sessionStorage.removeItem(PARENT_PREVIEW_KEY); sessionStorage.removeItem(PARENT_PREVIEW_ROSTER_KEY); } catch { /* optional storage */ }
++  try { sessionStorage.removeItem(PARENT_PREVIEW_KEY); } catch { /* optional storage */ }
+ }
+diff --git b/src/lib/practice-catalog.ts a/src/lib/practice-catalog.ts
+index ae37260..4ca5bc8 100644
+--- b/src/lib/practice-catalog.ts
++++ a/src/lib/practice-catalog.ts
+@@ -6,18 +6,15 @@ import valentinTasks from '../../content/valentin/way2go8-unit01-2026/homework.j
+ import ferdiArchive from '../../content/ferdi/unit10/homework.json';
+ import valentinArchive from '../../content/valentin/unit05/homework.json';
+ export type RingUnit={id:string;title:string;year:string;available:boolean;active:boolean;homework:{week:number;title:string;availableFrom?:string;tasks:{type:string}[]}[]};
+-// Student and parent codes both start with the learner they belong to ("<learner>-…"), so the
+-// catalogue never needs the sign-in codes themselves in public browser code.
+-function codeLearner(code:string):'ferdi'|'valentin'|null{return code.startsWith('ferdi-')?'ferdi':code.startsWith('valentin-')?'valentin':null;}
+ export function practiceCatalog(code:string):RingUnit[]{
+- const student=codeLearner(code);if(!student)return [];
++ const student=['ferdi-7h3k','ferdi-fam-3p9k'].includes(code)?'ferdi':['valentin-q9m2','valentin-fam-8w2d'].includes(code)?'valentin':null;if(!student)return [];
+  const defs=student==='ferdi'?ferdi:valentin,plan=plans.find(p=>p.studentId===student)!;
+  const prefix=student==='ferdi'?'english-in-context5':'way2go8';
+  const units:RingUnit[]=plan.units.map(u=>{const id=`${prefix}-unit${String(u.number).padStart(2,'0')}-2026`,def=defs.find(d=>d.id===id);return {id,title:`Unit ${u.number} · ${u.title}`,year:plan.schoolYear,available:!!def,active:!!def?.active,homework:def?.active?(student==='ferdi'?ferdiTasks:valentinTasks):[]};});
+  for(const def of defs)if(!units.some(u=>u.id===def.id))units.push({id:def.id,title:def.title,year:def.schoolYear,available:true,active:def.active,homework:def.id==='unit10'?ferdiArchive:def.id==='unit05'?valentinArchive:[]});
+  return units;
+ }
+-export function practiceCourse(code:string){const plan=plans.find(p=>p.studentId===(codeLearner(code)||''));return plan?{title:plan.book,year:plan.schoolYear,provisional:plan.studentId==='valentin'}:null;}
++export function practiceCourse(code:string){const plan=plans.find(p=>p.studentId===(['ferdi-7h3k','ferdi-fam-3p9k'].includes(code)?'ferdi':['valentin-q9m2','valentin-fam-8w2d'].includes(code)?'valentin':''));return plan?{title:plan.book,year:plan.schoolYear,provisional:plan.studentId==='valentin'}:null;}
+ 
+ export function ringWritingPath(code:string,unit:RingUnit|undefined,lessonId:string|undefined,today:string){
+  if(lessonId)return `/s/${code}/progress/#write-${lessonId}`;
+diff --git b/src/lib/server/progress-backend.ts a/src/lib/server/progress-backend.ts
+index 4c46729..d621c0b 100644
+--- b/src/lib/server/progress-backend.ts
++++ a/src/lib/server/progress-backend.ts
+@@ -1,11 +1,11 @@
+ import type {Reply} from "./account-service";
+-import {postProgress, ProgressTransportError} from "./progress-transport";
++import {postProgress} from "./progress-transport";
+ import {googleHttp} from "./google-http";
+ const sessions = new Map<string, { token: string; expires: number }>();
+ const pending = new Map<string, Promise<string>>();
+ export async function upstream(body: Record<string, unknown>): Promise<Reply> {
+   const endpoint = process.env.APPS_SCRIPT_URL;
+-  if (!endpoint) throw new ProgressTransportError("service-missing");
++  if (!endpoint) throw new Error("Missing progress service");
+   return postProgress(endpoint, body, googleHttp, fetch);
+ }
+ export async function backendSession(code: string, idToken: string, refresh = false): Promise<string> {
+@@ -13,7 +13,7 @@ export async function backendSession(code: string, idToken: string, refresh = fa
+   if (pending.has(code)) return pending.get(code)!;
+   const attempt = (async () => {
+     const result = await upstream({ action: "firebaseLogin", code, idToken });
+-    if (!result.ok || result.role !== "student" || typeof result.token !== "string" || typeof result.expires !== "number") throw new ProgressTransportError("student-session");
++    if (!result.ok || result.role !== "student" || typeof result.token !== "string" || typeof result.expires !== "number") throw new Error("Student connection unavailable");
+     sessions.set(code, { token: result.token, expires: result.expires });
+     return result.token;
+   })();
+diff --git b/src/lib/speaking-homework.ts a/src/lib/speaking-homework.ts
+index ba391e4..7ca2ba5 100644
+--- b/src/lib/speaking-homework.ts
++++ a/src/lib/speaking-homework.ts
+@@ -1,6 +1,6 @@
+ import type { Assignment } from "./remote";
+ 
+ export function isFerdiSpeakingHomework(code: string, assignment: Assignment) {
+-  return code.startsWith("ferdi-") && /Chat 1:\s*Tell a story/i.test(assignment.details)
++  return code === "ferdi-7h3k" && /Chat 1:\s*Tell a story/i.test(assignment.details)
+     && /Chat 2:\s*Compare/i.test(assignment.details);
+ }
+diff --git b/tests/homework-release.test.mjs a/tests/homework-release.test.mjs
+deleted file mode 100644
+index 8692c59..0000000
+--- b/tests/homework-release.test.mjs
++++ /dev/null
+@@ -1,36 +0,0 @@
+-import test from "node:test";
+-import assert from "node:assert/strict";
+-import fs from "node:fs";
+-import vm from "node:vm";
+-import ts from "typescript";
+-
+-function load(file) {
+-  const exports = {};
+-  const out = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+-  vm.runInNewContext(out, { exports, module: { exports } });
+-  return exports;
+-}
+-const read = (f) => fs.readFileSync(f, "utf8");
+-const { isHomeworkReleased } = load("src/lib/homework-release.ts");
+-
+-test("a homework week opens on its availableFrom date, and not before", () => {
+-  assert.equal(isHomeworkReleased({}, "2026-11-13"), true, "no date means open");
+-  assert.equal(isHomeworkReleased({ availableFrom: "2026-11-13" }, "2026-11-13"), true, "open on the day");
+-  assert.equal(isHomeworkReleased({ availableFrom: "2026-11-14" }, "2026-11-13"), false, "closed the day before");
+-});
+-
+-test("the week page itself is gated, by the Vienna date, before it shows any tasks or answer boxes", () => {
+-  const view = read("src/components/views/HomeworkWeekView.tsx");
+-  assert.match(view, /isHomeworkReleased\(week,viennaDate\(\)\)/, "uses the Vienna date helper the Today view uses");
+-  assert.doesNotMatch(view, /localDate|new Date\(\)/, "no device-local or UTC clock");
+-  assert.match(view, /This homework opens on \{lessonDate\(week\.availableFrom\)\}/);
+-  const gate = view.indexOf("isHomeworkReleased(week");
+-  assert.ok(gate > 0 && gate < view.indexOf("<SubmissionForm"), "the gate returns before the answer form is built");
+-  assert.ok(gate < view.indexOf("<HomeworkAudioRecorder"), "and before the recorder");
+-  assert.match(view, /href=\{`\/s\/\$\{code\}\/homework\/`\}/, "links back to the Homework list");
+-});
+-
+-test("the lists keep the same rule the page now uses", () => {
+-  assert.match(read("src/lib/find.ts"), /!h\.availableFrom\|\|h\.availableFrom<=today/);
+-  assert.match(read("src/components/views/HomeworkListView.tsx"), /!h\.availableFrom\|\|h\.availableFrom<=today/);
+-});
+diff --git b/tests/roster-privacy.test.mjs a/tests/roster-privacy.test.mjs
+deleted file mode 100644
+index 26ba606..0000000
+--- b/tests/roster-privacy.test.mjs
++++ /dev/null
+@@ -1,99 +0,0 @@
+-// The roster (content/students.json: names, sign-in codes, parent codes, profiles) must never be
+-// bundled into browser code, because everything under .next/static is downloadable without signing in.
+-// Server components read it through src/lib/content.ts and pass each page only what it needs.
+-import test from "node:test";
+-import assert from "node:assert/strict";
+-import fs from "node:fs";
+-import path from "node:path";
+-
+-const SRC = path.resolve("src");
+-const read = (p) => fs.readFileSync(p, "utf8");
+-
+-function walk(dir) {
+-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+-    const p = path.join(dir, e.name);
+-    return e.isDirectory() ? walk(p) : /\.(ts|tsx)$/.test(e.name) ? [p] : [];
+-  });
+-}
+-
+-function resolveImport(from, spec) {
+-  let base;
+-  if (spec.startsWith("@/")) base = path.join(SRC, spec.slice(2));
+-  else if (spec.startsWith(".")) base = path.resolve(path.dirname(from), spec);
+-  else return null;
+-  for (const c of [base, `${base}.ts`, `${base}.tsx`, path.join(base, "index.ts"), path.join(base, "index.tsx")]) {
+-    if (fs.existsSync(c) && fs.statSync(c).isFile()) return c;
+-  }
+-  return null;
+-}
+-
+-// Value imports only: `import type` is erased by the compiler and never reaches a bundle.
+-function importsOf(file) {
+-  const out = [];
+-  for (const m of read(file).matchAll(/^\s*(?:import|export)\s+(?!type\b)[^;'"]*?from\s*['"]([^'"]+)['"]|^\s*import\s*['"]([^'"]+)['"]/gm)) {
+-    out.push(m[1] || m[2]);
+-  }
+-  return out;
+-}
+-
+-function clientReachable() {
+-  const roots = walk(SRC).filter((f) => /^\s*["']use client["']/.test(read(f)));
+-  const seen = new Map(roots.map((f) => [f, [path.relative(SRC, f)]]));
+-  const queue = [...roots];
+-  while (queue.length) {
+-    const file = queue.shift();
+-    for (const spec of importsOf(file)) {
+-      const next = resolveImport(file, spec);
+-      if (next && !seen.has(next)) {
+-        seen.set(next, [...seen.get(file), path.relative(SRC, next)]);
+-        queue.push(next);
+-      }
+-    }
+-  }
+-  return seen;
+-}
+-
+-test("no client component, nor anything it imports, imports students.json", () => {
+-  const reachable = clientReachable();
+-  assert.ok(reachable.size > 100, "the walk should cover the client code");
+-  const bad = [];
+-  for (const [file, chain] of reachable) {
+-    if (importsOf(file).some((spec) => /students\.json$/.test(spec))) bad.push(chain.join(" -> "));
+-  }
+-  assert.deepEqual(bad, [], "these client files pull content/students.json into public JavaScript");
+-});
+-
+-test("only server code reads the roster", () => {
+-  const readers = walk(SRC).filter((f) => importsOf(f).some((spec) => /students\.json$/.test(spec))).map((f) => path.relative(SRC, f)).sort();
+-  assert.deepEqual(readers, ["app/api/voice/route.ts"]);
+-});
+-
+-test("no sign-in code is written into code the browser downloads", () => {
+-  const students = JSON.parse(read("content/students.json"));
+-  const codes = students.flatMap((s) => [s.code, s.parentCode]).filter(Boolean);
+-  const leaks = [];
+-  for (const [file] of clientReachable()) {
+-    const text = read(file);
+-    codes.forEach((value, i) => { if (text.includes(value)) leaks.push(`${path.relative(SRC, file)} (code #${i + 1})`); });
+-  }
+-  assert.deepEqual(leaks, [], "a student or parent code is hard-coded in browser-reachable source");
+-});
+-
+-test("the teacher workspace gets its students from its route, and parent previews carry only names and codes", () => {
+-  const teacherPages = ["src/app/teacher/page.tsx", "src/app/teacher/calendar/page.tsx", "src/app/teacher/live/page.tsx"];
+-  for (const page of teacherPages) assert.match(read(page), /roster=\{getTeacherRoster\(\)\}/, `${page} must pass the roster`);
+-  assert.match(read("src/lib/content.ts"), /export function getTeacherRoster/);
+-  // Nothing from the profile or the unit list is passed down.
+-  const fn = read("src/lib/content.ts").match(/export function getTeacherRoster[\s\S]*?\n}\n/)[0];
+-  assert.doesNotMatch(fn, /profile|progressLinks|units|greeting/);
+-  // The public parent page no longer lists the other families; the teacher's own tab remembers them.
+-  assert.doesNotMatch(read("src/components/ParentPreviewBanner.tsx"), /students\.json|roster\./);
+-  assert.match(read("src/components/ParentPreviewBanner.tsx"), /parentPreviewRoster\(\)/);
+-});
+-
+-test("the post-build check exists and gates on codes and parent codes", () => {
+-  const script = read("scripts/check-roster-privacy.mjs");
+-  assert.match(script, /\.next["'], ?["']static/);
+-  assert.match(script, /parentCode/);
+-  assert.match(script, /process\.exit\(total \? 1 : 0\)/);
+-});
+diff --git b/tests/voice.test.mjs a/tests/voice.test.mjs
+index 67938f2..81789b3 100644
+--- b/tests/voice.test.mjs
++++ a/tests/voice.test.mjs
+@@ -114,40 +114,3 @@ test('archived unit practice selects only a published unit in the authenticated
+  assert.equal(exports.selectVoiceUnit(undefined,units).id,'current-unit');assert.equal(exports.selectVoiceUnit('old-unit',units).title,'Old');
+  for(const id of ['other-student-unit','future-unpublished',{},null])assert.throws(()=>exports.selectVoiceUnit(id,units));
+ });
+-
+-test('a slow or failing backend gives the student a 503 to retry, and only real validation problems stay a 400',async()=>{
+-  const route={};let lookup;
+-  const source=ts.transpileModule(fs.readFileSync('src/app/api/voice/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+-  const {createHash}=await import('node:crypto');
+-  class TransportError extends Error{constructor(stage,status=0){super('Progress service unavailable');this.stage=stage;this.status=status;}}
+-  vm.runInNewContext(source,{
+-    exports:route,Response,URL,AbortSignal,console:{...console,error(){}},process:{env:{LIVE_VOICE_ENABLED:'true',OPENAI_API_KEY:'synthetic-api-key',APPS_SCRIPT_URL:'https://script.google.com/synthetic',ACCOUNT_ROSTER_JSON:'{"learner-a":{}}'}},
+-    require:name=>{
+-      if(name==='node:crypto')return {createHash};
+-      if(name.includes('firebase-admin'))return {};
+-      if(name.includes('voice-session'))return exports;
+-      if(name.includes('content/students.json'))return {default:[{code:'learner-a',id:'ferdi'}]};
+-      if(name.includes('content/ferdi/units.json'))return {default:[{id:'current-unit',active:true,title:'Current'}]};
+-      if(name.includes('content/valentin/units.json'))return {default:[]};
+-      if(name.includes('google-http'))return {googleHttp:async()=>({})};
+-      if(name.includes('learning-memory'))return {buildLearningMemory:()=>({}),memoryInput:()=>({})};
+-      if(name.includes('lesson-practice'))return practiceExports;
+-      if(name.includes('progress-backend'))return {upstream:async()=>lookup(),backendSession:async()=>'session'};
+-      if(name.includes('progress-transport'))return {ProgressTransportError:TransportError,postProgress:async()=>({ok:true,students:[]})};
+-      throw Error(name);
+-    },
+-    fetch:async()=>Response.json({session:{id:'synthetic-live'},transport:{sdp:'v=0 answer'}}),
+-  });
+-  const post=extra=>route.POST(new Request('https://app.example/api/voice/',{method:'POST',headers:{origin:'https://app.example'},body:JSON.stringify({...body,teacherTest:true,code:'__teacher__',token:'teacher-token',practiceStudent:'learner-a',...extra})}));
+-  const message='Speaking practice is briefly unavailable. Try again in a minute.';
+-  for(const failure of [new TransportError('response-http',502),new TransportError('timeout'),new TransportError('service-missing')]){
+-    lookup=async()=>{throw failure;};
+-    const res=await post();assert.equal(res.status,503);assert.equal((await res.json()).error,message);
+-  }
+-  lookup=async()=>({ok:true,records:[],settings:{}});
+-  assert.equal((await post({topic:'lesson',lessonPracticeId:{}})).status,400,'a malformed request stays a 400');
+-  assert.equal((await post({practiceStudent:'unknown-learner',topic:'lesson'})).status,400,'asking for a practice that does not exist stays a 400');
+-  const client=fs.readFileSync('src/components/views/SpeakView.tsx','utf8');
+-  assert.match(client,/if \(!response\.ok\) throw new Error\(result\.error/,'the Speak page shows the server message for any non-OK status');
+-  assert.match(fs.readFileSync('src/lib/server/progress-backend.ts','utf8'),/ProgressTransportError\("student-session"\)/);
+-});
