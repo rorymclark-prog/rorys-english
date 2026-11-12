@@ -26,3 +26,5 @@ Four more areas were recorded on 12 November 2026, one per commit, and each roll
 Each covers its own components, styles and tests, and none disables a stylesheet. Release notes and the design spec stay as written, so add a note when one is applied. Each was proven in an isolated copy, alone and all four together, with type checking and the full tests.
 
 State on 12 November: `npm run ui:rollbacks` reports `entry`, `header` and these four as ready; `findability` becomes ready once `teacher-tabs` is rolled back.
+
+`live-coach-resilience` (13 November 2026) returns live teaching to stopping its queue when one coaching request cannot be sent, ending the session on any service error, and four live sessions an hour. It covers `LiveTeachingCoach.tsx`, `coach-turns.ts`, the live-coach route, their tests and the paragraph in `LIVE_TEACHING.md`. It has no visual effect and disables no stylesheet. Proven in an isolated copy with type checking and the full tests.
