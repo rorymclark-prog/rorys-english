@@ -1,0 +1,323 @@
+diff --git b/src/app/teacher/live-coach.css a/src/app/teacher/live-coach.css
+index 76e714c..f33386e 100644
+--- b/src/app/teacher/live-coach.css
++++ a/src/app/teacher/live-coach.css
+@@ -23,17 +23,47 @@
+ .lc-powerpoint-reference pre,.lc-selected-lesson pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.875rem;line-height:1.8;max-height:24rem;overflow:auto;margin:.8rem 0}
+ .live-coach{
+   max-width:1600px;margin:0 auto;
+-  --lc-ink:var(--re-ink);--lc-muted:var(--re-muted);--lc-accent:var(--re-accent);
+-  --lc-card:var(--re-surface);--lc-wash:var(--re-soft);--lc-field:var(--re-surface);--lc-border:var(--re-line);
+-  --lc-hero:var(--re-hero);--lc-hero-ink:var(--re-herotext);--lc-hero-muted:var(--re-heromuted);
+-  --lc-hero-line:color-mix(in srgb,var(--re-herotext) 30%,transparent);--lc-hero-glow:color-mix(in srgb,var(--re-herotext) 8%,transparent);
+-  --lc-warm:var(--re-warm);--lc-warm-ink:var(--re-warmtext);--lc-warm-muted:var(--re-warmtext);
+-  --lc-context:var(--re-surface2);--lc-console:var(--re-soft);--lc-record:var(--re-surface);
+-  --lc-shadow:var(--re-shadow);--lc-error-bg:#fff1f2;--lc-error-ink:#9f1239;
++  --lc-ink:#213b3b;--lc-muted:#536d6b;--lc-accent:#17665e;
++  --lc-card:#fffdf7;--lc-wash:#e4efea;--lc-field:#fffef9;--lc-border:#cbded5;
++  --lc-hero:#173f3d;--lc-hero-ink:#fff9e9;--lc-hero-muted:#c6e3d8;
++  --lc-hero-line:#58827a;--lc-hero-glow:#28544d;
++  --lc-warm:#ffdec3;--lc-warm-ink:#573522;--lc-warm-muted:#784a30;
++  --lc-context:#edf3eb;--lc-console:#e5efeb;--lc-record:#f6eddc;
++  --lc-shadow:0 8px 26px #173f3d09;--lc-error-bg:#fff1f2;--lc-error-ink:#9f1239;
+   color:var(--lc-ink);--teacher-muted:var(--lc-muted);--teacher-line:var(--lc-border);
+   --teacher-surface:var(--lc-card);--teacher-accent:var(--lc-accent)
+ }
+-.dark .live-coach{--lc-error-bg:#451f2b;--lc-error-ink:#ffc3cf}
++[data-palette=indigo] .live-coach{
++  --lc-accent:#575194;--lc-ink:#34334b;--lc-muted:#65627b;--lc-wash:#ebe8f5;
++  --lc-border:#d5d0e5;--lc-context:#f1eef7;--lc-console:#eae7f3;
++  --lc-hero:#35334f;--lc-hero-muted:#d9d3ee;--lc-hero-line:#797299;--lc-hero-glow:#45415f
++}
++[data-palette=clay] .live-coach{
++  --lc-accent:#90452f;--lc-ink:#49352c;--lc-muted:#766056;--lc-wash:#f5e6dc;
++  --lc-border:#e4d1c3;--lc-context:#f6ede2;--lc-console:#f3e5d9;
++  --lc-hero:#56392e;--lc-hero-muted:#ecd6c4;--lc-hero-line:#9f7b66;--lc-hero-glow:#684a3b
++}
++.dark .live-coach{
++  --lc-ink:#ecf4ee;--lc-muted:#b2c9c0;--lc-accent:#a3decb;
++  --lc-card:#203632;--lc-wash:#2d4942;--lc-field:#1a2d29;--lc-border:#476158;
++  --lc-hero:#173d38;--lc-hero-ink:#fff9e9;--lc-hero-muted:#c3ddd1;
++  --lc-hero-line:#5a8276;--lc-hero-glow:#214a40;
++  --lc-warm:#513d2d;--lc-warm-ink:#ffe8cf;--lc-warm-muted:#e8c4a3;
++  --lc-context:#253b32;--lc-console:#294239;--lc-record:#3d392c;
++  --lc-shadow:0 8px 26px #00000026;--lc-error-bg:#451f2b;--lc-error-ink:#ffc3cf
++}
++.dark[data-palette=indigo] .live-coach{
++  --lc-accent:#c9c1fa;--lc-ink:#f0eef9;--lc-muted:#c4bed8;--lc-wash:#3c3656;
++  --lc-border:#5c5574;--lc-card:#302b42;--lc-field:#252237;
++  --lc-context:#332e45;--lc-console:#3a344d;--lc-hero:#302d47;
++  --lc-hero-muted:#d9d3ee;--lc-hero-line:#797299;--lc-hero-glow:#3e3a56
++}
++.dark[data-palette=clay] .live-coach{
++  --lc-accent:#f5ba9d;--lc-ink:#faeee4;--lc-muted:#d3bfae;--lc-wash:#584335;
++  --lc-border:#725947;--lc-card:#3c3028;--lc-field:#30271f;
++  --lc-context:#44392c;--lc-console:#4b3a2e;--lc-hero:#4c3429;
++  --lc-hero-muted:#ecd6c4;--lc-hero-line:#9f7b66;--lc-hero-glow:#604335
++}
+ .live-coach .teacher-topbar{padding:1rem 0;border-bottom:0}
+ .lc-private{font-size:.75rem;font-weight:800;letter-spacing:.1em;color:var(--lc-muted)}
+ .live-coach .teacher-quiet-button{color:var(--lc-accent);font-size:.875rem;min-height:44px}
+@@ -42,10 +72,10 @@
+ .dark .live-coach .teacher-primary{color:var(--lc-field)}
+ .lc-heading{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:2rem;padding:1.9rem 2.1rem;margin:.2rem 0 1.3rem;border-radius:24px;background:var(--lc-hero);color:var(--lc-hero-ink)}
+ .lc-heading::before{content:"";position:absolute;z-index:-1;right:13%;top:-4rem;width:21rem;height:21rem;border:1px solid var(--lc-hero-line);border-radius:50%;box-shadow:0 0 0 2.7rem var(--lc-hero-glow),0 0 0 2.75rem var(--lc-hero-line);opacity:.55;pointer-events:none}
+-.lc-heading::after{content:"";position:absolute;z-index:-1;right:-1.5rem;bottom:-2.8rem;width:7rem;height:7rem;transform:rotate(13deg);border-radius:1.6rem 1.6rem .2rem 1.6rem;background:var(--lc-hero-line);pointer-events:none}
++.lc-heading::after{content:"";position:absolute;z-index:-1;right:-1.5rem;bottom:-2.8rem;width:7rem;height:7rem;transform:rotate(13deg);border-radius:1.6rem 1.6rem .2rem 1.6rem;background:var(--lc-warm);pointer-events:none}
+ .lc-heading>div{min-width:0}
+ .lc-heading .teacher-eyebrow{display:inline-flex;align-items:center;gap:.6rem;color:var(--lc-hero-muted);font-size:.75rem;letter-spacing:.14em}
+-.lc-heading .teacher-eyebrow::before{content:"";height:.5rem;width:.5rem;background:var(--lc-hero-muted);border-radius:50%}
++.lc-heading .teacher-eyebrow::before{content:"";height:.5rem;width:.5rem;background:var(--lc-warm);border-radius:50%}
+ .lc-heading h1{font-size:1.75rem;font-weight:800;line-height:1.22;letter-spacing:-.045em;margin:.7rem 0 .75rem}
+ .lc-heading h1 span{color:var(--lc-hero-muted)}
+ .lc-heading p:last-child{font-size:.875rem;color:var(--lc-hero-muted);line-height:1.65;max-width:34rem}
+@@ -115,9 +145,9 @@
+ .lc-feedback-pair.lc-feedback-context{grid-template-columns:1fr}
+ .lc-feedback-pair p,.lc-correction p,.lc-next p{font-size:.875rem;line-height:1.8;overflow-wrap:anywhere}
+ .lc-correction{padding-top:1rem;margin-bottom:1rem;border-top:1px solid var(--lc-border)}
+-.lc-prompt{position:relative;background:var(--lc-accent);color:var(--re-onaccent);padding:1.25rem 1.4rem 1.35rem;border-radius:16px 16px 16px 3px;margin:1.2rem 0}
+-.lc-prompt h3{color:var(--re-onaccent);padding-right:2rem}
+-.lc-prompt::after{content:"↗";position:absolute;right:1.1rem;top:.7rem;font-size:1.75rem;line-height:1.2;color:var(--re-onaccent);pointer-events:none}
++.lc-prompt{position:relative;background:var(--lc-warm);color:var(--lc-warm-ink);padding:1.25rem 1.4rem 1.35rem;border-radius:16px 16px 16px 3px;margin:1.2rem 0}
++.lc-prompt h3{color:var(--lc-warm-muted);padding-right:2rem}
++.lc-prompt::after{content:"↗";position:absolute;right:1.1rem;top:.7rem;font-size:1.75rem;line-height:1.2;color:var(--lc-warm-muted);pointer-events:none}
+ .lc-prompt p{font-size:1.25rem;font-weight:750;letter-spacing:-.02em;line-height:1.6;overflow-wrap:anywhere}
+ .lc-next{padding:.4rem 0}
+ .lc-badge{font-size:.75rem;letter-spacing:.07em;font-weight:800;padding:.35rem .6rem;border-radius:8px;background:var(--lc-wash);color:var(--lc-accent);margin-left:auto;line-height:1.5}
+@@ -150,8 +180,7 @@
+ .lc-no-slide pre{font:inherit;font-size:.875rem;white-space:pre-wrap;overflow-wrap:anywhere;padding:1rem;background:var(--lc-field);border-radius:10px;width:100%}
+ .lc-commentary{background:var(--lc-card)}
+ .lc-commentary form{border-top:1px solid var(--lc-border);padding-top:.6rem;margin-top:1rem}
+-.lc-talk-feed{max-height:440px;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:.8rem;padding:.2rem .2rem 1rem}
+-.lc-talk-feed>*{flex-shrink:0}
++.lc-talk-feed{max-height:440px;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:.8rem;padding:.2rem}
+ .lc-turn{border:1px solid var(--lc-border);border-left:3px solid var(--lc-muted);border-radius:12px;padding:1rem;background:var(--lc-field)}
+ .lc-turn-teacher{border-left-color:var(--lc-warm-muted)}
+ .lc-turn-learner{border-left-color:var(--lc-accent)}
+@@ -162,9 +191,10 @@
+ .lc-turn p{font-size:.875rem;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:.6rem}
+ .live-coach .lc-speaker-edit{font-size:.75rem!important;display:flex!important;align-items:center;gap:.5rem;color:var(--lc-muted);margin-bottom:0!important;flex-wrap:wrap}
+ .live-coach .lc-speaker-edit select{width:auto;max-width:100%;margin:0;padding:.35rem .5rem;font-size:.75rem;min-height:36px}
+-.lc-recording{background:var(--lc-record)}
++.lc-recording{background:var(--lc-record);border-top:4px solid var(--lc-warm-muted)}
++.lc-recording>.lc-section-title::before{background:var(--lc-warm-muted)}
+ .lc-record-state{display:inline-flex;align-items:center;gap:.55rem;padding:.65rem .8rem;background:var(--lc-field);border:1px solid var(--lc-border);border-radius:10px;font-size:.875rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--lc-accent);line-height:1.5}
+-.lc-record-state::before{content:"";width:.55rem;height:.55rem;border-radius:50%;background:var(--lc-accent);flex-shrink:0}
++.lc-record-state::before{content:"";width:.55rem;height:.55rem;border-radius:50%;background:var(--lc-warm-muted);flex-shrink:0}
+ .lc-saved-lessons{margin-top:1rem;border-top:1px solid var(--lc-border);padding-top:1rem}
+ .lc-saved-lessons summary,.lc-lesson-review summary{cursor:pointer;font-size:.875rem;font-weight:750;padding:.5rem 0;min-height:44px;line-height:1.6}
+ .lc-history-item{display:flex;flex-direction:column;gap:.4rem;text-align:left;width:100%;padding:1rem;margin-top:.6rem;border:1px solid var(--lc-border);border-radius:12px;background:var(--lc-field);font-size:.875rem;overflow-wrap:anywhere}
+@@ -209,11 +239,3 @@
+ .lc-session-start[open]>summary{margin-bottom:1rem}
+ .lc-session-start h2{font-size:1rem;margin:1rem 0}
+ .lc-position h2{font-size:1rem;margin-bottom:.7rem}
+-
+-/* Once started, the setup area is one summary row that can be reopened. */
+-.lc-setup-collapsed{display:none}
+-.lc-setup-summary{display:flex;align-items:center;justify-content:space-between;gap:.5rem 1rem;flex-wrap:wrap;padding:.4rem 1.1rem;margin-bottom:1rem}
+-.lc-setup-summary p{font-size:.875rem;line-height:1.5;color:var(--lc-muted);overflow-wrap:anywhere;min-width:0}
+-.lc-setup-summary strong{color:var(--lc-ink)}
+-/* Conversation practice has no slides, so the coach column takes the full width. */
+-.lc-grid.lc-grid-solo{grid-template-columns:minmax(0,1fr)}
+diff --git b/src/app/teacher/teacher.css a/src/app/teacher/teacher.css
+index 7d652f8..9c68c04 100644
+--- b/src/app/teacher/teacher.css
++++ a/src/app/teacher/teacher.css
+@@ -115,11 +115,3 @@
+ 
+ /* Keep the learner heading and progress action within narrow, enlarged text. */
+ @media(max-width:400px){.teacher-workspace .teacher-student-banner{flex-direction:column;align-items:stretch}.teacher-workspace .teacher-banner-name{min-width:0}.teacher-workspace .teacher-banner-name>div{min-width:0;overflow-wrap:anywhere}.teacher-workspace .teacher-progress-button{flex-direction:row;align-self:flex-start;max-width:100%;min-height:44px;gap:.5rem;text-align:left}}
+-
+-/* Small text on the teacher home: 14px and the stronger text colour (7:1 or better in light and dark). */
+-.teacher-workspace{--teacher-soft:color-mix(in srgb,var(--re-ink) 78%,var(--re-surface))}
+-.teacher-quiet-button,.teacher-card-footer,.teacher-card-footer strong,.teacher-bottom-note small,.teacher-updated{font-size:.875rem}
+-.teacher-quiet-button,.teacher-card-footer,.teacher-bottom-note small,.teacher-updated{color:var(--teacher-soft)}
+-.teacher-card-footer strong{color:var(--re-accent)}
+-.teacher-topbar,.teacher-topbar-actions{flex-wrap:wrap;min-width:0}
+-.teacher-topbar-actions{justify-content:flex-end}
+diff --git b/src/app/visual-refresh/teacher.css a/src/app/visual-refresh/teacher.css
+index 5ab620b..f45dd2d 100644
+--- b/src/app/visual-refresh/teacher.css
++++ a/src/app/visual-refresh/teacher.css
+@@ -51,11 +51,3 @@
+ .insight-folded>div button{min-height:40px;padding:6px 14px;border:1px solid var(--re-line);border-radius:999px;background:var(--re-surface);color:var(--re-ink);font-weight:650}
+ .teacher-insights .insight-grid:has(>[hidden])>:not([hidden]){grid-column:1/-1}
+ .insight-folded button:focus-visible{outline:3px solid var(--re-accent);outline-offset:2px}
+-
+-/* Teacher home: a block with nothing in it is one quiet folded line. */
+-.home-fold{padding:0 18px;border:1px dashed var(--re-line);border-radius:16px;font-size:.875rem;line-height:1.5;color:var(--re-muted)}
+-.home-fold>summary{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;min-height:44px;padding:8px 0;cursor:pointer}
+-.home-fold>summary strong{color:var(--re-ink)}
+-.home-fold[open]{padding-bottom:12px}
+-.home-fold>p{margin-top:4px}
+-.home-fold>summary:focus-visible{outline:3px solid var(--re-accent);outline-offset:2px}
+diff --git b/src/components/RecordedLessonLinks.tsx a/src/components/RecordedLessonLinks.tsx
+index e3b705f..2ec5fd6 100644
+--- b/src/components/RecordedLessonLinks.tsx
++++ a/src/components/RecordedLessonLinks.tsx
+@@ -4,7 +4,6 @@ import {useEffect,useState} from 'react';
+ import {getLearning,type LearningRecord} from '@/lib/learning';
+ import {readableDate} from '@/lib/clarity';
+ import {latestRecordedLesson} from '@/lib/feedback-source';
+-import {HOME_FOLDS} from '@/lib/home-folds';
+ 
+ export default function RecordedLessonLinks({students,onOpen}:{students:{code:string;name:string}[];onOpen:(code:string,id:string)=>void}){
+   const [entries,setEntries]=useState<{code:string;name:string;record:LearningRecord}[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(false),[retry,setRetry]=useState(0);
+@@ -16,7 +15,6 @@ export default function RecordedLessonLinks({students,onOpen}:{students:{code:st
+       setLoading(false);
+     });return()=>{live=false;};
+   },[students,retry]);
+-  if(!entries.length&&!error)return <details className="home-fold mb-6"><summary><strong>{HOME_FOLDS.assessments.label}</strong><span>{loading?'Looking for lesson reviews…':HOME_FOLDS.assessments.appears}</span></summary><p>Open the latest lesson review for each student. These drafts are private and await your review.</p><p role="status">{loading?'Finding your lesson reviews…':'No recorded lesson reviews yet.'}</p></details>;
+   return <section className="re-card mb-6" aria-labelledby="recorded-lessons-title"><p className="teacher-eyebrow">LESSON RECORDING FEEDBACK</p><h2 id="recorded-lessons-title" className="mt-1 text-xl font-bold">Recorded lesson assessments</h2><p className="mt-2 text-sm">Open the latest lesson review for each student. These drafts are private and await your review.</p>
+     {loading?<p className="mt-3 text-sm" role="status">Finding your lesson reviews…</p>:<><div className="mt-4 grid gap-3 sm:grid-cols-2">{entries.map(({code,name,record})=><button key={code} type="button" className="re-button re-secondary text-left" onClick={()=>onOpen(code,record.id)}><strong className="block">{name} · {readableDate(record.date)}</strong><span className="block mt-1">Open recorded lesson feedback →</span></button>)}</div>{!entries.length&&!error&&<p className="mt-3 text-sm">No recorded lesson reviews yet.</p>}</>}
+     {error&&<StatusRow kind="error" className="mt-3" onRetry={()=>setRetry(x=>x+1)}>Some lesson reviews could not be loaded.</StatusRow>}
+diff --git b/src/components/views/LiveTeachingCoach.tsx a/src/components/views/LiveTeachingCoach.tsx
+index 24e9ab4..c19f1b9 100644
+--- b/src/components/views/LiveTeachingCoach.tsx
++++ a/src/components/views/LiveTeachingCoach.tsx
+@@ -72,13 +72,6 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
+   const [lessonSession, setLessonSession] = useState(0);
+   const [evidenceRevision, setEvidenceRevision] = useState(0);
+   const [rehearsalIndex, setRehearsalIndex] = useState(0);
+-  // Once listening or the prepared rehearsal has started, the setup area folds into one summary row.
+-  const [setupOpen, setSetupOpen] = useState(false);
+-  const started = phase !== "idle" || rehearsalIndex > 0;
+-  const setupHidden = started && !setupOpen;
+-  const feedRef = useRef<HTMLDivElement>(null);
+-  useEffect(() => { if (!started) setSetupOpen(false); }, [started]);
+-  useEffect(() => { const feed = feedRef.current; if (feed) feed.scrollTop = feed.scrollHeight; }, [turns.length]);
+   const peer = useRef<RTCPeerConnection | null>(null);
+   const channel = useRef<RTCDataChannel | null>(null);
+   const stream = useRef<MediaStream | null>(null);
+@@ -510,8 +503,6 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
+     <main>
+       <section className="lc-heading"><div><p className="teacher-eyebrow">LIVE TEACHING</p><h1>A little space to think.<br/><span>More room to teach.</span></h1><p>Your lesson, both voices, and a useful next question.</p></div><div className={`lc-connection lc-${phase}`} role="status"><span aria-hidden>●</span> {phase === "listening" ? "Listening" : phase === "paused" ? "Microphone paused" : phase === "connecting" ? "Connecting…" : checking ? "Checking AI connection…" : available ? "AI connection ready" : "Rehearsal available"}{live && <small>{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")} / {COACH_MINUTES}:00</small>}</div></section>
+       {error && <p className="lc-error" role="alert">{error}</p>}
+-      {started&&<div className="lc-panel lc-setup-summary"><p><strong>{selected?.name||"No student"}</strong> · {materialName||reference?.title||(lessonChosen?"Conversation practice":"No lesson")} · {audioMode==="online"?"online call":"in person"}</p><button type="button" className="teacher-quiet-button" aria-expanded={!setupHidden} onClick={()=>setSetupOpen(open=>!open)}>{setupHidden?"Show setup":"Hide setup"}</button></div>}
+-      <div className={setupHidden?"lc-setup lc-setup-collapsed":"lc-setup"}>
+       <details className="lc-panel lc-session-start" aria-label="Choose student and lesson" open={!live}><summary>{selected?`${selected.name} · ${materialName||reference?.title||(lessonChosen?"Conversation practice":"Choose a lesson")}`:"1. Choose student and lesson"}</summary>
+           <label>1. Student<select value={learner} onChange={e => changeLearner(e.target.value)} disabled={live || working || importing || libraryBusy || asking || recordingBusy}><option value="">Choose a student…</option>{learners.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}</select></label>
+           {selected&&<><h2>2. Choose {selected.name}’s lesson</h2>
+@@ -531,8 +522,7 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
+         <label>Where is this lesson?<select value={audioMode} disabled={live || recordingBusy || choosingAudio} onChange={event=>{audioInput.current.close();setCallConnected(false);setAudioMode(event.target.value as LessonAudioMode);setSpeaker("unknown");setError("");}}><option value="room">In person · this microphone</option><option value="online">Online · microphone and call tab</option></select></label>
+         {audioMode === "online" ? <><p className="lc-hint">Open your call in a browser tab. Connect that tab and tick Share tab audio so the learner is heard even when you use headphones. Only audio is used; no call video is sent or saved.</p><div className="lc-actions"><button type="button" className="teacher-quiet-button" disabled={live || recordingBusy || choosingAudio} onClick={()=>{if(callConnected){audioInput.current.disconnectCall();setCallConnected(false);}else void connectCallAudio();}}>{choosingAudio?"Choosing call tab…":callConnected?"Disconnect call audio":"Connect call audio"}</button><span role="status">{callConnected?"Call audio connected":"Choose a browser call tab with audio sharing"}</span></div><div className="lc-audio-signals" aria-label="Online audio signals"><label>My microphone<meter min={0} max={1} value={audioLevels.microphone} aria-label="My microphone signal"/><span>{live || recordingBusy ? "Speak to check the signal" : "Checked when listening or recording"}</span></label><label>Student’s call audio<meter min={0} max={1} value={audioLevels.call} aria-label="Student call audio signal"/><span>{callConnected ? "The meter moves when the call is heard" : "Connect the call tab first"}</span></label></div></> : <p className="lc-hint">The microphone captures people in the same room. For a remote learner, select Online and connect the call tab audio.</p>}
+       </details>
+-      </div>
+-      <div className={view==="presenter"?"lc-grid lc-presenter-grid":view==="setup"&&!pdfFile?"lc-grid lc-grid-solo":"lc-grid"}>
++      <div className={view==="presenter"?"lc-grid lc-presenter-grid":"lc-grid"}>
+         <div className="lc-stage">
+           {pdfFile&&<div hidden={view==="powerpoint"}><CoachSlidePresenter file={pdfFile} page={slideIndex+1} onLoaded={pdfLoaded} onIndex={pdfIndexed} onIndexError={pdfIndexError} onContext={pdfContext} onPage={page=>selectSlide(page-1)}/></div>}
+           {view==="powerpoint"&&<section className="lc-panel lc-powerpoint-reference" aria-label="Current PowerPoint reference"><p className="teacher-eyebrow">MATCH YOUR POWERPOINT SLIDE</p><h2>{materialName||reference?.title||"Choose a saved lesson below"}</h2>{!!slides.length&&<div className="lc-actions"><button type="button" className="teacher-quiet-button" disabled={slideIndex<=0} onClick={()=>selectSlide(slideIndex-1)}>← Previous</button><strong>Slide {slideIndex+1} / {slides.length}</strong><button type="button" className="teacher-quiet-button" disabled={slideIndex>=slides.length-1} onClick={()=>selectSlide(slideIndex+1)}>Next →</button></div>}<p className="lc-hint">Text reference for the AI. Graphics, animations and media play in your original PowerPoint.</p>{source&&<pre>{source}</pre>}{!source&&<p className="lc-hint">Choose “Use current PowerPoint text” from the saved library or open your deck below.</p>}</section>}
+@@ -569,7 +559,7 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
+           <div className="lc-panel lc-feedback" aria-live="polite" aria-atomic="true"><div className="lc-section-title"><h2>Your next teaching move</h2>{latest?.rehearsal && <span className="lc-badge">PREPARED EXAMPLE</span>}</div>
+             {latest ? <><p className="lc-evidence-label">{latest.context.learner} · {latest.context.slide}</p>{latest.feedback.prompt && <div className="lc-prompt"><h3>Ask the learner</h3><p>{latest.feedback.prompt}</p></div>}<blockquote>“{latest.feedback.heard || "The words were not clear enough to quote."}”</blockquote><div className={`lc-feedback-pair ${!latest.feedback.strength?"lc-feedback-context":""}`}>{latest.feedback.strength && <div><h3>What worked</h3><p>{latest.feedback.strength}</p></div>}<div><h3>{latest.context.learner === "Lesson conversation" || latest.context.learner.includes("AI estimate") ? "Conversation support" : "Focus now"}</h3><p>{latest.feedback.focus}</p></div></div>{latest.feedback.correction && <div className="lc-correction"><h3>{latest.context.learner.includes("AI estimate") ? "Possible correction · check who spoke" : "Minimal correction"}</h3><p>{latest.feedback.correction}</p></div>}<div className="lc-next"><h3>Teach next</h3><p>{latest.feedback.next}</p></div>{latest.feedback.uncertainty && <p className="lc-hint">{latest.feedback.uncertainty}</p>}</> : <div className="lc-empty"><span aria-hidden>↳</span><h3>Space to think, while they speak.</h3><p>A faithful quote, one useful teaching point and a question you can ask next will appear here.</p><button type="button" className="lc-link" onClick={() => tryRehearsal(0)}>See an example</button></div>}
+           </div>
+-          <section className="lc-panel lc-commentary"><div className="lc-section-title"><h2>Running commentary</h2><span className="lc-badge">PRIVATE</span></div><div className="lc-talk-feed" ref={feedRef} role="log" aria-label="Rory, learner and AI conversation">{!turns.length&&<p className="lc-hint">{selected?.name||"Learner"}, Rory and AI will appear separately here. Automatic speaker labels appear as estimates; teaching guidance continues even when a voice is uncertain.</p>}{turns.map(turn=><article className={`lc-turn lc-turn-${turn.role}`} key={turn.id}><div className="lc-turn-heading"><strong>{coachSpeakerLabel(turn,selected?.name||"Learner")}{turn.rehearsal?" · rehearsal":""}</strong><small>{new Date(turn.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</small></div><p>{turn.text}</p>{turn.role!=="ai"&&<details className="lc-speaker-correction"><summary>Correct speaker · optional</summary><label className="lc-speaker-edit">Confirmed speaker<select value={turn.role} onChange={e=>correctSpeaker(turn.id,e.target.value as "learner"|"teacher"|"unknown")}><option value="unknown">Unconfirmed conversation</option><option value="learner">{selected?.name||"Learner"}</option><option value="teacher">Rory</option></select></label></details>}</article>)}</div><details><summary>Ask the AI · optional</summary><form onSubmit={e=>{e.preventDefault();void askTeacherAI();}}><label>Ask the AI privately<textarea rows={2} value={question} maxLength={4000} onChange={e=>setQuestion(e.target.value)} placeholder="How can I explain this? What question should I ask next?"/></label><button type="submit" className="teacher-primary" disabled={!available||!agreed||!question.trim()||asking||referenceLoading||!learner||!lessonChosen}>{asking?"Thinking…":"Ask AI"}</button><p className="lc-hint">Uses the selected slide and recent conversation. Your question and answer stay in this teacher view.</p></form></details></section>
++          <section className="lc-panel lc-commentary"><div className="lc-section-title"><h2>Running commentary</h2><span className="lc-badge">PRIVATE</span></div><div className="lc-talk-feed" role="log" aria-label="Rory, learner and AI conversation">{!turns.length&&<p className="lc-hint">{selected?.name||"Learner"}, Rory and AI will appear separately here. Automatic speaker labels appear as estimates; teaching guidance continues even when a voice is uncertain.</p>}{turns.map(turn=><article className={`lc-turn lc-turn-${turn.role}`} key={turn.id}><div className="lc-turn-heading"><strong>{coachSpeakerLabel(turn,selected?.name||"Learner")}{turn.rehearsal?" · rehearsal":""}</strong><small>{new Date(turn.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</small></div><p>{turn.text}</p>{turn.role!=="ai"&&<details className="lc-speaker-correction"><summary>Correct speaker · optional</summary><label className="lc-speaker-edit">Confirmed speaker<select value={turn.role} onChange={e=>correctSpeaker(turn.id,e.target.value as "learner"|"teacher"|"unknown")}><option value="unknown">Unconfirmed conversation</option><option value="learner">{selected?.name||"Learner"}</option><option value="teacher">Rory</option></select></label></details>}</article>)}</div><details><summary>Ask the AI · optional</summary><form onSubmit={e=>{e.preventDefault();void askTeacherAI();}}><label>Ask the AI privately<textarea rows={2} value={question} maxLength={4000} onChange={e=>setQuestion(e.target.value)} placeholder="How can I explain this? What question should I ask next?"/></label><button type="submit" className="teacher-primary" disabled={!available||!agreed||!question.trim()||asking||referenceLoading||!learner||!lessonChosen}>{asking?"Thinking…":"Ask AI"}</button><p className="lc-hint">Uses the selected slide and recent conversation. Your question and answer stay in this teacher view.</p></form></details></section>
+           <CoachLessonArchive key={`${learner}:${lessonSession}`} learnerCode={learner} snapshot={{ context, turns, entries }} acquireAudio={acquireAudio} evidenceRevision={evidenceRevision} onBusy={setRecordingBusy} onFocus={note => { setObjective(note); setStatus("Saved teacher review loaded as the lesson focus."); }}/>
+           <details className="lc-panel lc-details"><summary>Enter an answer manually</summary><p className="lc-hint">For checking exact wording. Typed answers say nothing about pronunciation.</p><label>Learner’s actual words<textarea value={draft} maxLength={4000} rows={3} onChange={e => setDraft(e.target.value)} placeholder="Keep the learner’s original wording and mistakes."/></label><button className="teacher-primary" type="button" disabled={live || !available || !agreed || !draft.trim() || working || !learner || !lessonChosen || referenceLoading} onClick={() => void analyseTyped()}>{working ? "Preparing feedback…" : "Get teaching feedback"}</button></details>
+           {transcript && <details className="lc-panel lc-details"><summary>Latest machine caption · check against what you heard</summary><p>{transcript}</p><p className="lc-hint">Captions can mishear or normalise errors. Use your judgement before correcting the learner.</p></details>}
+diff --git b/src/components/views/TeacherDashboardView.tsx a/src/components/views/TeacherDashboardView.tsx
+index 745dbfe..c3a9b8b 100644
+--- b/src/components/views/TeacherDashboardView.tsx
++++ a/src/components/views/TeacherDashboardView.tsx
+@@ -208,7 +208,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
+     <div className="teacher-workspace">
+       <header className="teacher-topbar">
+         <a href="/teacher/" className="teacher-brand"><span aria-hidden>r.</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
+-        <div className="teacher-topbar-actions flex items-center gap-2">
++        <div className="flex items-center gap-2">
+           <InboxLink teacher/>
+           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
+           <button type="button" disabled={loadState !== "ok"} className="teacher-quiet-button" onClick={() => go({kind:"live"})}>Live teaching</button>
+diff --git b/src/components/views/TeachingProgress.tsx a/src/components/views/TeachingProgress.tsx
+index 42b6f6b..2fd272f 100644
+--- b/src/components/views/TeachingProgress.tsx
++++ a/src/components/views/TeachingProgress.tsx
+@@ -2,11 +2,9 @@
+ import {useEffect,useState} from 'react';
+ import {getLearning,type LearningRecord} from '@/lib/learning';
+ import {isTeachingPack} from '@/lib/teaching-files';
+-import {HOME_FOLDS} from '@/lib/home-folds';
+ export default function TeachingProgress({students,onOpen}:{students:{code:string;name:string}[];onOpen:(code:string)=>void}){
+  const [entries,setEntries]=useState<{code:string;name:string;record:LearningRecord}[]>([]),[loading,setLoading]=useState(true);
+  useEffect(()=>{let live=true;Promise.all(students.map(async s=>({s,result:await getLearning(s.code,true)}))).then(all=>{if(!live)return;setEntries(all.flatMap(({s,result})=>(result.records||[]).filter(r=>r.kind==='lesson'&&r.body.tutorPrivate&&!isTeachingPack(r)).map(record=>({code:s.code,name:s.name,record}))));setLoading(false);});return()=>{live=false;};},[students]);
+  const lessons=entries.length,plans=entries.filter(e=>e.record.body.tutorPrivate?.plan),recent=[...entries].sort((a,b)=>b.record.date.localeCompare(a.record.date)).slice(0,3);
+- if(loading||!lessons)return <details className="home-fold mt-6"><summary><strong>{HOME_FOLDS.progress.label}</strong><span>{loading?'Opening lesson notes…':HOME_FOLDS.progress.appears}</span></summary><p>Private lesson reflections across students. Add one after each visit to see your teaching develop over time.</p><p>No lesson reflections yet. Open a student’s Learning reviews to record what worked and what you will change.</p></details>;
+  return <section className="re-card mt-6"><p className="teacher-eyebrow">YOUR TEACHING PROGRESS</p><h2 className="mt-1 text-xl font-bold">What you tried and what changes next</h2><p className="mt-2 text-sm text-navy-soft dark:text-navy-mist">Private lesson reflections across students. Add one after each visit to see your teaching develop over time.</p>{loading?<p className="mt-4 text-sm">Opening lesson notes…</p>:<><div className="mt-4 flex gap-5 text-sm"><span><strong className="text-2xl">{lessons}</strong><br/>lessons reflected on</span><span><strong className="text-2xl">{plans.length}</strong><br/>next lesson changes recorded</span></div>{recent.length?<ul className="mt-4 space-y-3">{recent.map(e=><li key={e.record.id} className="rounded-xl bg-black/5 p-3 text-sm dark:bg-white/5"><button className="font-bold underline" onClick={()=>onOpen(e.code)}>{e.name} · {e.record.date}</button>{e.record.body.tutorPrivate?.worked&&<p className="mt-1">What helped: {e.record.body.tutorPrivate.plainWorked||e.record.body.tutorPrivate.worked}</p>}{e.record.body.tutorPrivate?.plan&&<p>Next time: {e.record.body.tutorPrivate.plainPlan||e.record.body.tutorPrivate.plan}</p>}</li>)}</ul>:<p className="mt-4 text-sm">No lesson reflections yet. Open a student’s Learning reviews to record what worked and what you will change.</p>}</>}</section>;
+ }
+diff --git b/src/lib/home-folds.ts a/src/lib/home-folds.ts
+deleted file mode 100644
+index e3b023b..0000000
+--- b/src/lib/home-folds.ts
++++ /dev/null
+@@ -1,9 +0,0 @@
+-// The teacher home shows a block that has something in it as a card. A block
+-// with nothing yet is one quiet folded line that says what will appear there;
+-// open it to read the full explanation. Same idea as dashboard-folds.ts.
+-
+-export const HOME_FOLDS={
+-  assessments:{label:'Recorded lesson assessments',appears:'Draft reviews of recorded lessons appear here.'},
+-  progress:{label:'Your teaching progress',appears:'Your lesson reflections appear here once you add one.'},
+-} as const;
+-export type HomeFold=keyof typeof HOME_FOLDS;
+diff --git b/tests/look-fixes.test.mjs a/tests/look-fixes.test.mjs
+deleted file mode 100644
+index adc7621..0000000
+--- b/tests/look-fixes.test.mjs
++++ /dev/null
+@@ -1,54 +0,0 @@
+-import test from "node:test";
+-import assert from "node:assert/strict";
+-import fs from "node:fs";
+-
+-// 13 November look fixes: one colour scheme, no empty boxes, a shorter live
+-// screen and readable small text. Source-text checks in the house style.
+-const read=f=>fs.readFileSync(f,"utf8");
+-
+-test("live teaching takes its colours from the app's --re tokens, not its own green palette",()=>{
+-  const css=read("src/app/teacher/live-coach.css");
+-  const block=css.slice(css.indexOf(".live-coach{"),css.indexOf(".live-coach .teacher-topbar{"));
+-  for(const name of ["hero","hero-ink","hero-muted","card","wash","border","accent","record"])assert.match(block,new RegExp(`--lc-${name}:[^;]*var\\(--re-`),`--lc-${name} should map to a --re token`);
+-  assert.doesNotMatch(block.replace(/--lc-error-(bg|ink):#[0-9a-f]{6}/gi,""),/#[0-9a-fA-F]{3,8}\b/,"no raw hex besides the error pair");
+-  assert.doesNotMatch(css,/data-palette/,"live teaching no longer has a palette of its own");
+-});
+-
+-test("the Ask the learner card uses the accent and the recording panel is a plain card",()=>{
+-  const css=read("src/app/teacher/live-coach.css");
+-  assert.match(css,/\.lc-prompt\{[^}]*background:var\(--lc-accent\);color:var\(--re-onaccent\)/);
+-  assert.match(css,/\.lc-recording\{background:var\(--lc-record\)\}/);
+-});
+-
+-test("empty teacher home blocks fold to one line and filled ones still render as cards",()=>{
+-  const folds=read("src/lib/home-folds.ts");
+-  assert.match(folds,/Recorded lesson assessments/);assert.match(folds,/Your teaching progress/);
+-  const lessons=read("src/components/RecordedLessonLinks.tsx");
+-  assert.match(lessons,/if\(!entries\.length&&!error\)return <details className="home-fold/);
+-  assert.match(lessons,/<section className="re-card mb-6"/);
+-  const progress=read("src/components/views/TeachingProgress.tsx");
+-  assert.match(progress,/if\(loading\|\|!lessons\)return <details className="home-fold/);
+-  assert.match(progress,/<section className="re-card mt-6"/);
+-  assert.match(read("src/app/visual-refresh/teacher.css"),/\.home-fold>summary\{[^}]*min-height:44px/);
+-});
+-
+-test("live teaching folds its setup once started, uses the full width without slides and shows the last commentary turn",()=>{
+-  const tsx=read("src/components/views/LiveTeachingCoach.tsx"),css=read("src/app/teacher/live-coach.css");
+-  assert.match(tsx,/const started = phase !== "idle" \|\| rehearsalIndex > 0/);
+-  assert.match(tsx,/lc-setup-summary/);assert.match(tsx,/aria-expanded=\{!setupHidden\}/);
+-  assert.match(css,/\.lc-setup-collapsed\{display:none\}/);
+-  assert.match(tsx,/view==="setup"&&!pdfFile\?"lc-grid lc-grid-solo"/);
+-  assert.match(css,/\.lc-grid\.lc-grid-solo\{grid-template-columns:minmax\(0,1fr\)\}/);
+-  assert.match(tsx,/feed\.scrollTop = feed\.scrollHeight/);
+-  assert.match(css,/\.lc-talk-feed>\*\{flex-shrink:0\}/);
+-  // the live start logic is untouched
+-  assert.match(tsx,/async function start\(/);
+-});
+-
+-test("small teacher text is 14px in the stronger text colour and the top bar wraps instead of overflowing",()=>{
+-  const css=read("src/app/teacher/teacher.css");
+-  assert.match(css,/--teacher-soft:color-mix\(in srgb,var\(--re-ink\) 78%,var\(--re-surface\)\)/);
+-  assert.match(css,/\.teacher-quiet-button,\.teacher-card-footer,\.teacher-card-footer strong,\.teacher-bottom-note small,\.teacher-updated\{font-size:\.875rem\}/);
+-  assert.match(css,/\.teacher-topbar,\.teacher-topbar-actions\{flex-wrap:wrap;min-width:0\}/);
+-  assert.match(read("src/components/views/TeacherDashboardView.tsx"),/className="teacher-topbar-actions flex items-center gap-2"/);
+-});
