@@ -44,3 +44,11 @@ test("live teaching folds its setup once started, uses the full width without sl
   // the live start logic is untouched
   assert.match(tsx,/async function start\(/);
 });
+
+test("small teacher text is 14px in the stronger text colour and the top bar wraps instead of overflowing",()=>{
+  const css=read("src/app/teacher/teacher.css");
+  assert.match(css,/--teacher-soft:color-mix\(in srgb,var\(--re-ink\) 78%,var\(--re-surface\)\)/);
+  assert.match(css,/\.teacher-quiet-button,\.teacher-card-footer,\.teacher-card-footer strong,\.teacher-bottom-note small,\.teacher-updated\{font-size:\.875rem\}/);
+  assert.match(css,/\.teacher-topbar,\.teacher-topbar-actions\{flex-wrap:wrap;min-width:0\}/);
+  assert.match(read("src/components/views/TeacherDashboardView.tsx"),/className="teacher-topbar-actions flex items-center gap-2"/);
+});

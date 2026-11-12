@@ -115,3 +115,11 @@
 
 /* Keep the learner heading and progress action within narrow, enlarged text. */
 @media(max-width:400px){.teacher-workspace .teacher-student-banner{flex-direction:column;align-items:stretch}.teacher-workspace .teacher-banner-name{min-width:0}.teacher-workspace .teacher-banner-name>div{min-width:0;overflow-wrap:anywhere}.teacher-workspace .teacher-progress-button{flex-direction:row;align-self:flex-start;max-width:100%;min-height:44px;gap:.5rem;text-align:left}}
+
+/* Small text on the teacher home: 14px and the stronger text colour (7:1 or better in light and dark). */
+.teacher-workspace{--teacher-soft:color-mix(in srgb,var(--re-ink) 78%,var(--re-surface))}
+.teacher-quiet-button,.teacher-card-footer,.teacher-card-footer strong,.teacher-bottom-note small,.teacher-updated{font-size:.875rem}
+.teacher-quiet-button,.teacher-card-footer,.teacher-bottom-note small,.teacher-updated{color:var(--teacher-soft)}
+.teacher-card-footer strong{color:var(--re-accent)}
+.teacher-topbar,.teacher-topbar-actions{flex-wrap:wrap;min-width:0}
+.teacher-topbar-actions{justify-content:flex-end}
