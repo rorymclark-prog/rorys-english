@@ -11,12 +11,14 @@ import {studentNavigation} from "@/lib/student-navigation";
 import {studentFindIndex,teacherFindIndex} from "@/lib/find-index";
 import {localDate} from "@/lib/local-date";
 import FindBox from "./FindBox";
-import roster from "../../content/students.json";
+import {useOptionalStudent} from "./StudentContext";
+import {useTeacherRoster} from "./TeacherRoster";
 export default function AppMenu({code,teacher=false}:{code?:string;teacher?:boolean}) {
   const dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null);
   const [panel,setPanel]=useState<"menu"|"settings"|"news"|"preview"|"parent-preview">("menu");
   const [unread,setUnread]=useState(false),[open,setOpen]=useState(false);
   const titleId=useId();
+  const roster=useTeacherRoster(),studentId=useOptionalStudent()?.studentId||"";
   const preview=isStudentPreview(code);
   const seenKey=`re_news_seen_${teacher||preview?"teacher":code}`;
   useEffect(()=>{try{setUnread(localStorage.getItem(seenKey)!==LATEST_RELEASE);}catch{setUnread(true);}},[seenKey]);
@@ -30,7 +32,7 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
   // The five sections are the tab bar, always on screen on a phone, so the menu
   // lists only the pages inside them, under the tab they belong to.
   const menuGroups=code?studentNavigation.filter(section=>section.more.length).map(section=>({label:section.label,links:section.more.map(item=>({label:item.label,hint:item.hint,href:`/s/${code}/${item.suffix}`}))})):[];
-  const findEntries=useCallback(()=>teacher?teacherFindIndex():code?studentFindIndex(code,localDate()):[],[teacher,code]);
+  const findEntries=useCallback(()=>teacher?teacherFindIndex(roster):code?studentFindIndex(code,localDate(),studentId):[],[teacher,code,roster,studentId]);
   return <>
     <button ref={trigger} type="button" className="app-menu-trigger" aria-label="Open menu" aria-haspopup="dialog" aria-expanded={open} onClick={()=>{setPanel("menu");dialog.current?.showModal();setOpen(true);}}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menu</span>{unread&&<span className="app-news-dot" aria-label="New updates"/>}</button>
     <dialog ref={dialog} aria-labelledby={titleId} className="app-menu-dialog" onClose={()=>{setOpen(false);trigger.current?.focus();}} onClick={e=>{if(e.target===dialog.current){const rect=dialog.current.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)close();}}}>
@@ -44,8 +46,8 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
         {preview?<button type="button" className="app-menu-link w-full" onClick={()=>{endStudentPreview();window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH||""}/teacher/`);}}>Back to teacher workspace<span aria-hidden>↗</span></button>:<button type="button" className="app-menu-link w-full" onClick={async()=>{close();await logout(teacher?"__teacher__":code||"");}}>Sign out<span aria-hidden>↗</span></button>}
       </div>}
       {panel==="settings"&&<><AppearanceSettings/><p className="mt-6 text-sm leading-relaxed text-navy-soft dark:text-navy-mist">Microphone and camera access is controlled by your device. Choose Allow when prompted; this app cannot grant permission silently or prevent iOS from asking again.</p></>}
-      {panel==="preview"&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Open the same pages your student sees. Preview is read-only, so their answers and progress stay unchanged.</p>{roster.map(s=><StudentPreviewButton key={s.code} code={s.code} name={s.displayName} onOpen={close}/>)}</div>}
-      {panel==="parent-preview"&&teacher&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Choose a student to see their parent’s learning overview and calendar. Preview is read-only and shows the same shared information parents see.</p>{roster.map(s=><ParentPreviewButton key={s.parentCode} code={s.parentCode} name={s.displayName} onOpen={close}/>)}</div>}
+      {panel==="preview"&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Open the same pages your student sees. Preview is read-only, so their answers and progress stay unchanged.</p>{roster.map(s=><StudentPreviewButton key={s.code} code={s.code} name={s.name} onOpen={close}/>)}</div>}
+      {panel==="parent-preview"&&teacher&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Choose a student to see their parent’s learning overview and calendar. Preview is read-only and shows the same shared information parents see.</p>{roster.map(s=><ParentPreviewButton key={s.parentCode} code={s.parentCode} name={s.name} roster={roster} onOpen={close}/>)}</div>}
       {panel==="news"&&<div className="space-y-6">{RELEASE_NOTES.map(note=><article key={`${note.date}-${note.title}`} className="rounded-2xl bg-black/5 p-4 dark:bg-white/5"><p className="text-xs text-navy-soft dark:text-navy-mist">{note.date}</p><h3 className="my-2 font-bold">{note.title}</h3><ul className="list-disc space-y-2 pl-4 text-sm leading-relaxed">{note.items.map(item=><li key={item}>{item}</li>)}</ul></article>)}</div>}
     </dialog>
   </>;

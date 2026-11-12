@@ -26,6 +26,11 @@ export function getAllStudents(): Student[] {
   return readJson<Student[]>(path.join(CONTENT_DIR, "students.json"));
 }
 
+/** Minimum the teacher workspace needs for every student (code, parent code, name). */
+export function getTeacherRoster(): { code: string; parentCode: string; name: string }[] {
+  return getAllStudents().map((s) => ({ code: s.code, parentCode: s.parentCode ?? "", name: s.displayName }));
+}
+
 export function getStudentByCode(code: string): Student | undefined {
   return getAllStudents().find((s) => s.code === code);
 }
