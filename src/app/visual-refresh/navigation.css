@@ -11,3 +11,29 @@
 .app-menu-group>p{color:var(--re-muted);font-size:.6rem;font-weight:850;letter-spacing:.14em;padding:0 5px 4px}
 .app-menu-group .app-menu-link{background:var(--re-surface);border:1px solid var(--re-line)}
 @media(prefers-reduced-motion:reduce){.re-tab-link{transition:none!important}}
+/* One map (12 Nov): the sidebar lists each section's pages under it. */
+.re-nav-groups{gap:10px!important}
+.re-sidebar .re-nav-group a.re-nav-sub{min-height:36px;padding:6px 11px 6px 44px;font-weight:600}
+.re-sidebar .re-nav-group a.is-section{color:var(--re-ink)}
+.re-sidebar .find-box{margin:24px 0 14px}
+.re-sidebar .find-results em{display:none}
+.app-menu-group .app-menu-hint{font-size:.75rem;font-weight:400;color:var(--re-muted);text-align:right}
+.app-menu-dialog .find-box{margin-bottom:14px}
+/* Find */
+.find-box{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;min-width:0}
+.find-field{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--re-line);border-radius:10px;background:var(--re-surface);color:var(--re-muted);cursor:text}
+.find-field:focus-within{border-color:var(--re-accent);box-shadow:0 0 0 3px var(--re-soft)}
+.find-field svg{flex-shrink:0}
+.find-field input{flex:1;min-width:0;height:42px;padding:0;border:0;outline:0;background:transparent;color:var(--re-ink);font-size:1rem}
+.find-field input::placeholder{color:var(--re-muted)}
+.find-field input::-webkit-search-cancel-button{cursor:pointer}
+.find-field kbd{padding:1px 7px;border:1px solid var(--re-line);border-radius:10px;font-size:.75rem;font-family:inherit}
+.find-results{list-style:none;margin:0;padding:4px;display:grid;gap:2px;border:1px solid var(--re-line);border-radius:10px;background:var(--re-surface)}
+.find-results[hidden]{display:none}
+.find-results li{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:center;min-height:44px;padding:7px 10px;border-radius:10px;cursor:pointer}
+.find-results li[aria-selected="true"]{background:var(--re-soft)}
+.find-results strong{grid-column:1;overflow-wrap:anywhere;color:var(--re-ink);font-size:.875rem}
+.find-results small{grid-column:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--re-muted);font-size:.75rem}
+.find-results em{grid-column:2;grid-row:1/span 2;color:var(--re-muted);font-size:.75rem;font-style:normal}
+.find-empty{margin:0;color:var(--re-muted);font-size:.875rem}
+.find-empty:empty{display:none}

@@ -1,0 +1,2 @@
+/** Today on this device as YYYY-MM-DD, the form homework release dates use. */
+export function localDate(now=new Date()){return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;}

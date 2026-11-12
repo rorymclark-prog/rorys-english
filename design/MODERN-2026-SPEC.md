@@ -86,3 +86,16 @@ Reference implementation of the portable spec: `projects/assistenze-care-app`.*
 ## Complete work feedback · 28 October 2026
 
 Use the same sentence table in uploaded writing, retained writing reviews and new typed homework. Table order: original, corrected, optional stronger wording, checks/explanation. Correct rows may collapse; no sentence is omitted. Below it, retain the full original, corrected and optional example as paragraphs. Use the established red/green/blue writing tokens consistently in headings, borders and changed-word highlights; preserve unchanged words and paragraph gaps. Corrections expose their reason on demand. The table scrolls within its container on small screens. Put new practice beneath the full text and keep answers hidden until the learner saves a try. Show saved conversation feedback beside its audio original and in Speaking, with an explicit caption limitation. Rory's private checks never appear in student/parent/preview views. An AI result is not a formal teacher mark.
+
+
+## One map and Find · 12 November 2026
+
+`src/lib/student-navigation.ts` is the only definition of where student pages live. It has five sections, one per tab (Today, Homework, Speak, Lessons, Feedback); each section lists its pages in `more` and may `own` unlisted pages (notifications, year plan). The tab bar, the sidebar and the menu all render from it, and `navPlace()` decides which tab is lit, so a page cannot be listed under one section and light another. A new student route must be added to the map; `tests/find.test.mjs` fails otherwise.
+
+- **Tab bar:** the five sections. A homework task lights Homework although its address sits under its unit.
+- **Sidebar (desktop):** Find, then each section with its pages indented beneath, without icons. The student’s name appears once, at the bottom.
+- **Menu (phone):** Find, then only the pages that are not tabs, grouped under their tab’s name, each with a short hint. Then Settings, What’s new and Sign out.
+- **Find** (`FindBox`, `src/lib/find.ts`): one search field, 44px, 16px text so iOS does not zoom. Matches pages, released homework, available units and lesson files for students; students, workspace pages and the seven student sections for the teacher. It runs on the device and sends nothing. Homework with a future `availableFrom` and unavailable units are never returned. Results show name, hint and kind; arrow keys and Enter work; “/” focuses the sidebar field. Never auto-focus it when the menu opens, because that raises the phone keyboard.
+- **Words:** each place carries hidden search words, German included. Add a synonym there rather than renaming a page.
+- **Back:** the top bar owns Back. Pages do not add a second one.
+- Styles live in `visual-refresh/navigation.css` and use only the shared type sizes, the 10px radius and colour tokens.
