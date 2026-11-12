@@ -31,15 +31,26 @@ students.forEach((s, i) => {
 });
 
 let total = 0;
-const hits = new Map([...probes, ...info].map((p) => [p.label, new Set()]));
-for (const file of walk(staticDir)) {
-  const text = readFileSync(file, "utf-8");
-  for (const p of [...probes, ...info]) if (p.pattern ? p.pattern.test(text) : p.needle && text.includes(p.needle)) hits.get(p.label).add(file.slice(root.length + 1));
-}
-for (const p of [...probes, ...info]) {
-  const files = [...hits.get(p.label)];
-  if (probes.includes(p)) total += files.length;
-  console.log(`${p.label}: ${files.length} file(s)${files.length ? " -> " + files.join(", ") : ""}`);
-}
-console.log(total ? `FAIL: ${total} match(es) in .next/static` : "OK: roster not found in .next/static");
+const scan = (title, files) => {
+  const hits = new Map([...probes, ...info].map((p) => [p.label, new Set()]));
+  for (const file of files) {
+    const text = readFileSync(file, "utf-8");
+    for (const p of [...probes, ...info]) if (p.pattern ? p.pattern.test(text) : p.needle && text.includes(p.needle)) hits.get(p.label).add(file.slice(root.length + 1));
+  }
+  console.log(`== ${title}`);
+  for (const p of [...probes, ...info]) {
+    const found = [...hits.get(p.label)];
+    if (probes.includes(p)) total += found.length;
+    console.log(`${p.label}: ${found.length} file(s)${found.length ? " -> " + found.join(", ") : ""}`);
+  }
+};
+scan(".next/static (public JavaScript)", walk(staticDir));
+// The teacher pages are prerendered, so their HTML and RSC payload are public too.
+const serverApp = join(root, ".next", "server", "app");
+const teacherFiles = readdirSync(serverApp, { recursive: true })
+  .map(String)
+  .filter((f) => /^teacher(\/|\.)/.test(f) && /\.(html|rsc|segment\.rsc)$/.test(f))
+  .map((f) => join(serverApp, f));
+scan(`prerendered teacher pages (${teacherFiles.length} files under .next/server/app/teacher*)`, teacherFiles);
+console.log(total ? `FAIL: ${total} match(es) in public output` : "OK: roster not found in public output");
 process.exit(total ? 1 : 0);

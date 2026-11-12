@@ -49,11 +49,14 @@ type LoadState = "idle" | "loading" | "ok" | "error";
 
 /** The /teacher routes pass `roster` (code, parentCode, name per student): the one place client code
  *  learns who the students are, because the static JavaScript must not carry content/students.json. */
-export default function TeacherDashboardView({roster=[],...rest}:{roster?:TeacherRosterEntry[];initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>;lessonLibraries?:Record<string,CoachLearnerLibrary>}) {
-  return <TeacherRosterProvider roster={roster}><TeacherWorkspace roster={roster} {...rest}/></TeacherRosterProvider>;
+export default function TeacherDashboardView({initialCalendar=false,initialLive=false}:{initialCalendar?:boolean;initialLive?:boolean}) {
+  // None of this is in the prerendered page: it arrives with the signed-in teacherDashboard reply.
+  const [roster,setRoster]=useState<TeacherRosterEntry[]>([]);
+  const [content,setContent]=useState<{activeUnits:Record<string,Unit|null>;lessonLibraries:Record<string,CoachLearnerLibrary>}>({activeUnits:{},lessonLibraries:{}});
+  return <TeacherRosterProvider roster={roster}><TeacherWorkspace roster={roster} activeUnits={content.activeUnits} lessonLibraries={content.lessonLibraries} initialCalendar={initialCalendar} initialLive={initialLive} onRoster={(r,c)=>{setRoster(r);setContent(c);}}/></TeacherRosterProvider>;
 }
 
-function TeacherWorkspace({roster,initialCalendar=false,initialLive=false,activeUnits={},lessonLibraries={}}:{roster:TeacherRosterEntry[];initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>;lessonLibraries?:Record<string,CoachLearnerLibrary>}) {
+function TeacherWorkspace({roster,onRoster,initialCalendar=false,initialLive=false,activeUnits,lessonLibraries}:{roster:TeacherRosterEntry[];onRoster:(roster:TeacherRosterEntry[],content:{activeUnits:Record<string,Unit|null>;lessonLibraries:Record<string,CoachLearnerLibrary>})=>void;initialCalendar?:boolean;initialLive?:boolean;activeUnits:Record<string,Unit|null>;lessonLibraries:Record<string,CoachLearnerLibrary>}) {
   const [inboxTab,setInboxTab]=useState<"messages"|"notifications"|null>(null);
   const [inboxCode,setInboxCode]=useState("__teacher__");
   const [section,setSection]=useState<TeacherSection>("overview");
@@ -122,6 +125,7 @@ function TeacherWorkspace({roster,initialCalendar=false,initialLive=false,active
       .then((d) => {
         if (!live) return;
         if (d.ok) {
+          onRoster(d.roster??[],{activeUnits:d.teacherContent?.activeUnits??{},lessonLibraries:d.teacherContent?.lessonLibraries??{}});
           setStudents(d.students ?? []);
           setGeneratedAt(d.generatedAt);
           setLoadState("ok");

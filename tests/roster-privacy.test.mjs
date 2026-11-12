@@ -79,16 +79,19 @@ test("no sign-in code is written into code the browser downloads", () => {
   assert.deepEqual(leaks, [], "a student or parent code is hard-coded in browser-reachable source");
 });
 
-test("the teacher workspace gets its students from its route, and parent previews carry only names and codes", () => {
-  const teacherPages = ["src/app/teacher/page.tsx", "src/app/teacher/calendar/page.tsx", "src/app/teacher/live/page.tsx"];
-  for (const page of teacherPages) assert.match(read(page), /roster=\{getTeacherRoster\(\)\}/, `${page} must pass the roster`);
-  assert.match(read("src/lib/content.ts"), /export function getTeacherRoster/);
+test("the teacher workspace gets its students from the signed-in dashboard reply, and parent previews carry only names and codes", () => {
+  const view = read("src/components/views/TeacherDashboardView.tsx");
+  assert.match(view, /d\.roster\?\?\[\]/, "the workspace keeps the roster from the teacherDashboard reply");
+  assert.match(read("src/lib/content.ts"), /export function getTeacherExtras/);
   // Nothing from the profile or the unit list is passed down.
   const fn = read("src/lib/content.ts").match(/export function getTeacherRoster[\s\S]*?\n}\n/)[0];
   assert.doesNotMatch(fn, /profile|progressLinks|units|greeting/);
   // The public parent page no longer lists the other families; the teacher's own tab remembers them.
   assert.doesNotMatch(read("src/components/ParentPreviewBanner.tsx"), /students\.json|roster\./);
   assert.match(read("src/components/ParentPreviewBanner.tsx"), /parentPreviewRoster\(\)/);
+  // The remembered list is keyed by parent code, because the banner links to /p/<parent code>/.
+  assert.match(read("src/components/AppMenu.tsx"), /parentRoster=roster\.map\(s=>\(\{code:s\.parentCode,name:s\.name\}\)\)/);
+  assert.match(read("src/components/AppMenu.tsx"), /roster=\{parentRoster\}/);
 });
 
 test("the post-build check exists and gates on codes and parent codes", () => {

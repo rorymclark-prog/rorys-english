@@ -18,7 +18,7 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
   const [panel,setPanel]=useState<"menu"|"settings"|"news"|"preview"|"parent-preview">("menu");
   const [unread,setUnread]=useState(false),[open,setOpen]=useState(false);
   const titleId=useId();
-  const roster=useTeacherRoster(),studentId=useOptionalStudent()?.studentId||"";
+  const roster=useTeacherRoster(),parentRoster=roster.map(s=>({code:s.parentCode,name:s.name})),studentId=useOptionalStudent()?.studentId||"";
   const preview=isStudentPreview(code);
   const seenKey=`re_news_seen_${teacher||preview?"teacher":code}`;
   useEffect(()=>{try{setUnread(localStorage.getItem(seenKey)!==LATEST_RELEASE);}catch{setUnread(true);}},[seenKey]);
@@ -47,7 +47,7 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
       </div>}
       {panel==="settings"&&<><AppearanceSettings/><p className="mt-6 text-sm leading-relaxed text-navy-soft dark:text-navy-mist">Microphone and camera access is controlled by your device. Choose Allow when prompted; this app cannot grant permission silently or prevent iOS from asking again.</p></>}
       {panel==="preview"&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Open the same pages your student sees. Preview is read-only, so their answers and progress stay unchanged.</p>{roster.map(s=><StudentPreviewButton key={s.code} code={s.code} name={s.name} onOpen={close}/>)}</div>}
-      {panel==="parent-preview"&&teacher&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Choose a student to see their parent’s learning overview and calendar. Preview is read-only and shows the same shared information parents see.</p>{roster.map(s=><ParentPreviewButton key={s.parentCode} code={s.parentCode} name={s.name} roster={roster} onOpen={close}/>)}</div>}
+      {panel==="parent-preview"&&teacher&&<div className="space-y-3"><p className="mb-4 text-sm text-navy-soft dark:text-navy-mist">Choose a student to see their parent’s learning overview and calendar. Preview is read-only and shows the same shared information parents see.</p>{roster.map(s=><ParentPreviewButton key={s.parentCode} code={s.parentCode} name={s.name} roster={parentRoster} onOpen={close}/>)}</div>}
       {panel==="news"&&<div className="space-y-6">{RELEASE_NOTES.map(note=><article key={`${note.date}-${note.title}`} className="rounded-2xl bg-black/5 p-4 dark:bg-white/5"><p className="text-xs text-navy-soft dark:text-navy-mist">{note.date}</p><h3 className="my-2 font-bold">{note.title}</h3><ul className="list-disc space-y-2 pl-4 text-sm leading-relaxed">{note.items.map(item=><li key={item}>{item}</li>)}</ul></article>)}</div>}
     </dialog>
   </>;

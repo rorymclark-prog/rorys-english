@@ -93,3 +93,42 @@ test('parent course practice reader is forwarded in parent preview but denied in
  const f=setup(),body={action:'parentPractice',code:'parent-a',session:'teacher-session',preview:true,parentPreview:true};await accountService(body,f.deps);assert.equal(f.calls.length,1);assert.equal(f.calls[0].parentPreview,true);
  const student=setup();assert.equal((await accountService({...body,parentPreview:false},student.deps)).ok,false);assert.equal(student.calls.length,0);
 });
+
+test('the roster is attached to an ok teacherDashboard reply and to nothing else', async () => {
+  const extras = { roster: [{ code: 'c', parentCode: 'p', name: 'N' }], teacherContent: { activeUnits: {}, lessonLibraries: {} } };
+  let reply = { ok: true, students: [] };
+  const teacherDeps = () => setup({ teacherExtras: () => extras, upstream: async body => { return typeof reply === 'function' ? reply(body) : reply; } }).deps;
+  const dashboard = { action: 'teacherDashboard', session: 'teacher-session' };
+  // Legacy teacher session, ok reply: attached.
+  const ok = await accountService(dashboard, teacherDeps());
+  assert.deepEqual(ok.roster, extras.roster); assert.deepEqual(ok.students, []); assert.ok(ok.teacherContent);
+  // A failed or unauthenticated reply carries no roster.
+  for (reply of [{ ok: false, authRequired: true }, { ok: false, error: 'Access denied' }, { authRequired: true }]) {
+    const out = await accountService(dashboard, teacherDeps());
+    assert.equal(out.roster, undefined); assert.equal(out.teacherContent, undefined);
+  }
+  // Every other action, including other teacher actions and the student reads, never gets it, even when ok.
+  reply = { ok: true, records: [] };
+  for (const action of ['login', 'teacherReview', 'teacherAddStudent', 'progress', 'learningRecords', 'teacherDashboardX']) {
+    const out = await accountService({ ...dashboard, action }, teacherDeps());
+    assert.equal(out.roster, undefined, action); assert.equal(out.teacherContent, undefined, action);
+  }
+  // Firebase path: a student account is refused teacherDashboard outright, and its other reads carry nothing.
+  const f = setup({ teacherExtras: () => extras });
+  const refused = await accountService({ ...request, action: 'teacherDashboard' }, f.deps);
+  assert.equal(refused.ok, false); assert.equal(refused.roster, undefined); assert.equal(f.calls.length, 0);
+  const read = await accountService(request, f.deps);
+  assert.equal(read.ok, true); assert.equal(read.roster, undefined);
+  // Nothing wired in, nothing attached.
+  assert.equal((await accountService(dashboard, setup().deps)).roster, undefined);
+});
+
+test('the service route supplies the roster from the server, and the prerendered teacher pages carry none', () => {
+  const route = fs.readFileSync('src/app/api/service/route.ts', 'utf8');
+  assert.match(route, /teacherExtras: getTeacherExtras/);
+  for (const page of ['src/app/teacher/page.tsx', 'src/app/teacher/calendar/page.tsx', 'src/app/teacher/live/page.tsx']) {
+    const text = fs.readFileSync(page, 'utf8');
+    assert.doesNotMatch(text, /roster|getTeacherRoster|getCoachLibraries|getBundle|getAllStudents/, `${page} must not read student data`);
+  }
+  assert.match(fs.readFileSync('scripts/preview-api.mjs', 'utf8'), /action==="teacherDashboard"\)result=\{[^;]*roster:demoRoster\(\)/, 'the demo API attaches the same field');
+});

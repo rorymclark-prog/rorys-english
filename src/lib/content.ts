@@ -31,6 +31,17 @@ export function getTeacherRoster(): { code: string; parentCode: string; name: st
   return getAllStudents().map((s) => ({ code: s.code, parentCode: s.parentCode ?? "", name: s.displayName }));
 }
 
+/** Everything the teacher workspace needs beyond the dashboard reply. Sent only after sign-in (see account-service). */
+export function getTeacherExtras(): Record<string, unknown> {
+  return {
+    roster: getTeacherRoster(),
+    teacherContent: {
+      activeUnits: Object.fromEntries(getAllStudents().map((s) => [s.code, getBundle(s.code)?.activeUnit || null])),
+      lessonLibraries: getCoachLibraries(),
+    },
+  };
+}
+
 export function getStudentByCode(code: string): Student | undefined {
   return getAllStudents().find((s) => s.code === code);
 }

@@ -6,7 +6,16 @@ export type Dependencies = {
   roster: Record<string, Account>;
   upstream: (body: Record<string, unknown>) => Promise<Reply>;
   backendSession: (code: string, idToken: string, refresh?: boolean) => Promise<string>;
+  /** Teacher-only data read from the server's own files (roster, unit content). Attached to a successful teacherDashboard reply and nothing else. */
+  teacherExtras?: () => Record<string, unknown>;
 };
+
+// An ok teacherDashboard reply only exists for a valid teacher session, so this is where the roster
+// may leave the server. Any other action, and any failed reply, passes through untouched.
+function withTeacherExtras(body: Record<string, unknown>, reply: Reply, deps: Dependencies): Reply {
+  if (body.action !== "teacherDashboard" || reply.ok !== true || !deps.teacherExtras) return reply;
+  return { ...reply, ...deps.teacherExtras() };
+}
 const studentActions = new Set(["progress", "resources", "assignments", "note", "submissions", "ai", "submit", "event", "documents", "document", "documentFile", "documentUpload", "documentAnalyse", "documentChat", "documentPractice", "workFeedback", "workFeedbackAnalyse", "workPractice", "learningRecords", "learningMemory", "learningMemoryEnabled", "learningReply", "speakingSave", "speakingAnalyse", "speakingAttachAudio", "calendarLessons", "calendarTestFile", "calendarLink", "calendarRevoke", "calendarRequest", "calendarTestSave", "calendarTestCancel", "messages", "notifications", "messageSend", "messagesRead", "notificationsRead"]);
 export async function accountService(body: Record<string, unknown>, deps: Dependencies): Promise<Reply> {
   if (body.parentPreview && !new Set(["progress","parentPractice","resources","note","documents","document","documentFile","learningRecords","workFeedback","calendarLessons","calendarTestFile"]).has(String(body.action))) return {ok:false,error:"Parent preview is read-only."};
@@ -17,7 +26,7 @@ export async function accountService(body: Record<string, unknown>, deps: Depend
     if (body.action === "login" && body.code === "__teacher__" && !reply.ok && reply.error === "Sign-in failed. Check your access code with Rory.") {
       return { ...reply, error: "Sign-in failed. Check your teacher password and try again." };
     }
-    return reply;
+    return withTeacherExtras(body, reply, deps);
   }
   const token = body.action === "accountLogin" ? body.idToken : body.session;
   if (typeof token !== "string" || !token) return { ok: false, authRequired: true, error: "Please sign in again." };
@@ -44,5 +53,5 @@ export async function accountService(body: Record<string, unknown>, deps: Depend
     outgoing.session = await deps.backendSession(code, token, true);
     response = await deps.upstream(outgoing);
   }
-  return response;
+  return withTeacherExtras(body, response, deps);
 }
