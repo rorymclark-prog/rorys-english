@@ -334,6 +334,7 @@ function TeacherStudentPanel({
   const [title, setTitle] = useState("");
   const [details, setDetails] = useState("");
   const [due, setDue] = useState("");
+  const [homeworkWeek,setHomeworkWeek]=useState("");
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [assignedFlash, setAssignedFlash] = useState(false);
@@ -362,12 +363,13 @@ function TeacherStudentPanel({
     if (!title.trim()) return;
     setAssigning(true);
     setAssignError(null);
-    const r = await assignHomeworkFromDashboard(secret, student.code, title.trim(), details.trim(), due.trim());
+    const r = await assignHomeworkFromDashboard(secret, student.code, title.trim(), details.trim(), due.trim(), homeworkWeek);
     setAssigning(false);
     if (r.ok) {
       setTitle("");
       setDetails("");
       setDue("");
+      setHomeworkWeek("");
       setAssignedFlash(true);
       window.setTimeout(() => setAssignedFlash(false), 2000);
     } else {
@@ -445,14 +447,21 @@ function TeacherStudentPanel({
             onSubmit={submitAssign}
             className="space-y-3 rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised dark:shadow-card-dark"
           >
+            <p className="text-sm">Homework is numbered automatically for {student.name}: HW1, HW2 and so on.</p>
+            <label className="block text-sm font-semibold">Homework name
             <input
               aria-label="Homework title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title (e.g. Read Unit 11 pages 4–6)"
+              placeholder="e.g. Money · saving and spending"
               maxLength={200}
               className="w-full rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm text-navy outline-none placeholder:text-navy-soft dark:border-white/10 dark:text-cream dark:placeholder:text-navy-mist"
             />
+            </label>
+            <label className="block text-sm font-semibold">Week beginning (optional)
+              <input type="date" aria-label="Homework week beginning (optional)" value={homeworkWeek} onChange={e=>setHomeworkWeek(e.target.value)} className="mt-1 block w-full rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/10"/>
+            </label>
+            <p className="text-xs">The week names the homework; set a due date separately if needed.</p>
             <input
               aria-label="Homework instructions"
               value={details}

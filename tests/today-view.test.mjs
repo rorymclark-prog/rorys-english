@@ -21,7 +21,7 @@ const unit={id:'unit',homework:[week(1),week(2)]};
 const assignment=(id,status='open',date='2026-10-01')=>({id,title:id,date,status,details:'Write an answer.',due:''});
 const submission=(task,status='submitted',extra={})=>({id:task,unit:'unit',task,submitted:'2026-10-22T12:00:00Z',status,feedback:'',answers:{},...extra});
 function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,code='student',calendarState='ready',units,wholePage=false}={}){
-  const states=['',assignments,error,loaded,submissions,calendarState];let state=0;
+  const states=['',assignments,error,loaded,submissions,{status:'loading'},calendarState];let state=0;
   const view=load('src/components/views/TodayView.tsx',{
     react:{...React,useState:()=>[states[state++],()=>{}],useEffect:()=>{}},'react/jsx-runtime':jsxRuntime,'next/link':link,
     '@/components/StudentContext':{useStudent:()=>({code,studentId:code,displayName:'Student'})},
@@ -30,7 +30,7 @@ function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,c
     '@/lib/today-task':todayTask,'@/lib/calendar-client':{},'@/lib/lesson-calendar':{viennaDate:()=> '2026-10-22'},'@/lib/engagement':{},
     '@/components/Icons':{ChevronRightIcon:empty,MessageIcon:empty},'@/components/LearningVisuals':{MicrophoneIcon:empty,RepeatIcon:empty,TopicArt:empty},
     '@/components/LessonPractice':{LatestLessonPractice:empty},
-    ...Object.fromEntries(['NextLesson','YearPlanNotice','EngagementPanel','StatusRow','MomentumStrip'].map(name=>[`@/components/${name}`,{default:empty}])),
+    ...Object.fromEntries(['NextLesson','YearPlanNotice','EngagementPanel','StatusRow','MomentumStrip','WeeklyPracticeSummary'].map(name=>[`@/components/${name}`,{default:empty}])),
   }).default;
   const html=renderToStaticMarkup(React.createElement(view,{unit:lesson,units}));
   return wholePage?html:html.match(/<section class="today-hero".*?<\/section>/s)[0];
@@ -87,7 +87,7 @@ test('Today opens the exact named assignment for a start or revision without cha
   const task={...assignment('reset id / one'),title:'Friendships · current homework · 17 October reset'};
   const expected='href="/s/student/homework/?assignment=reset%20id%20%2F%20one#assignment-reset%20id%20%2F%20one"';
   const hero=today({assignments:[task]});
-  assert.ok(hero.includes(expected));assert.match(hero,/<h2[^>]*>Friendships<\/h2>/);assert.match(hero,/aria-label="Start: Friendships"/);
+  assert.ok(hero.includes(expected));assert.match(hero,/<h2[^>]*>Friendships<\/h2>/);assert.match(hero,/aria-label="Open this week’s work: Friendships"/);
   assert.equal(task.title,'Friendships · current homework · 17 October reset');
   const revision=today({assignments:[task],submissions:[submission(task.id,'revision-needed',{unit:'assigned'})]});
   assert.ok(revision.includes(expected));assert.match(revision,/aria-label="Revise: Friendships"/);
@@ -127,7 +127,7 @@ test('landing page directly opens all Kashi starters including the separate math
  const units=defs.map(u=>({...u,homework:JSON.parse(fs.readFileSync(`content/kashi/${u.id}/homework.json`,'utf8'))}));
  const page=today({code:'kashi-f506',lesson:units.find(u=>u.active),units,wholePage:true});
  for(const [id,week] of [['kashi-writing-spelling-start-2026',1],['kashi-writing-spelling-start-2026',2],['kashi-multiplication-start-2026',1]])assert.ok(page.includes(`/s/kashi-f506/lessons/${id}/homework/${week}/`));
- assert.match(page,/Your current tasks/);assert.match(page,/Maths check/);
+ assert.match(page,/Other current tasks/);assert.match(page,/Maths check/);
 });
 
 test('previous unfinished lessons keep direct links but exclude received work and future tasks',()=>{
@@ -142,4 +142,13 @@ test('previous unfinished lessons keep direct links but exclude received work an
  const loading=today({units:[unit,older],loaded:false,wholePage:true});
  assert.doesNotMatch(loading.slice(loading.indexOf('<details')),/older\/homework/);
  assert.match(loading,/Checking your saved work/);
+});
+
+
+test('the main homework action names its number once and is not repeated below',()=>{
+ const task={...assignment('homework-reset-current'),title:'HW4 · Friendships · current homework · 17 October reset'};
+ const page=today({assignments:[task],wholePage:true});
+ assert.match(page,/Open this week’s work · HW4/);assert.match(page,/<h2[^>]*>Friendships<\/h2>/);
+ assert.equal((page.match(/assignment=homework-reset-current/g)||[]).length,1);
+ assert.doesNotMatch(page,/Other current tasks|Your current tasks/);
 });

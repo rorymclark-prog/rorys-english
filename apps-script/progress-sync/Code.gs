@@ -509,6 +509,20 @@ function rows_(ss, name) {
 // the student app reads open ones, and the student's completion writes back
 // to the same row (matched by a generated Id, not by title — two assignments
 // can share a title).
+// Number homework per learner and school year, retaining IDs and original rows.
+// Older unnumbered titles receive a display label; no historical row is rewritten.
+function homeworkYear_(date){var m=/^(\d{4})-(\d{2})-/.exec(String(date||''));return m?String(Number(m[1])-(Number(m[2])<9?1:0)):'undated';}
+function numberedHomeworkRows_(rows){
+ var used={},next={};
+ rows.forEach(function(r){var year=homeworkYear_(r[0]),m=/^HW([1-9]\d*)\b/i.exec(String(r[1]||''));if(!used[year])used[year]={};if(m)used[year][Number(m[1])]=true;});
+ return rows.map(function(r){var copy=r.slice(),year=homeworkYear_(r[0]);if(!/^HW[1-9]\d*\b/i.test(String(r[1]||''))){var n=next[year]||1;while(used[year][n])n++;used[year][n]=true;next[year]=n+1;copy[1]='HW'+n+' · '+r[1];}return copy;});
+}
+function homeworkWeek_(week){
+ if(!week)return '';
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(week)))throw new Error('Invalid homework week');
+ var date=new Date(week+'T12:00:00Z');if(!isFinite(date.getTime())||date.toISOString().slice(0,10)!==week)throw new Error('Invalid homework week');
+ return 'Week of '+Number(week.slice(8))+' '+['January','February','March','April','May','June','July','August','September','October','November','December'][Number(week.slice(5,7))-1]+' '+week.slice(0,4);
+}
 function getAssignments_(p) {
   var out;
   try {
@@ -525,7 +539,7 @@ function getAssignments_(p) {
         var ss = SpreadsheetApp.openById(sheetId);
         var all = rows_(ss, "Assignments");
         // Keep reviewed assignments available so their feedback is accessible.
-        out = { ok: true, assignments: { headers: all.headers, rows: all.rows } };
+        out = { ok: true, assignments: { headers: all.headers, rows: numberedHomeworkRows_(all.rows) } };
       }
     }
   } catch (err) {
@@ -576,10 +590,12 @@ function assignHomework_(p) {
         var lock = LockService.getScriptLock();
         lock.waitLock(10000);
         try {
-          var id = Utilities.getUuid().slice(0, 8);
+          var id = Utilities.getUuid().slice(0, 8),date=now_(),week=homeworkWeek_(p.week),existing=numberedHomeworkRows_(rows_(ss,'Assignments').rows),highest=0;
+          existing.forEach(function(r){if(homeworkYear_(r[0])===homeworkYear_(date)){var m=/^HW([1-9]\d*)\b/i.exec(String(r[1]||''));if(m)highest=Math.max(highest,Number(m[1]));}});
+          var homeworkTitle='HW'+(highest+1)+' · '+(week?week+' · ':'')+title.replace(/^HW[1-9]\d*\s*[·:—-]?\s*/i,'');
           ss.getSheetByName("Assignments").appendRow([
-            now_(),
-            sanitize_(title),
+            date,
+            sanitize_(homeworkTitle),
             sanitize_(p.details || ""),
             sanitize_(p.due || ""),
             "open",

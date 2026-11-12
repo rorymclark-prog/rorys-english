@@ -26,7 +26,7 @@ const teacherPost = <T extends ApiResult>(session:string,body:Record<string,unkn
 export const fetchTeacherDashboard = (session:string) => teacherPost<TeacherDashboard>(session,{action:"teacherDashboard"});
 export interface AddStudentResult extends ApiResult {code?:string;parentCode?:string;name?:string}
 export const addStudent = (s:string,name:string) => teacherPost<AddStudentResult>(s,{action:"teacherAddStudent",name});
-export const assignHomeworkFromDashboard = (s:string,code:string,title:string,details:string,due:string) => teacherPost<OkResult>(s,{action:"teacherAssignHomework",code,title,details,due});
+export const assignHomeworkFromDashboard = (s:string,code:string,title:string,details:string,due:string,week="") => teacherPost<OkResult>(s,{action:"teacherAssignHomework",code,title,details,due,week});
 export const setFocusNote = (s:string,code:string,note:string) => teacherPost<OkResult>(s,{action:"teacherSetFocusNote",code,note});
 export const logSchoolTest = (s:string,code:string,test:string,score:number,max:number,notes:string) => teacherPost<OkResult>(s,{action:"teacherLogSchoolTest",code,test,score,max,notes});
 export const logMockTest = (s:string,code:string,paper:string,reading:number,listening:number,writing:number,speaking:number,useOfEnglish:number,notes:string) => teacherPost<OkResult>(s,{action:"teacherLogMockTest",code,paper,reading,listening,writing,speaking,useOfEnglish,notes});

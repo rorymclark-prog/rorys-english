@@ -87,3 +87,32 @@ test('message history paginates without gaps and daily limits preserve existing 
  const earlier=f.post({...p,before:latest.messages[0].id});assert.equal(earlier.messages.length,5);assert.equal(earlier.hasEarlier,false);
  assert.equal(new Set([...earlier.messages,...latest.messages].map(m=>m.id)).size,305);
 });
+test('practice notifications use immutable attempt dates, keep retries separate and never notify parents or students',()=>{
+ const f=setup(),ss=f.ctx.studentSheet_('student-a'),docs=ss.insertSheet('Documents'),practice=ss.insertSheet('Document practice');
+ const doc=randomUUID(),first=randomUUID(),retry=randomUUID(),saved='2026-11-12T06:29:41.327Z';
+ docs.appendRow(f.ctx.DOCUMENT_HEADERS_);docs.appendRow([doc,'October school play','2026-10-08T12:00:00Z','Student','[]','ready',JSON.stringify({workType:'writing',exercises:[{id:'present-s',focus:'Present simple'}]})]);
+ practice.appendRow(['Id','Document','Review version','Exercise','Created','Answer JSON','Result JSON']);
+ practice.appendRow([first,doc,'v1','present-s',saved,'"listen"','{}']);
+ practice.appendRow([retry,doc,'v1','present-s','2026-11-12T06:30:14.757Z','"listens"','{}']);
+ practice.appendRow([first,doc,'v1','present-s',saved,'"listen"','{}']); // uncertain save retry has the same source ID
+ const t=f.teacher(),read=()=>f.post({action:'teacherNotifications',session:t});
+ const events=read().events.filter(e=>e.kind==='practice');assert.equal(events.length,2);
+ assert.equal(events[1].at,saved);assert.equal(events[0].practice.attempt,retry);assert.equal(events[0].practice.id,doc);assert.equal(events[0].practice.source,'document');
+ assert.equal(events[0].detail,'October school play · Present simple');assert.equal(JSON.stringify(events).includes('listens'),false);
+ f.post({action:'notificationsRead',code:'student-a',session:t,ids:['practice:'+first]});
+ assert.equal(read().events.find(e=>e.id==='practice:'+first).read,true);assert.equal(read().events.find(e=>e.id==='practice:'+retry).read,false);
+ docs.data[1][6]=JSON.stringify({workType:'writing',exercises:[{id:'present-s',focus:'Revised feedback'}]});
+ assert.equal(read().events.filter(e=>e.kind==='practice').length,2);assert.equal(read().events.find(e=>e.id==='practice:'+first).at,saved);
+ assert.equal(f.post({action:'notifications',code:'student-a',session:f.student()}).events.filter(e=>e.kind==='practice').length,0);
+ assert.equal(f.post({action:'notifications',code:'student-a',session:t,preview:true}).events.filter(e=>e.kind==='practice').length,0);
+});
+test('typed-answer and reply exercise notifications resolve their exact source without leaking unlinked rows',()=>{
+ const f=setup(),ss=f.ctx.studentSheet_('student-a'),practice=ss.insertSheet('Document practice'),submitted=randomUUID(),reply=randomUUID(),record=randomUUID();
+ const reviews=ss.insertSheet('Learning reviews');reviews.appendRow(f.ctx.LEARNING_HEADERS_);reviews.appendRow([record,'2026-10-01T00:00:00Z','2026-10-01','homework','Current writing','shared','{}','Rory']);
+ const replies=ss.insertSheet('Learning replies');replies.appendRow(['Id','Record','Created','Answer','Author']);replies.appendRow([reply,record,'2026-11-10T00:00:00Z','My own response','Student']);
+ const subs=ss.insertSheet('Submissions');subs.appendRow(['Id','Task','Unit','Submitted','Answers JSON','Status']);subs.appendRow([submitted,'task','assigned','2026-11-10T00:00:00Z','{}','reviewed','','','Homework draft']);
+ practice.appendRow(['Id','Document','Review version','Exercise','Created']);
+ for(const key of ['submission:'+submitted,'reply:'+reply,randomUUID()])practice.appendRow([randomUUID(),key,'v1','exercise','2026-11-12T06:40:00Z']);
+ const events=f.post({action:'teacherNotifications',session:f.teacher()}).events.filter(e=>e.kind==='practice');
+ assert.equal(events.length,2);assert.equal(events.find(e=>e.practice.source==='reply').practice.record,record);assert.equal(events.find(e=>e.practice.source==='submission').view,'review');
+});

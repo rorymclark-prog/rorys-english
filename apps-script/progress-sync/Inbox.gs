@@ -26,6 +26,25 @@ function inboxEvents_(code,teacher){
     DOCUMENT_CHECKS_CACHE_=documentChecks_(code);
     DOCUMENT_LEARNING_CACHE_=learningLatest_(code,'teacher').filter(function(r){return r[5]==='shared';});
     inboxRows_(code,'Documents').forEach(function(r){var d=documentPublic_(r,false,true);if(r[3]!=='Student'&&!d.needsTeacherCheck)return;if(d.workType==='conversation'||d.workType==='recording'){if(d.conversationId){var speech=events.filter(function(e){return e.id==='speaking:'+d.conversationId;})[0];if(speech)speech.needsCheck=!!d.needsTeacherCheck;}return;}add('document:'+r[0],r[2],'upload',d.needsTeacherCheck?'Check feedback':r[9]?'Revision uploaded':'Work uploaded',String(r[1]||'Document'),'documents');var event=events.filter(function(e){return e.id==='document:'+r[0];})[0];if(event)event.needsCheck=!!d.needsTeacherCheck;});
+    // Each immutable student attempt has its own receipt and original save time.
+    // Reading this list never creates a sheet, regenerates feedback or marks work.
+    var documents={},submissions={},replies={};
+    inboxRows_(code,'Documents').forEach(function(r){documents[String(r[0])]=r;});
+    inboxRows_(code,'Submissions').forEach(function(r){submissions[String(r[0])]=r;});
+    inboxRows_(code,'Learning replies').forEach(function(r){replies[String(r[0])]=r;});
+    inboxRows_(code,'Document practice').forEach(function(r){
+      if(!documentId_(String(r[0]||'')))return;
+      var key=String(r[1]||''),match=/^(submission|reply):(.+)$/.exec(key),kind=match?match[1]:'document',id=match?match[2]:key,source,title,analysis,record;
+      if(!documentId_(id))return;
+      if(kind==='document'){source=documents[id];if(!source)return;title=source[1];try{analysis=JSON.parse(source[6]||'null');}catch(e){}}
+      else if(kind==='submission'){source=submissions[id];if(!source)return;title=source[8]||source[1];}
+      else {source=replies[id];if(!source||source[4]!=='Student')return;record=learningFind_(code,source[1]);if(!record)return;title=record[4];}
+      if(kind!=='document'&&typeof workFeedbackLatest_==='function'){var state=workFeedbackLatest_(code,key);analysis=state&&state.analysis;}
+      var exercise=analysis&&(analysis.exercises||[]).filter(function(e){return e.id===r[3];})[0];
+      add('practice:'+r[0],r[4],'practice','Practice attempt saved',String(title||'Saved work')+(exercise?' · '+exercise.focus:''),kind==='document'?'documents':kind==='submission'?'review':'learning');
+      var event=events.filter(function(e){return e.id==='practice:'+r[0];})[0];
+      if(event)event.practice={source:kind,id:id,attempt:String(r[0]),record:record?String(record[0]):''};
+    });
     calendarRows_(code,'School test calendar').forEach(function(r){if(r.updatedBy==='student')add('test:'+r.id+':'+r.sequence,r.updatedAt,'test',r.status==='cancelled'?'School test cancelled':r.sequence?'School test updated':'School test added',String(r.title||'School test'),'calendar');});
     calendarRows_(code,'Lesson requests').forEach(function(r){if(r.role==='student')add('request:'+r.id,r.createdAt,'request','Lesson change requested','Open Calendar to respond.','calendar');});
     inboxRows_(code,'Vocab & Quizzes').forEach(function(r){if(r[6])add('quiz:'+r[6],r[0],'quiz','Practice round saved',String(r[1]||'Practice'),'overview');});
