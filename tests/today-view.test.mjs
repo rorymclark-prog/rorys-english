@@ -20,7 +20,7 @@ const week=(number)=>({week:number,title:`Task ${number}`,tasks:[{type:'written'
 const unit={id:'unit',homework:[week(1),week(2)]};
 const assignment=(id,status='open',date='2026-10-01')=>({id,title:id,date,status,details:'Write an answer.',due:''});
 const submission=(task,status='submitted',extra={})=>({id:task,unit:'unit',task,submitted:'2026-10-22T12:00:00Z',status,feedback:'',answers:{},...extra});
-function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,code='student',calendarState='ready'}={}){
+function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,code='student',calendarState='ready',units,wholePage=false}={}){
   const states=['',assignments,error,loaded,submissions,calendarState];let state=0;
   const view=load('src/components/views/TodayView.tsx',{
     react:{...React,useState:()=>[states[state++],()=>{}],useEffect:()=>{}},'react/jsx-runtime':jsxRuntime,'next/link':link,
@@ -32,14 +32,14 @@ function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,c
     '@/components/LessonPractice':{LatestLessonPractice:empty},
     ...Object.fromEntries(['NextLesson','YearPlanNotice','EngagementPanel','StatusRow','MomentumStrip'].map(name=>[`@/components/${name}`,{default:empty}])),
   }).default;
-  const html=renderToStaticMarkup(React.createElement(view,{unit:lesson}));
-  return html.match(/<section class="today-hero".*?<\/section>/s)[0];
+  const html=renderToStaticMarkup(React.createElement(view,{unit:lesson,units}));
+  return wholePage?html:html.match(/<section class="today-hero".*?<\/section>/s)[0];
 }
 
 test('Today recommends the untouched task after reviewed work, including a received teacher assignment',()=>{
   const hero=today({assignments:[assignment('Assigned answer')],submissions:[submission('hw:1','reviewed',{feedback:'Good work'}),submission('Assigned answer','submitted',{unit:'assigned'})]});
   assert.match(hero,/<h2[^>]*>Task 2<\/h2>/);
-  assert.match(hero,/href="\/s\/student\/lessons\/unit\/homework\/2\/"[^>]*>Start<\/a>/);
+  assert.match(hero,/href="\/s\/student\/lessons\/unit\/homework\/2\/"[^>]*>Open this week’s work<\/a>/);
   assert.doesNotMatch(hero,/more task/);
 });
 
@@ -94,7 +94,7 @@ test('Today opens the exact named assignment for a start or revision without cha
 });
 
 test('a verified break is visible next to the task while unknown calendar state makes no holiday claim',()=>{
-  const paused=today({calendarState:'paused'});assert.match(paused,/Optional during the break/);assert.match(paused,/Weekly practice is paused/);assert.match(paused,/>Start<\/a>/);
+  const paused=today({calendarState:'paused'});assert.match(paused,/Optional during the break/);assert.match(paused,/Weekly practice is paused/);assert.match(paused,/>Open this week’s work<\/a>/);
   const unavailable=today({calendarState:'unavailable'});assert.doesNotMatch(unavailable,/Optional during the break|Weekly practice is paused/);assert.match(unavailable,/href="\/s\/student\/calendar\/"/);
   assert.doesNotMatch(today({calendarState:'ready'}),/Optional during the break/);
 });
@@ -119,4 +119,27 @@ test('progress sharing is disabled and guarded in teacher preview, while normal 
     button.props.onClick();await Promise.resolve();
     assert.equal(shared.length,preview?0:1);assert.equal(summaries,preview?0:1);
   }
+});
+
+
+test('landing page directly opens all Kashi starters including the separate maths check',()=>{
+ const defs=JSON.parse(fs.readFileSync('content/kashi/units.json','utf8'));
+ const units=defs.map(u=>({...u,homework:JSON.parse(fs.readFileSync(`content/kashi/${u.id}/homework.json`,'utf8'))}));
+ const page=today({code:'kashi-f506',lesson:units.find(u=>u.active),units,wholePage:true});
+ for(const [id,week] of [['kashi-writing-spelling-start-2026',1],['kashi-writing-spelling-start-2026',2],['kashi-multiplication-start-2026',1]])assert.ok(page.includes(`/s/kashi-f506/lessons/${id}/homework/${week}/`));
+ assert.match(page,/Your current tasks/);assert.match(page,/Maths check/);
+});
+
+test('previous unfinished lessons keep direct links but exclude received work and future tasks',()=>{
+ const older={id:'older',title:'Earlier lesson',active:false,homework:[week(1),week(2),{...week(3),availableFrom:'2099-01-01'}]};
+ const sent=submission('hw:1','submitted',{unit:'older'});
+ const page=today({units:[unit,older],submissions:[sent],wholePage:true});
+ const previous=page.slice(page.indexOf('<details'));
+ assert.match(previous,/Previous lessons · unfinished work \(1\)/);
+ assert.match(previous,/href="\/s\/student\/lessons\/older\/homework\/2\/"/);
+ assert.doesNotMatch(previous,/older\/homework\/(1|3)\//);
+ assert.match(previous,/Optional catch-up/);
+ const loading=today({units:[unit,older],loaded:false,wholePage:true});
+ assert.doesNotMatch(loading.slice(loading.indexOf('<details')),/older\/homework/);
+ assert.match(loading,/Checking your saved work/);
 });
