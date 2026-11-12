@@ -27,9 +27,10 @@ const descriptions={
   settings:"Settings page headings",
   header:"Shared page heading layout",
   simplicity:"21 Oct one-job-per-page student screens",
+  findability:"12 Nov single navigation map and Find",
 };
 const features=Object.keys(descriptions);
-const unstyled=new Set(["settings","speaking-budget","simplicity","writing-feedback"]);
+const unstyled=new Set(["settings","speaking-budget","simplicity","writing-feedback","findability"]);
 const styledFeatures=features.filter(name=>!unstyled.has(name));
 const [command,...args]=process.argv.slice(2);
 

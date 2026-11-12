@@ -12,3 +12,8 @@ The areas are `entry`, `navigation`, `today`, `homework`, `lessons`, `practice`,
 
 
 `writing-feedback` restores the prior presentation of the three shared writing renderers. It keeps new feedback preparation, checkpoints, sentence validation, saved exercises, conversation links, private checks and learner records. The patch does not disable a stylesheet because its styling is shared with these retained functional features. As with all rollback areas, review and validate the applied patch before publication; later overlapping edits intentionally block automatic application.
+
+
+`findability` (12 November 2026) returns the tab bar, sidebar and menu to their separate lists, removes Find from the student and teacher menus, and restores the second Back control on Resource library and Writing help. It covers only the navigation components, `student-navigation.ts`, the Find files, the navigation styles and `tests/find.test.mjs`; it does not disable a stylesheet. Release notes and the design spec stay as written, so add a note when it is applied. Recorded against the commit that introduced it and proven by applying it in an isolated copy, then running type checking and the full tests.
+
+State on 12 November: `npm run ui:rollbacks` reports only `entry`, `header` and `findability` as ready. The other nineteen areas no longer apply to `main` because later edits overlap them; they were already in that state before `findability` was recorded.

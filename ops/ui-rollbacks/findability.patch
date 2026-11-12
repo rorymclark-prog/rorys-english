@@ -1,0 +1,620 @@
+diff --git b/src/app/s/[code]/coach/page.tsx a/src/app/s/[code]/coach/page.tsx
+index db7f649..e045325 100644
+--- b/src/app/s/[code]/coach/page.tsx
++++ a/src/app/s/[code]/coach/page.tsx
+@@ -1,11 +1,25 @@
++import Link from "next/link";
+ import { getBundle } from "@/lib/content";
+ import AiCoachView from "@/components/views/AiCoachView";
++import { ChevronLeftIcon } from "@/components/Icons";
+ 
+ export default async function CoachPage({ params }: { params: Promise<{ code: string }> }) {
+   const { code } = await params;
+   getBundle(code); // 404 handled by the [code] layout
+   return (
+     <>
++      <header
++        className="sticky top-0 z-10 flex items-center gap-2 bg-cream px-3 dark:bg-navy"
++        style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)", paddingBottom: "0.25rem" }}
++      >
++        <Link
++          href={`/s/${code}/`}
++          aria-label="Back to today"
++          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft transition hover:bg-black/5 active:scale-[.97] dark:text-navy-mist dark:hover:bg-white/10"
++        >
++          <ChevronLeftIcon />
++        </Link>
++      </header>
+       <AiCoachView code={code} />
+     </>
+   );
+diff --git b/src/app/s/[code]/resources/page.tsx a/src/app/s/[code]/resources/page.tsx
+index 7381a9b..5483a74 100644
+--- b/src/app/s/[code]/resources/page.tsx
++++ a/src/app/s/[code]/resources/page.tsx
+@@ -1,5 +1,7 @@
++import Link from "next/link";
+ import { getBundle } from "@/lib/content";
+ import ResourcesView from "@/components/views/ResourcesView";
++import { ChevronLeftIcon } from "@/components/Icons";
+ 
+ export default async function ResourcesPage({ params }: { params: Promise<{ code: string }> }) {
+   const { code } = await params;
+@@ -7,6 +9,18 @@ export default async function ResourcesPage({ params }: { params: Promise<{ code
+   const lessonResources=bundle.units.flatMap(unit=>(unit.resources||[]).map(r=>({...r,unit:unit.title,schoolYear:unit.schoolYear||"Previous year"})));
+   return (
+     <>
++      <header
++        className="sticky top-0 z-10 flex items-center gap-2 bg-cream px-3 dark:bg-navy"
++        style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)", paddingBottom: "0.25rem" }}
++      >
++        <Link
++          href={`/s/${code}/`}
++          aria-label="Back to today"
++          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-navy-soft transition hover:bg-black/5 active:scale-[.97] dark:text-navy-mist dark:hover:bg-white/10"
++        >
++          <ChevronLeftIcon />
++        </Link>
++      </header>
+       <ResourcesView fetchCode={code} mode="student" lessonResources={lessonResources} />
+     </>
+   );
+diff --git b/src/app/visual-refresh/navigation.css a/src/app/visual-refresh/navigation.css
+index 4b6f639..47c55a0 100644
+--- b/src/app/visual-refresh/navigation.css
++++ a/src/app/visual-refresh/navigation.css
+@@ -11,29 +11,3 @@
+ .app-menu-group>p{color:var(--re-muted);font-size:.6rem;font-weight:850;letter-spacing:.14em;padding:0 5px 4px}
+ .app-menu-group .app-menu-link{background:var(--re-surface);border:1px solid var(--re-line)}
+ @media(prefers-reduced-motion:reduce){.re-tab-link{transition:none!important}}
+-/* One map (12 Nov): the sidebar lists each section's pages under it. */
+-.re-nav-groups{gap:10px!important}
+-.re-sidebar .re-nav-group a.re-nav-sub{min-height:36px;padding:6px 11px 6px 44px;font-weight:600}
+-.re-sidebar .re-nav-group a.is-section{color:var(--re-ink)}
+-.re-sidebar .find-box{margin:24px 0 14px}
+-.re-sidebar .find-results em{display:none}
+-.app-menu-group .app-menu-hint{font-size:.75rem;font-weight:400;color:var(--re-muted);text-align:right}
+-.app-menu-dialog .find-box{margin-bottom:14px}
+-/* Find */
+-.find-box{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;min-width:0}
+-.find-field{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--re-line);border-radius:10px;background:var(--re-surface);color:var(--re-muted);cursor:text}
+-.find-field:focus-within{border-color:var(--re-accent);box-shadow:0 0 0 3px var(--re-soft)}
+-.find-field svg{flex-shrink:0}
+-.find-field input{flex:1;min-width:0;height:42px;padding:0;border:0;outline:0;background:transparent;color:var(--re-ink);font-size:1rem}
+-.find-field input::placeholder{color:var(--re-muted)}
+-.find-field input::-webkit-search-cancel-button{cursor:pointer}
+-.find-field kbd{padding:1px 7px;border:1px solid var(--re-line);border-radius:10px;font-size:.75rem;font-family:inherit}
+-.find-results{list-style:none;margin:0;padding:4px;display:grid;gap:2px;border:1px solid var(--re-line);border-radius:10px;background:var(--re-surface)}
+-.find-results[hidden]{display:none}
+-.find-results li{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:center;min-height:44px;padding:7px 10px;border-radius:10px;cursor:pointer}
+-.find-results li[aria-selected="true"]{background:var(--re-soft)}
+-.find-results strong{grid-column:1;overflow-wrap:anywhere;color:var(--re-ink);font-size:.875rem}
+-.find-results small{grid-column:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--re-muted);font-size:.75rem}
+-.find-results em{grid-column:2;grid-row:1/span 2;color:var(--re-muted);font-size:.75rem;font-style:normal}
+-.find-empty{margin:0;color:var(--re-muted);font-size:.875rem}
+-.find-empty:empty{display:none}
+diff --git b/src/components/AppMenu.tsx a/src/components/AppMenu.tsx
+index 9ec2895..87e0361 100644
+--- b/src/components/AppMenu.tsx
++++ a/src/components/AppMenu.tsx
+@@ -1,5 +1,5 @@
+ "use client";
+-import { useCallback, useEffect, useId, useRef, useState } from "react";
++import { useEffect, useId, useRef, useState } from "react";
+ import Link from "next/link";
+ import AppearanceSettings from "./AppearanceSettings";
+ import StudentPreviewButton from "./StudentPreviewButton";
+@@ -8,9 +8,6 @@ import { RELEASE_NOTES, LATEST_RELEASE } from "@/lib/whats-new";
+ import { endStudentPreview, isStudentPreview } from "@/lib/student-preview";
+ import { logout } from "@/lib/api";
+ import {studentNavigation} from "@/lib/student-navigation";
+-import {studentFindIndex,teacherFindIndex} from "@/lib/find-index";
+-import {localDate} from "@/lib/local-date";
+-import FindBox from "./FindBox";
+ import roster from "../../content/students.json";
+ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:boolean}) {
+   const dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null);
+@@ -27,17 +24,13 @@ export default function AppMenu({code,teacher=false}:{code?:string;teacher?:bool
+   },[open]);
+   const close=()=>dialog.current?.close();
+   const viewNews=()=>{setPanel("news");setUnread(false);try{localStorage.setItem(seenKey,LATEST_RELEASE);}catch{/* optional badge */}};
+-  // The five sections are the tab bar, always on screen on a phone, so the menu
+-  // lists only the pages inside them, under the tab they belong to.
+-  const menuGroups=code?studentNavigation.filter(section=>section.more.length).map(section=>({label:section.label,links:section.more.map(item=>({label:item.label,hint:item.hint,href:`/s/${code}/${item.suffix}`}))})):[];
+-  const findEntries=useCallback(()=>teacher?teacherFindIndex():code?studentFindIndex(code,localDate()):[],[teacher,code]);
++  const menuGroups=code?studentNavigation.map(group=>({label:group.label,links:group.items.map(([suffix,label])=>[label,`/s/${code}/${suffix}`])})):[];
+   return <>
+     <button ref={trigger} type="button" className="app-menu-trigger" aria-label="Open menu" aria-haspopup="dialog" aria-expanded={open} onClick={()=>{setPanel("menu");dialog.current?.showModal();setOpen(true);}}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menu</span>{unread&&<span className="app-news-dot" aria-label="New updates"/>}</button>
+     <dialog ref={dialog} aria-labelledby={titleId} className="app-menu-dialog" onClose={()=>{setOpen(false);trigger.current?.focus();}} onClick={e=>{if(e.target===dialog.current){const rect=dialog.current.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)close();}}}>
+       <header className="mb-6 flex items-center justify-between gap-3"><div>{panel!=="menu"&&<button type="button" className="mb-2 min-h-11 text-sm underline" onClick={()=>setPanel("menu")}>← Menu</button>}<p className="text-xs font-bold uppercase tracking-widest text-navy-soft dark:text-navy-mist">Rory’s English</p><h2 id={titleId} className="mt-1 text-2xl font-extrabold">{panel==="menu"?"Your space":panel==="news"?"What’s new":panel==="preview"?"View as student":panel==="parent-preview"?"View as parent":"Settings"}</h2></div><button type="button" className="app-menu-close" aria-label="Close menu" onClick={close}>×</button></header>
+       {panel==="menu"&&<div className="space-y-2">
+-        <FindBox entries={findEntries} hard={teacher} onGo={close} placeholder={teacher?"Find a student or a place":"Find a page, task or lesson"}/>
+-        {teacher?<><a className="app-menu-link" href="/teacher/" onClick={close}>Students & teaching<span aria-hidden>→</span></a><a className="app-menu-link" href="/teacher/calendar/" onClick={close}>Calendar<span aria-hidden>→</span></a><a className="app-menu-link" href="/teacher/?inbox=notifications" onClick={close}>Notifications<span aria-hidden>→</span></a><a className="app-menu-link" href="/teacher/?inbox=messages" onClick={close}>Messages<span aria-hidden>→</span></a><button type="button" className="app-menu-link w-full" onClick={()=>setPanel("preview")}>View as student<span aria-hidden>↗</span></button><button type="button" className="app-menu-link w-full" onClick={()=>setPanel("parent-preview")}>View as parent<span aria-hidden>↗</span></button></>:menuGroups.map(group=><section key={group.label} className="app-menu-group"><p>{group.label.toUpperCase()}</p>{group.links.map(({label,hint,href})=><Link key={href} href={href} onClick={close} className="app-menu-link">{label}<span className="app-menu-hint">{hint}</span></Link>)}</section>)}
++        {teacher?<><a className="app-menu-link" href="/teacher/" onClick={close}>Students & teaching<span aria-hidden>→</span></a><a className="app-menu-link" href="/teacher/calendar/" onClick={close}>Calendar<span aria-hidden>→</span></a><a className="app-menu-link" href="/teacher/?inbox=notifications" onClick={close}>Notifications<span aria-hidden>→</span></a><a className="app-menu-link" href="/teacher/?inbox=messages" onClick={close}>Messages<span aria-hidden>→</span></a><button type="button" className="app-menu-link w-full" onClick={()=>setPanel("preview")}>View as student<span aria-hidden>↗</span></button><button type="button" className="app-menu-link w-full" onClick={()=>setPanel("parent-preview")}>View as parent<span aria-hidden>↗</span></button></>:menuGroups.map(group=><section key={group.label} className="app-menu-group"><p>{group.label}</p>{group.links.map(([label,href])=><Link key={href} href={href} onClick={close} className="app-menu-link">{label}<span aria-hidden>→</span></Link>)}</section>)}
+         <div className="my-3 border-t border-black/10 dark:border-white/10"/>
+         <button type="button" className="app-menu-link w-full" onClick={()=>setPanel("settings")}>Settings<span className="text-xs font-normal">Appearance & text size</span></button>
+         <button type="button" className="app-menu-link w-full" onClick={viewNews}>What’s new{unread?<span className="app-new-pill">New</span>:<span aria-hidden>→</span>}</button>
+diff --git b/src/components/FindBox.tsx a/src/components/FindBox.tsx
+deleted file mode 100644
+index c99c28d..0000000
+--- b/src/components/FindBox.tsx
++++ /dev/null
+@@ -1,52 +0,0 @@
+-"use client";
+-
+-import {useEffect,useId,useMemo,useRef,useState} from "react";
+-import {useRouter} from "next/navigation";
+-import {findMatches,type FindEntry} from "@/lib/find";
+-
+-/**
+- * One box that finds a page, a task, a unit or a file by name.
+- * Matching happens on the device; nothing typed here is sent anywhere.
+- *
+- * `hard` loads the address afresh, which the teacher workspace needs because
+- * it reads its view from the address bar. `shortcut` lets "/" jump to the box.
+- */
+-export default function FindBox({entries,placeholder="Find a page, task or lesson",onGo,hard=false,shortcut=false}:{entries:()=>FindEntry[];placeholder?:string;onGo?:()=>void;hard?:boolean;shortcut?:boolean}){
+-  const router=useRouter(),id=useId(),input=useRef<HTMLInputElement>(null);
+-  const [query,setQuery]=useState(""),[active,setActive]=useState(0);
+-  // Built the first time something is typed, not on every page.
+-  const index=useMemo(()=>query?entries():[],[!!query,entries]);// eslint-disable-line react-hooks/exhaustive-deps
+-  const results=useMemo(()=>findMatches(query,index),[query,index]);
+-  useEffect(()=>{setActive(0);},[query]);
+-  useEffect(()=>{
+-    if(!shortcut)return;
+-    const onKey=(e:KeyboardEvent)=>{
+-      const target=e.target as HTMLElement|null;
+-      if(e.key!=="/"||e.metaKey||e.ctrlKey||e.altKey||target?.closest("input,textarea,select,[contenteditable='true']"))return;
+-      if(!input.current||input.current.offsetParent===null)return;
+-      e.preventDefault();input.current.focus();
+-    };
+-    window.addEventListener("keydown",onKey);
+-    return()=>window.removeEventListener("keydown",onKey);
+-  },[shortcut]);
+-  const go=(entry:FindEntry)=>{
+-    setQuery("");onGo?.();
+-    if(hard)window.location.assign(`${process.env.NEXT_PUBLIC_BASE_PATH||""}${entry.href}`);else router.push(entry.href);
+-  };
+-  const typed=query.trim();
+-  return <div className="find-box" role="search">
+-    <label className="find-field"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span className="sr-only">Find</span>
+-      <input ref={input} type="search" value={query} placeholder={placeholder} autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} enterKeyHint="go" role="combobox" aria-autocomplete="list" aria-expanded={!!typed} aria-controls={`${id}-results`} aria-activedescendant={results[active]?`${id}-${active}`:undefined}
+-        onChange={e=>setQuery(e.target.value)}
+-        onKeyDown={e=>{
+-          if(e.key==="ArrowDown"){e.preventDefault();setActive(i=>Math.min(i+1,results.length-1));}
+-          else if(e.key==="ArrowUp"){e.preventDefault();setActive(i=>Math.max(i-1,0));}
+-          else if(e.key==="Enter"&&results[active]){e.preventDefault();go(results[active]);}
+-          else if(e.key==="Escape"&&query){e.preventDefault();e.stopPropagation();setQuery("");}
+-        }}/>
+-      {shortcut&&!query&&<kbd aria-hidden="true">/</kbd>}
+-    </label>
+-    <ul id={`${id}-results`} role="listbox" aria-label="Results" className="find-results" hidden={!results.length}>{results.map((entry,i)=><li key={entry.href+entry.label} id={`${id}-${i}`} role="option" aria-selected={i===active} onMouseEnter={()=>setActive(i)} onClick={()=>go(entry)}><strong>{entry.label}</strong>{entry.hint&&<small>{entry.hint}</small>}<em>{entry.group}</em></li>)}</ul>
+-    <p className="find-empty" role="status">{typed&&!results.length?`Nothing found for “${typed}”. Try a page name, a task or a unit.`:""}</p>
+-  </div>;
+-}
+diff --git b/src/components/NavIcons.ts a/src/components/NavIcons.ts
+deleted file mode 100644
+index de16fcc..0000000
+--- b/src/components/NavIcons.ts
++++ /dev/null
+@@ -1,6 +0,0 @@
+-import {HomeIcon,CalendarIcon,BookIcon,CheckSquareIcon,ChartIcon,FolderIcon,TargetIcon,FileIcon,MessageIcon} from "./Icons";
+-import {MicrophoneIcon,RepeatIcon} from "./LearningVisuals";
+-import type {NavIcon} from "@/lib/student-navigation";
+-
+-/** The picture for each place on the student map, shared by the tab bar and the sidebar. */
+-export const navIcons:Record<NavIcon,typeof HomeIcon>={home:HomeIcon,calendar:CalendarIcon,work:CheckSquareIcon,feedback:ChartIcon,documents:FileIcon,test:TargetIcon,speaking:MicrophoneIcon,lessons:BookIcon,practice:RepeatIcon,files:FolderIcon,writing:MessageIcon};
+diff --git b/src/components/StudentNavigation.tsx a/src/components/StudentNavigation.tsx
+index fa6b05b..6a9e0ba 100644
+--- b/src/components/StudentNavigation.tsx
++++ a/src/components/StudentNavigation.tsx
+@@ -1,37 +1,28 @@
+ "use client";
+ 
+-import {useCallback} from "react";
+ import Link from "next/link";
+ import ProfileAvatar from "@/components/ProfileAvatar";
+ import {usePathname} from "next/navigation";
+ import {useStudent} from "./StudentContext";
+-import {GearIcon} from "./Icons";
+-import {navIcons} from "./NavIcons";
+-import FindBox from "./FindBox";
+-import {studentNavigation as sections,navPlace} from '@/lib/student-navigation';
+-import {studentFindIndex} from '@/lib/find-index';
+-import {localDate} from '@/lib/local-date';
++import {HomeIcon,CalendarIcon,BookIcon,CheckSquareIcon,ChartIcon,GearIcon,FolderIcon,TargetIcon,FileIcon,MessageIcon} from "./Icons";
++import {MicrophoneIcon,RepeatIcon} from "./LearningVisuals";
++import {studentNavigation as groups} from '@/lib/student-navigation';
++const icons={home:HomeIcon,calendar:CalendarIcon,work:CheckSquareIcon,feedback:ChartIcon,documents:FileIcon,test:TargetIcon,speaking:MicrophoneIcon,lessons:BookIcon,practice:RepeatIcon,files:FolderIcon,writing:MessageIcon};
+ 
+-// The desktop sidebar: the same five sections as the phone's tab bar, each
+-// with its own pages underneath, and Find above them.
+ export default function StudentNavigation(){
+   const {code,displayName}=useStudent();
+   const path=usePathname();
+   const base=`/s/${code}`;
+-  const here=navPlace(path,base);
+-  const entries=useCallback(()=>studentFindIndex(code,localDate()),[code]);
+   return <aside className="re-sidebar">
+     <Link href={`${base}/`} className="re-brand"><span>r.</span><div>Rory’s English<small>A LITTLE EVERY LESSON.</small></div></Link>
+-    <FindBox entries={entries} placeholder="Find" shortcut/>
++    <div className="re-workspace-label"><ProfileAvatar code={code} name={displayName}/><div>YOUR LEARNING SPACE<strong>{displayName}</strong></div></div>
+     <nav aria-label="Workspace navigation" className="re-nav-groups">
+-      {sections.map(section=>{
+-        const Icon=navIcons[section.icon];
+-        const current=here.item===section.suffix,inside=here.section===section.suffix&&!current;
+-        return <div className="re-nav-group" key={section.suffix}>
+-          <Link href={`${base}/${section.suffix}`} aria-current={current?"page":undefined} className={current?"is-active":inside?"is-section":""}><Icon width={21} height={21}/>{section.label}</Link>
+-          {section.more.map(item=>{const on=here.item===item.suffix;return <Link key={item.suffix} href={`${base}/${item.suffix}`} aria-current={on?"page":undefined} className={`re-nav-sub${on?" is-active":""}`}>{item.label}</Link>;})}
+-        </div>;
+-      })}
++      {groups.map(group=><div className="re-nav-group" key={group.label}><p>{group.label}</p>{group.items.map(([suffix,label,icon])=>{
++        const Icon=icons[icon];
++        const href=`${base}/${suffix}`;
++        const active=suffix?path.startsWith(href):path===base||path===base+"/";
++        return <Link key={href} href={href} aria-current={active?"page":undefined} className={active?"is-active":""}><Icon width={21} height={21}/>{label}</Link>;
++      })}</div>)}
+     </nav>
+     <div className="re-sidebar-bottom"><Link href={`${base}/settings/`} className="re-settings-link"><GearIcon width={20}/>Settings</Link><div className="re-profile"><ProfileAvatar code={code} name={displayName}/><div><strong>{displayName}</strong><small>Your English space</small></div></div></div>
+   </aside>;
+diff --git b/src/components/TabBar.tsx a/src/components/TabBar.tsx
+index 7b94db6..5138432 100644
+--- b/src/components/TabBar.tsx
++++ a/src/components/TabBar.tsx
+@@ -3,18 +3,19 @@
+ import Link from "next/link";
+ import {usePathname} from "next/navigation";
+ import {useStudent} from "./StudentContext";
+-import {navIcons} from "./NavIcons";
+-import {studentNavigation,navPlace} from "@/lib/student-navigation";
++import {HomeIcon,BookIcon,CheckSquareIcon,ChartIcon} from "./Icons";
++import {MicrophoneIcon} from "./LearningVisuals";
+ 
+-// The five tabs are the five sections of the shared map, so a page lights the
+-// same tab it is listed under in the sidebar and the menu.
+ export default function TabBar(){
+   const {code}=useStudent(),path=usePathname(),base=`/s/${code}`;
+-  const here=navPlace(path,base).section;
++  const tabs=[
++    {href:`${base}/`,label:"Today",Icon:HomeIcon,active:path===base||path===`${base}/`},
++    {href:`${base}/homework/`,label:"Homework",Icon:CheckSquareIcon,active:["homework","test-prep","documents"].some(section=>path.startsWith(`${base}/${section}/`))},
++    {href:`${base}/speak/`,label:"Speak",Icon:MicrophoneIcon,active:path.startsWith(`${base}/speak/`)},
++    {href:`${base}/lessons/`,label:"Lessons",Icon:BookIcon,active:["lessons","study","resources","coach"].some(section=>path.startsWith(`${base}/${section}/`))},
++    {href:`${base}/progress/`,label:"Feedback",Icon:ChartIcon,active:path.startsWith(`${base}/progress/`)},
++  ];
+   return <nav aria-label="Main navigation" className="re-bottom-nav glass fixed inset-x-3 bottom-3 z-20 mx-auto rounded-card border border-black/[.06] shadow-[0_8px_30px_rgba(0,0,0,.14)] dark:border-white/10">
+-    <ul className="flex items-stretch justify-around pb-safe">{studentNavigation.map(({suffix,label,icon})=>{
+-      const Icon=navIcons[icon],active=here===suffix;
+-      return <li key={suffix} className="flex-1"><Link href={`${base}/${suffix}`} aria-current={active?"page":undefined} className={`re-tab-link flex min-h-[56px] flex-col items-center justify-center gap-1 pt-2 text-xs font-semibold ${active?"is-active":""}`}><Icon width={24} height={24}/><span>{label==='Homework'?<>Home<wbr/>work</>:label==='Feedback'?<>Feed<wbr/>back</>:label}</span></Link></li>;
+-    })}</ul>
++    <ul className="flex items-stretch justify-around pb-safe">{tabs.map(({href,label,Icon,active})=><li key={href} className="flex-1"><Link href={href} aria-current={active?"page":undefined} className={`re-tab-link flex min-h-[56px] flex-col items-center justify-center gap-1 pt-2 text-xs font-semibold ${active?"is-active":""}`}><Icon width={24} height={24}/><span>{label==='Homework'?<>Home<wbr/>work</>:label==='Feedback'?<>Feed<wbr/>back</>:label}</span></Link></li>)}</ul>
+   </nav>;
+ }
+diff --git b/src/lib/find-index.ts a/src/lib/find-index.ts
+deleted file mode 100644
+index f027f06..0000000
+--- b/src/lib/find-index.ts
++++ /dev/null
+@@ -1,21 +0,0 @@
+-// Wires the student's own content into Find. The matching and the rules about
+-// what may be found live in find.ts; this file only fetches the data.
+-import ferdi from '../../content/ferdi/units.json';
+-import valentin from '../../content/valentin/units.json';
+-import roster from '../../content/students.json';
+-import {practiceCatalog} from './practice-catalog';
+-import {studentNavigation} from './student-navigation';
+-import {studentFindEntries,teacherFindEntries,type FindEntry} from './find';
+-
+-type UnitFiles={title:string;resources?:{title:string}[]};
+-const unitFiles:Record<string,UnitFiles[]>={ferdi,valentin};
+-
+-export function studentFindIndex(code:string,today:string):FindEntry[]{
+-  const student=roster.find(s=>s.code===code)?.id||'';
+-  const files=(unitFiles[student]||[]).flatMap(unit=>(unit.resources||[]).map(r=>({title:r.title,unit:unit.title})));
+-  return studentFindEntries(code,studentNavigation,practiceCatalog(code),files,today);
+-}
+-
+-export function teacherFindIndex():FindEntry[]{
+-  return teacherFindEntries(roster.map(s=>({code:s.code,name:s.displayName})));
+-}
+diff --git b/src/lib/find.ts a/src/lib/find.ts
+deleted file mode 100644
+index 135239b..0000000
+--- b/src/lib/find.ts
++++ /dev/null
+@@ -1,110 +0,0 @@
+-// Find: one box that knows where everything is.
+-//
+-// Pure matching over a list of entries, so it runs on the device with no
+-// request and nothing typed leaves the phone. Matching forgives accents, case,
+-// a single typing slip and German words for the same place.
+-
+-export type FindEntry={label:string;href:string;group:string;hint?:string;words?:string};
+-
+-const fold=(text:string)=>text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,' ').trim();
+-const wordsOf=(text:string)=>fold(text).split(' ').filter(Boolean);
+-
+-/** True when two words differ by one inserted, missing, swapped or wrong letter. */
+-function oneSlip(a:string,b:string){
+-  if(Math.abs(a.length-b.length)>1)return false;
+-  let i=0;while(i<a.length&&i<b.length&&a[i]===b[i])i++;
+-  if(a.length===b.length)return a.slice(i+1)===b.slice(i+1)||(a[i]===b[i+1]&&a[i+1]===b[i]&&a.slice(i+2)===b.slice(i+2));
+-  const [long,short]=a.length>b.length?[a,b]:[b,a];
+-  return long.slice(i+1)===short.slice(i);
+-}
+-
+-// How well one typed word matches one field: 3 a whole word, 2 the start of a
+-// word, 1 a slip away from the start of a word, 0 nothing.
+-function wordScore(token:string,field:string[]){
+-  let best=0;
+-  for(const word of field){
+-    if(word===token)return 3;
+-    if(word.startsWith(token))best=Math.max(best,2);
+-    else if(!best&&token.length>=5&&(oneSlip(token,word)||oneSlip(token,word.slice(0,token.length))||oneSlip(token,word.slice(0,token.length+1))))best=1;
+-  }
+-  return best;
+-}
+-
+-/** The best matches for what was typed, best first. Every typed word has to match something. */
+-export function findMatches(query:string,entries:readonly FindEntry[],limit=7):FindEntry[]{
+-  const tokens=wordsOf(query);
+-  if(!tokens.length)return [];
+-  const whole=fold(query);
+-  const ranked:{entry:FindEntry;score:number;order:number}[]=[];
+-  entries.forEach((entry,order)=>{
+-    const label=wordsOf(entry.label),hint=wordsOf(entry.hint||''),extra=wordsOf(entry.words||'');
+-    let score=0;
+-    for(const token of tokens){
+-      const inLabel=wordScore(token,label),inExtra=wordScore(token,extra),inHint=wordScore(token,hint);
+-      const best=Math.max(inLabel*100,inExtra*10,inHint*5);
+-      if(!best)return;
+-      score+=best;
+-    }
+-    const name=fold(entry.label);
+-    if(name===whole)score+=1000;else if(name.startsWith(whole))score+=500;
+-    ranked.push({entry,score,order});
+-  });
+-  return ranked.sort((a,b)=>b.score-a.score||a.order-b.order).slice(0,limit).map(r=>r.entry);
+-}
+-
+-// ── What can be found ────────────────────────────────────────────────────
+-
+-type FindPage={suffix:string;label:string;hint:string;words:string};
+-export type FindUnit={id:string;title:string;available:boolean;homework:readonly {week:number;title:string;availableFrom?:string}[]};
+-export type FindFile={title:string;unit:string};
+-
+-// Reached from a bell or a row rather than the menu, so Find has to know them.
+-const OTHER_STUDENT_PAGES:readonly FindPage[]=[
+-  {suffix:'year-plan/',label:'Year plan',hint:'The whole school year',words:'jahresplan plan year overview units schuljahr'},
+-  {suffix:'notifications/',label:'Notifications',hint:'News from Rory',words:'benachrichtigungen alerts bell news updates'},
+-  {suffix:'settings/',label:'Settings',hint:'Appearance and text size',words:'einstellungen dark mode light theme text size font bigger larger schrift'},
+-];
+-
+-/**
+- * Everything a student can look for: every page, the homework that has been
+- * released, their units and their lesson files. Homework with a future
+- * `availableFrom` is left out, exactly as the Homework list leaves it out.
+- */
+-export function studentFindEntries(code:string,sections:readonly (FindPage&{more:readonly FindPage[]})[],units:readonly FindUnit[],files:readonly FindFile[],today:string):FindEntry[]{
+-  const base=`/s/${code}/`;
+-  const page=(p:FindPage):FindEntry=>({label:p.label,href:base+p.suffix,group:'Pages',hint:p.hint,words:p.words});
+-  return [
+-    ...sections.flatMap(section=>[page(section),...section.more.map(page)]),
+-    ...OTHER_STUDENT_PAGES.map(page),
+-    ...units.flatMap(unit=>unit.homework.filter(h=>!h.availableFrom||h.availableFrom<=today).map(h=>({label:h.title,href:`${base}lessons/${unit.id}/homework/${h.week}/`,group:'Homework',hint:unit.title,words:'homework task hausaufgabe'}))),
+-    ...units.filter(unit=>unit.available).map(unit=>({label:unit.title,href:`${base}lessons/`,group:'Lessons',hint:'Unit',words:'unit lesson lektion'})),
+-    ...files.map(file=>({label:file.title,href:`${base}resources/`,group:'Lesson files',hint:file.unit,words:'file resource slides pdf datei'})),
+-  ];
+-}
+-
+-/** The seven places inside one student's teacher workspace, with the words Rory might type for each. */
+-export const TEACHER_FIND_SECTIONS=[
+-  {section:'overview',label:'Learning dashboard',hint:'Homework, activity & assessment',words:'overview summary progress rings'},
+-  {section:'teaching',label:'Teaching materials',hint:'PowerPoints & teacher notes',words:'slides powerpoint pptx lesson plan files prepare'},
+-  {section:'learning',label:'Feedback & lesson notes',hint:'Saved reviews & practice',words:'recorded lesson transcript brief records history'},
+-  {section:'documents',label:'Documents',hint:'Scan, upload & discuss',words:'photo essay handwriting worksheet file pdf saved work writing'},
+-  {section:'review',label:'Work to review',hint:'New answers & uploaded work',words:'mark marking correct submissions answers homework check'},
+-  {section:'assign',label:'Assign homework',hint:'Set the next step',words:'set task new assignment give'},
+-  {section:'assess',label:'School results',hint:'Tests & writing checkpoints',words:'grades marks noten schularbeit test exam assessment checkpoint'},
+-] as const;
+-
+-/** Everything Rory can look for: the workspace pages, each student, and each place inside each student. */
+-export function teacherFindEntries(students:readonly {code:string;name:string}[]):FindEntry[]{
+-  return [
+-    {label:'Students & teaching',href:'/teacher/',group:'Workspace',hint:'All students',words:'home dashboard start'},
+-    {label:'Calendar',href:'/teacher/?view=calendar',group:'Workspace',hint:'Lessons and bookings',words:'schedule dates times plan termine'},
+-    {label:'Live teaching',href:'/teacher/?view=live',group:'Workspace',hint:'Record a lesson with live prompts',words:'coach record recording lesson prompts'},
+-    {label:'Messages',href:'/teacher/?inbox=messages',group:'Workspace',hint:'From students and parents',words:'chat inbox nachrichten'},
+-    {label:'Notifications',href:'/teacher/?inbox=notifications',group:'Workspace',hint:'What happened recently',words:'alerts bell news activity'},
+-    ...students.flatMap(student=>TEACHER_FIND_SECTIONS.map(place=>({
+-      label:place.section==='overview'?student.name:`${student.name} · ${place.label}`,
+-      href:`/teacher/?student=${student.code}${place.section==='overview'?'':`&section=${place.section}`}`,
+-      group:'Student',hint:place.section==='overview'?place.label:place.hint,words:place.section==='overview'?`${place.label} ${place.words}`:place.words,
+-    }))),
+-  ];
+-}
+diff --git b/src/lib/local-date.ts a/src/lib/local-date.ts
+deleted file mode 100644
+index d63d3da..0000000
+--- b/src/lib/local-date.ts
++++ /dev/null
+@@ -1,2 +0,0 @@
+-/** Today on this device as YYYY-MM-DD, the form homework release dates use. */
+-export function localDate(now=new Date()){return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;}
+diff --git b/src/lib/student-navigation.ts a/src/lib/student-navigation.ts
+index b103335..80ef560 100644
+--- b/src/lib/student-navigation.ts
++++ a/src/lib/student-navigation.ts
+@@ -1,45 +1,6 @@
+-// One map of the student app. The tab bar, the desktop sidebar, the phone menu
+-// and Find all read it, so a page sits in the same place wherever you look.
+-//
+-// Five sections, one per tab. `more` lists the pages that belong to a section;
+-// `owns` names pages that light the tab without being listed (they are reached
+-// from a bell, a row on Today or Find). `words` are extra search words, German
+-// included, and are never shown.
+-
+-export type NavIcon='home'|'calendar'|'work'|'feedback'|'documents'|'test'|'speaking'|'lessons'|'practice'|'files'|'writing';
+-export type NavItem={suffix:string;label:string;icon:NavIcon;hint:string;words:string};
+-export type NavSection=NavItem&{more:readonly NavItem[];owns?:readonly string[]};
+-
+-export const studentNavigation:readonly NavSection[]=[
+-  {suffix:'',label:'Today',icon:'home',hint:'What to do next',words:'home start heute dashboard next',owns:['notifications','year-plan'],more:[
+-    {suffix:'calendar/',label:'Calendar',icon:'calendar',hint:'Lesson times and dates',words:'kalender termine schedule timetable when lesson time date stundenplan'},
+-    {suffix:'messages/',label:'Messages',icon:'writing',hint:'Write to Rory',words:'nachrichten message chat ask question rory contact schreiben'},
+-  ]},
+-  {suffix:'homework/',label:'Homework',icon:'work',hint:'Tasks Rory set',words:'hausaufgaben hausübung hü tasks assignment due exercise aufgabe',more:[
+-    {suffix:'test-prep/',label:'Test prep',icon:'test',hint:'Dates and what to revise',words:'schularbeit test exam prüfung matura revise revision lernen klausur'},
+-    {suffix:'documents/',label:'My saved work',icon:'documents',hint:'Photos and files you sent',words:'documents dokumente upload photo foto scan essay file pdf worksheet arbeitsblatt handwriting'},
+-  ]},
+-  {suffix:'speak/',label:'Speak',icon:'speaking',hint:'Talk and get feedback',words:'sprechen speaking voice conversation talk pronunciation aussprache microphone mikrofon',more:[]},
+-  {suffix:'lessons/',label:'Lessons',icon:'lessons',hint:'Units and lesson notes',words:'unit units lektion book buch course kurs slides',more:[
+-    {suffix:'study/',label:'Practice desk',icon:'practice',hint:'Retry your exercises',words:'practice practise üben übung exercises retry vocabulary vokabeln study tools quiz'},
+-    {suffix:'resources/',label:'Resource library',icon:'files',hint:'All lesson files',words:'resources files dateien materials slides folien pdf worksheet transcript download unterlagen'},
+-    {suffix:'coach/',label:'Writing help',icon:'writing',hint:'Ask the writing coach',words:'coach writing schreiben essay email text tips hilfe ai'},
+-  ]},
+-  {suffix:'progress/',label:'Feedback',icon:'feedback',hint:'Corrections and progress',words:'feedback progress fortschritt corrections korrektur rückmeldung results marks noten review',more:[]},
+-];
+-
+-/** Where a path sits on the map: the section whose tab lights up, and the exact page if it is listed. */
+-export function navPlace(path:string,base:string):{section:string|null;item:string|null}{
+-  const rest=path.startsWith(base)?path.slice(base.length).replace(/^\/+/,''):'';
+-  const parts=rest.split('/').filter(Boolean);
+-  if(!parts.length)return {section:'',item:''};
+-  // A homework task is homework, even though its address sits under its unit.
+-  if(parts[0]==='lessons'&&parts[2]==='homework')return {section:'homework/',item:'homework/'};
+-  const page=parts[0]+'/';
+-  for(const section of studentNavigation){
+-    if(section.suffix===page)return {section:section.suffix,item:page};
+-    if(section.more.some(item=>item.suffix===page))return {section:section.suffix,item:page};
+-    if(section.owns?.includes(parts[0]))return {section:section.suffix,item:null};
+-  }
+-  return {section:null,item:null};
+-}
++export const studentNavigation=[
++  {label:'YOUR DAY',items:[['','Today','home'],['calendar/','Calendar','calendar']]},
++  {label:'YOUR WORK',items:[['homework/','Homework','work'],['progress/','Feedback','feedback'],['messages/','Messages','writing']]},
++  {label:'YOUR LEARNING',items:[['speak/','Speak','speaking'],['lessons/','Lessons','lessons'],['study/','Practice desk','practice']]},
++  {label:'MORE TOOLS',items:[['documents/','My saved work','documents'],['test-prep/','Test prep','test'],['resources/','Resource library','files'],['coach/','Writing help','writing']]},
++] as const;
+diff --git b/tests/find.test.mjs a/tests/find.test.mjs
+deleted file mode 100644
+index ecbb151..0000000
+--- b/tests/find.test.mjs
++++ /dev/null
+@@ -1,115 +0,0 @@
+-import test from "node:test";
+-import assert from "node:assert/strict";
+-import fs from "node:fs";
+-import vm from "node:vm";
+-import ts from "typescript";
+-
+-// Both modules are import-free on purpose, so they load here as plain scripts.
+-function load(file) {
+-  const exports = {};
+-  const src = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+-  vm.runInNewContext(src, { exports, module: { exports } });
+-  return exports;
+-}
+-// Values built inside the vm belong to another realm, so compare plain copies.
+-const plain = v => JSON.parse(JSON.stringify(v));
+-const nav = load("src/lib/student-navigation.ts");
+-const find = load("src/lib/find.ts");
+-const read = f => fs.readFileSync(f, "utf8");
+-
+-const units = [
+-  { id: "unit01", title: "way2go! 8 · Unit 1", available: true, homework: [
+-    { week: 1, title: "September starter · A skill worth learning", availableFrom: "2026-09-18" },
+-    { week: 2, title: "A wellbeing idea for school · Email practice", availableFrom: "2026-12-01" },
+-  ] },
+-  { id: "unit02", title: "Unit 2 · Not open yet", available: false, homework: [] },
+-];
+-const files = [{ title: "Unit 1 lesson 1 · student slides", unit: "way2go! 8 · Unit 1" }];
+-const entries = find.studentFindEntries("demo", nav.studentNavigation, units, files, "2026-11-12");
+-const first = q => find.findMatches(q, entries)[0]?.label;
+-const labels = q => plain(find.findMatches(q, entries).map(e => e.label));
+-
+-test("there is one map: five sections, one per tab, and every student page is on it or owned by it", () => {
+-  assert.deepEqual(plain(nav.studentNavigation.map(s => s.label)), ["Today", "Homework", "Speak", "Lessons", "Feedback"]);
+-  const listed = nav.studentNavigation.flatMap(s => [s.suffix, ...s.more.map(m => m.suffix)]);
+-  assert.equal(new Set(listed).size, listed.length, "no page is listed twice");
+-  const known = new Set([...listed.map(s => s.replace("/", "")), ...nav.studentNavigation.flatMap(s => s.owns || []), "settings"]);
+-  for (const dir of fs.readdirSync("src/app/s/[code]", { withFileTypes: true })) if (dir.isDirectory()) assert.ok(known.has(dir.name), `/s/[code]/${dir.name}/ is missing from the navigation map`);
+-});
+-
+-test("the tab bar and the sidebar read the map instead of keeping their own lists", () => {
+-  for (const f of ["src/components/TabBar.tsx", "src/components/StudentNavigation.tsx", "src/components/AppMenu.tsx"]) {
+-    assert.match(read(f), /student-navigation/, `${f} must import the shared map`);
+-  }
+-  assert.doesNotMatch(read("src/components/TabBar.tsx"), /"test-prep"|"documents"|"resources"/, "TabBar must not hard-code which pages belong to a tab");
+-});
+-
+-test("a page lights the tab of the section it is listed under", () => {
+-  const place = p => plain(nav.navPlace(p, "/s/demo"));
+-  assert.deepEqual(place("/s/demo/"), { section: "", item: "" });
+-  assert.deepEqual(place("/s/demo"), { section: "", item: "" });
+-  assert.equal(place("/s/demo/calendar/").section, "");
+-  assert.equal(place("/s/demo/documents/").section, "homework/");
+-  assert.equal(place("/s/demo/study/").section, "lessons/");
+-  assert.equal(place("/s/demo/progress/").section, "progress/");
+-  assert.deepEqual(place("/s/demo/notifications/"), { section: "", item: null });
+-  assert.deepEqual(place("/s/demo/settings/"), { section: null, item: null });
+-  // A homework task opens under its unit's address but is still homework.
+-  assert.equal(place("/s/demo/lessons/unit01/homework/2/").section, "homework/");
+-  assert.equal(place("/s/demo/lessons/").section, "lessons/");
+-});
+-
+-test("Find reaches every page by its name", () => {
+-  for (const section of nav.studentNavigation) for (const page of [section, ...section.more]) assert.equal(first(page.label), page.label);
+-  assert.equal(first("year plan"), "Year plan");
+-  assert.equal(first("settings"), "Settings");
+-});
+-
+-test("Find understands other words for the same place, German included", () => {
+-  assert.equal(first("hausaufgaben"), "Homework");
+-  assert.equal(first("Hausübung"), "Homework");
+-  assert.equal(first("schularbeit"), "Test prep");
+-  assert.equal(first("exam"), "Test prep");
+-  assert.equal(first("upload"), "My saved work");
+-  assert.equal(first("vokabeln"), "Practice desk");
+-  assert.equal(first("dark mode"), "Settings");
+-  assert.equal(first("corrections"), "Feedback");
+-  assert.equal(first("essay"), "My saved work");
+-  assert.ok(labels("essay").includes("Writing help"));
+-});
+-
+-test("Find forgives a typing slip and half-typed words", () => {
+-  assert.equal(first("homwork"), "Homework");
+-  assert.equal(first("calender"), "Calendar");
+-  assert.equal(first("feedbakc"), "Feedback");
+-  assert.equal(first("mess"), "Messages");
+-  assert.equal(first("PRACTICE  desk"), "Practice desk");
+-  assert.deepEqual(labels("zzzz"), []);
+-  assert.deepEqual(labels("   "), []);
+-});
+-
+-test("Find reaches released homework, units and lesson files, and never homework that is not released", () => {
+-  assert.ok(labels("september starter").includes("September starter · A skill worth learning"));
+-  assert.equal(find.findMatches("september starter", entries)[0].href, "/s/demo/lessons/unit01/homework/1/");
+-  assert.deepEqual(labels("wellbeing"), [], "homework dated in the future stays hidden");
+-  assert.ok(!entries.some(e => e.label.includes("Not open yet")), "a unit that is not available stays hidden");
+-  assert.equal(first("student slides"), "Unit 1 lesson 1 · student slides");
+-});
+-
+-test("the teacher can find a student, a place, or a place for a student", () => {
+-  const teacher = find.teacherFindEntries([{ code: "aaa-1", name: "Ferdi" }, { code: "bbb-2", name: "Valentin" }]);
+-  const hit = q => find.findMatches(q, teacher)[0];
+-  assert.equal(hit("valentin").href, "/teacher/?student=bbb-2");
+-  assert.equal(hit("valentin review").href, "/teacher/?student=bbb-2&section=review");
+-  assert.equal(hit("ferdi grades").label, "Ferdi · School results");
+-  assert.equal(hit("ferdi slides").label, "Ferdi · Teaching materials");
+-  assert.equal(hit("live").label, "Live teaching");
+-  assert.deepEqual(plain(find.findMatches("marking", teacher).map(e => e.label)), ["Ferdi · Work to review", "Valentin · Work to review"]);
+-});
+-
+-test("the teacher places in Find match the workspace's own sections and names", () => {
+-  const route = read("src/lib/teacher-route.ts").match(/TEACHER_SECTIONS=\[([^\]]*)\]/)[1].replace(/"/g, "").split(",");
+-  assert.deepEqual(plain(find.TEACHER_FIND_SECTIONS.map(s => s.section)), route);
+-  const view = read("src/components/views/TeacherDashboardView.tsx");
+-  for (const place of find.TEACHER_FIND_SECTIONS) assert.ok(view.includes(`<span>${place.label}<small>${place.hint}</small>`), `"${place.label}" is no longer the name on the teacher tile`);
+-});
