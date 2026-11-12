@@ -19,3 +19,15 @@ test("the Ask the learner card uses the accent and the recording panel is a plai
   assert.match(css,/\.lc-prompt\{[^}]*background:var\(--lc-accent\);color:var\(--re-onaccent\)/);
   assert.match(css,/\.lc-recording\{background:var\(--lc-record\)\}/);
 });
+
+test("empty teacher home blocks fold to one line and filled ones still render as cards",()=>{
+  const folds=read("src/lib/home-folds.ts");
+  assert.match(folds,/Recorded lesson assessments/);assert.match(folds,/Your teaching progress/);
+  const lessons=read("src/components/RecordedLessonLinks.tsx");
+  assert.match(lessons,/if\(!entries\.length&&!error\)return <details className="home-fold/);
+  assert.match(lessons,/<section className="re-card mb-6"/);
+  const progress=read("src/components/views/TeachingProgress.tsx");
+  assert.match(progress,/if\(loading\|\|!lessons\)return <details className="home-fold/);
+  assert.match(progress,/<section className="re-card mt-6"/);
+  assert.match(read("src/app/visual-refresh/teacher.css"),/\.home-fold>summary\{[^}]*min-height:44px/);
+});
