@@ -1,11 +1,11 @@
 import type {Reply} from "./account-service";
-import {postProgress} from "./progress-transport";
+import {postProgress, ProgressTransportError} from "./progress-transport";
 import {googleHttp} from "./google-http";
 const sessions = new Map<string, { token: string; expires: number }>();
 const pending = new Map<string, Promise<string>>();
 export async function upstream(body: Record<string, unknown>): Promise<Reply> {
   const endpoint = process.env.APPS_SCRIPT_URL;
-  if (!endpoint) throw new Error("Missing progress service");
+  if (!endpoint) throw new ProgressTransportError("service-missing");
   return postProgress(endpoint, body, googleHttp, fetch);
 }
 export async function backendSession(code: string, idToken: string, refresh = false): Promise<string> {
@@ -13,7 +13,7 @@ export async function backendSession(code: string, idToken: string, refresh = fa
   if (pending.has(code)) return pending.get(code)!;
   const attempt = (async () => {
     const result = await upstream({ action: "firebaseLogin", code, idToken });
-    if (!result.ok || result.role !== "student" || typeof result.token !== "string" || typeof result.expires !== "number") throw new Error("Student connection unavailable");
+    if (!result.ok || result.role !== "student" || typeof result.token !== "string" || typeof result.expires !== "number") throw new ProgressTransportError("student-session");
     sessions.set(code, { token: result.token, expires: result.expires });
     return result.token;
   })();
