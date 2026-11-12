@@ -15,3 +15,13 @@ test('conversation focus chooses Conversations rather than the recorded-lessons 
  assert.equal(focusedFeedbackFilter({kind:'lesson',body:{source:'/lesson-recording/sample'}}),'recorded');
  assert.equal(focusedFeedbackFilter({kind:'homework',body:{}}),'all');
 });
+test('practice links select the exact original and immutable attempt, including older retries',()=>{
+ for(const source of ['document','submission','reply']){
+  const practice={source,id:'original-source-0001',attempt:'saved-attempt-000001',record:'lesson-practice-0001'};
+  const url=new URL(inboxDestination({...event,id:'practice:'+practice.attempt,kind:'practice',practice},true),'https://app.test');
+  assert.equal(url.searchParams.get('student'),'student-a');assert.equal(url.searchParams.get('attempt'),practice.attempt);
+  assert.equal(url.searchParams.get(source==='document'?'document':source==='submission'?'submission':'record'),source==='reply'?practice.record:practice.id);
+  assert.equal(url.hash,'#practice-'+practice.attempt);
+ }
+ const url=new URL(inboxDestination({...event,kind:'practice',practice:{source:'document',id:'../../wrong',attempt:'attempt-valid-0001'}},true),'https://app.test');assert.equal(url.searchParams.has('attempt'),false);
+});

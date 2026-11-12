@@ -12,7 +12,7 @@ const statusLabel = (status:string) => status === "reviewed" ? "Feedback given" 
 export default function TeacherReviewPanel({code}:{code:string}) {
   const [rows,setRows]=useState<Submission[]>([]),[message,setMessage]=useState("");
   const [loading,setLoading]=useState(true),[loadError,setLoadError]=useState("");
-  const [filter,setFilter]=useState<Filter>("waiting");
+  const [filter,setFilter]=useState<Filter>(()=>typeof window!=="undefined"&&new URLSearchParams(window.location.search).has("submission")?"all":"waiting");
   const [access,setAccess]=useState(""),[resources,setResources]=useState<ResourceItem[]>([]);
   const [name,setName]=useState(""),[url,setUrl]=useState("");
   const [resourcesLoaded,setResourcesLoaded]=useState(false),[publishing,setPublishing]=useState(false),[creating,setCreating]=useState(false);

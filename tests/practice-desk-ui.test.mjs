@@ -12,8 +12,8 @@ const pureModules=Object.fromEntries(['practice-history','writing-labels','paren
 function componentHarness(file,mocks,props){
  const states=[],refs=[],deps=[],effects=[],listeners=new Map();let cursor=0,refCursor=0,effectCursor=0;
  const react={...React,useState(initial){const index=cursor++;if(!(index in states))states[index]=typeof initial==='function'?initial():initial;return [states[index],next=>{states[index]=typeof next==='function'?next(states[index]):next;}];},useRef(initial){return refs[refCursor++]??(refs[refCursor-1]={current:initial});},useEffect(fn,next){const index=effectCursor++,old=deps[index];if(!old||next.some((value,i)=>value!==old[i])){deps[index]=next;effects.push(fn);}}};
- const exports={},window={addEventListener:(event,fn)=>listeners.set(event,fn),removeEventListener:event=>listeners.delete(event)};
- vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>name==='react'?react:name==='react/jsx-runtime'?jsxRuntime:mocks[name]||pureModules[name]||(()=>{throw Error(name);})(),window,Intl,Date,Error,encodeURIComponent});
+ const exports={},window={location:{search:''},addEventListener:(event,fn)=>listeners.set(event,fn),removeEventListener:event=>listeners.delete(event)};
+ vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>name==='react'?react:name==='react/jsx-runtime'?jsxRuntime:mocks[name]||pureModules[name]||(()=>{throw Error(name);})(),window,URLSearchParams,Intl,Date,Error,encodeURIComponent});
  const cleanups=[];
  function render(){cursor=refCursor=effectCursor=0;const tree=exports.default(props);while(effects.length){const cleanup=effects.shift()();if(cleanup)cleanups.push(cleanup);}return tree;}
  return {render,html:()=>renderToStaticMarkup(render()),event:name=>listeners.get(name)?.(),unmount:()=>cleanups.forEach(fn=>fn()),props};
@@ -24,7 +24,7 @@ const old={id:'old-attempt',documentId:'document-001',version:'v1',exerciseId:ex
 function exerciseHarness({attempts=[old],disabled=false,teacher=false,preview=false,confirm=true}={}){
  let resolveRequest;const requests=[],receipts=[],saved=[],draft={value:'went',ready:true,pending:false,scopeKey:'account-one',status:'Draft saved on this device',error:'',setValue(){},beginRequest(){draft.pending=true;return 'new-attempt';},confirmSaved(){receipts.push('confirmed');return confirm;},resumeEditing(){draft.pending=false;}};
  const props={code:'sample',documentId:'document-001',version:'v1',sourceType:'document',disabled,teacher,exercise,index:0,attempts,hidePreviousUntilAttempt:true,onSaved:attempt=>saved.push(attempt)};
- const h=componentHarness('src/components/PracticeExercise.tsx',{'@/lib/documents':{documentRequest:(_code,_teacher,body)=>{requests.push(body);return new Promise(resolve=>resolveRequest=resolve);}},'@/lib/student-preview':{isStudentPreview:()=>preview},'@/lib/use-durable-draft':{useDurableDraft:()=>draft}},props);
+ const h=componentHarness('src/components/PracticeExercise.tsx',{'@/lib/inbox':{inboxDate:date=>date,inboxChanged:()=>{}},'@/lib/documents':{documentRequest:(_code,_teacher,body)=>{requests.push(body);return new Promise(resolve=>resolveRequest=resolve);}},'@/lib/student-preview':{isStudentPreview:()=>preview},'@/lib/use-durable-draft':{useDurableDraft:()=>draft}},props);
  const result={ok:true,received:true,attempt:{...old,id:'new-attempt',answer:'went',result:{status:'correct',example:'went',explanation:'Use the past simple for yesterday.'}}};
  return {...h,requests,receipts,saved,draft,result,resolve:value=>resolveRequest(value),start(){const button=find(h.render(),node=>node.type==='button'&&node.props.children==='Save this try');return button.props.onClick();}};
 }
