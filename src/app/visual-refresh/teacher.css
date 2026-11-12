@@ -40,3 +40,14 @@
 .progress-coverage{margin:26px 0 22px;text-align:center}.progress-coverage>strong{font-size:2.5rem;line-height:1.3}.progress-coverage>strong>span{font-size:1.4rem;color:var(--re-muted,#64616e)}.progress-coverage-dots{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-top:18px}.progress-coverage-dots>span{height:12px;border-radius:4px;background:var(--re-line,#ddd)}.progress-coverage-dots>.reviewed{background:#c7b5e8}.progress-coverage-dots>.marked{background:var(--re-accent,#4058b0)}
 .progress-benchmark-status{display:block;font-size:1.25rem;line-height:1.4;margin:20px 0 12px}.progress-skill-bars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px;row-gap:18px}.progress-skill-bar-title{display:flex;justify-content:space-between;gap:12px;font-size:.85rem}.progress-skill-bar-title h4{font-weight:700}.progress-skill-bar-title strong{white-space:nowrap;font-size:.8rem}.progress-bar-track{height:9px;border-radius:8px;overflow:hidden;background:var(--re-line,#ddd);margin-top:8px}.progress-bar-track>span{display:block;height:100%;background:var(--re-accent,#4058b0)}.progress-bar-track.unassessed{background:repeating-linear-gradient(135deg,var(--re-line,#ddd),var(--re-line,#ddd) 5px,transparent 5px,transparent 10px);outline:1px solid var(--re-line,#ddd)}
 @media(max-width:850px){.progress-overview-grid{grid-template-columns:1fr}.progress-overview-tile{display:block}.progress-ring-group{margin:12px 0}.progress-coverage-dots{max-width:280px;margin:18px auto 0}.progress-benchmark-status{margin:12px 0}}@media(max-width:500px){.progress-skill-bars{grid-template-columns:1fr}.progress-overview-tile,.progress-skill-chart{padding:15px}}
+
+/* Learning dashboard: blocks with nothing in them are folded away and named. */
+.teacher-insights [hidden]{display:none!important}
+.teacher-workspace .insight-metrics{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.insight-folded{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:18px;padding:16px 18px;border:1px dashed var(--re-line);border-radius:16px;font-size:.875rem;color:var(--re-muted)}
+.insight-folded p{flex:1 1 220px;line-height:1.5}
+.insight-folded p strong{color:var(--re-ink);margin-right:6px}
+.insight-folded>div{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 100%;order:3}
+.insight-folded>div button{min-height:40px;padding:6px 14px;border:1px solid var(--re-line);border-radius:999px;background:var(--re-surface);color:var(--re-ink);font-weight:650}
+.teacher-insights .insight-grid:has(>[hidden])>:not([hidden]){grid-column:1/-1}
+.insight-folded button:focus-visible{outline:3px solid var(--re-accent);outline-offset:2px}
