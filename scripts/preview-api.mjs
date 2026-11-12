@@ -50,6 +50,7 @@ const server=http.createServer(async(req,res)=>{
     else if(p.action==="submissions")result={ok:true,submissions:submissions.filter(s=>s.code===p.code)};
     else if(p.action==="resources")result={ok:true,resources:[]};
     else if(p.action==="teacherDashboard")result={ok:true,students:[student],generatedAt:"Local demo"};
+    else if(p.action==="teacherNotifications"&&session.role==="teacher")result={ok:true,events:submissions.map(s=>({id:"submission:"+s.id,code:s.code,name:student.name,at:s.submitted,kind:"homework",title:"Homework received",detail:s.title||"Homework",view:"review",read:!!s.reviewed}))};
     else if(p.action==="progress")result={ok:true,name:"Demo learner",homework:empty,quizzes:empty,schoolTests:empty,writing:empty,speaking:empty,mockTests:empty};
     else if(p.action==="submit"){
       if(!submissions.some(s=>s.id===p.id))submissions.push({id:p.id,code:p.code,title:p.title,prompts:p.prompts,task:p.task,unit:p.unit,submitted:new Date().toISOString(),answers:p.answers,status:"submitted",feedback:"",reviewed:""});

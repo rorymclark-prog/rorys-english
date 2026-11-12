@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { readTeacherView, teacherViewHref, type TeacherSection, type TeacherView } from "@/lib/teacher-route";
 import {
   addStudent,
@@ -27,6 +27,7 @@ import TeachingFilesView from "./TeachingFilesView";
 import CalendarView from "./CalendarView";
 import TeachingProgress from "./TeachingProgress";
 import RecordedLessonLinks from "@/components/RecordedLessonLinks";
+import NeedsYou from "@/components/NeedsYou";
 import TeacherReviewPanel from "./TeacherReviewPanel";
 import AppMenu from "@/components/AppMenu";
 import ProfileAvatar from "@/components/ProfileAvatar";
@@ -56,6 +57,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
   const [ready, setReady] = useState(false);
   const [secret, setSecret] = useState<string | null>(null);
   const [students, setStudents] = useState<TeacherStudent[] | null>(null);
+  const needStudents=useMemo(()=>(students||[]).map(s=>({code:s.code,name:s.name,daysSinceActivity:s.summary?.daysSinceActivity??null})),[students]);
   const [generatedAt, setGeneratedAt] = useState<string | undefined>();
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
@@ -224,7 +226,8 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
         {loadState === "loading" && <div className="teacher-student-grid" role="status" aria-label="Loading students">{[0,1].map(i=><div key={i} className="h-72 animate-pulse rounded-card bg-amber-soft dark:bg-amber-dusk"/>)}</div>}
         {loadState === "error" && <div className="teacher-empty" role="alert"><ChartIcon/><h2>Let’s try that again</h2><p>Your students’ records could not be loaded.</p><button className="teacher-primary" onClick={()=>setRefreshKey(k=>k+1)}>Reload students</button></div>}
         {loadState === "ok" && students && <>
-          <div className="inbox-home-actions"><a className="teacher-primary" href="/teacher/?inbox=notifications">Notifications & recent activity</a><a className="teacher-quiet-button" href="/teacher/?inbox=messages">Messages →</a></div>
+          <NeedsYou token={secret} students={needStudents}/>
+          <div className="inbox-home-actions"><a className="teacher-quiet-button" href="/teacher/?inbox=notifications">Notifications & recent activity</a><a className="teacher-quiet-button" href="/teacher/?inbox=messages">Messages →</a></div>
           <RecordedLessonLinks students={students} onOpen={(code,id)=>go({kind:"student",student:code,section:"learning",record:id})}/>
           <div className="teacher-section-heading"><div><p className="teacher-eyebrow">ONE STEP AT A TIME</p><h2>Your students <span>{students.length}</span></h2></div><button type="button" onClick={()=>setAddingStudent(true)} className="teacher-quiet-button">+ Add student</button></div>
           <div className="teacher-student-grid">
