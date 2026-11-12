@@ -253,3 +253,19 @@ test('lesson maps are validated and estimated page fields never become feedback 
  assert.equal('lessonPage' in shared.parseCoachFeedback(text),false);
  assert.equal(shared.parseCoachPosition(JSON.stringify({...shared.coachRehearsal[0],lessonPage:3,lessonConfidence:'high'})).page,0);
 });
+
+test('an hour-long lesson can reconnect: eight live sessions an hour, then a pause',async()=>{
+  let payments=0;
+  const {createHash}=await import('node:crypto');
+  const route=load('src/app/api/live-coach/route.ts',{
+    'node:crypto':{createHash},
+    '@/lib/server/progress-transport':{postProgress:async()=>({ok:true,students:[]})},
+    '@/lib/server/google-http':{googleHttp:()=>{}},
+    '@/lib/server/live-coach-service':service,
+    '@/lib/server/coach-material':material,
+  },{process:{env:{APPS_SCRIPT_URL:'https://example.test/progress',LIVE_COACH_ENABLED:'true',OPENAI_API_KEY:'synthetic-key'}},fetch:async()=>{payments++;return new Response('v=0\r\n');}});
+  const connect=()=>route.POST(new Request('https://example.test/api/live-coach/',{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json'},body:JSON.stringify({...body,action:'connect'})}));
+  for(let i=0;i<8;i++)assert.equal((await connect()).status,201,`session ${i+1} of the hour connects`);
+  assert.equal((await connect()).status,429);
+  assert.equal(payments,8,'the refused ninth session never reaches the paid service');
+});

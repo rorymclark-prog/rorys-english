@@ -101,6 +101,15 @@ export class CoachTurnQueue {
     return { request: active, invalidated: !current || current.corrected };
   }
 
+  /** Give up on the request in flight (it could not be sent, or the service
+   * refused it) so the turns behind it are not held up. A late reply to an
+   * abandoned request no longer matches anything and is ignored. */
+  abandon(requestId: string) {
+    if (!this.active || this.active.requestId !== requestId) return false;
+    this.active = null;
+    return true;
+  }
+
   clear() { this.turns.clear(); this.waiting = []; this.active = null; this.sequence = 0; }
 }
 

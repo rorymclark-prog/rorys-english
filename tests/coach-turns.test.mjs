@@ -178,3 +178,31 @@ test('fast mode keeps the audio model and limits output; balanced mode permits f
     assert.equal(event.response.instructions.includes('Fast mode:'), responseSpeed === 'fast');
   }
 });
+
+test('an abandoned request frees the queue for the next answer and its late reply is ignored', () => {
+  const queue = new CoachTurnQueue();
+  queue.committed('audio-one', context, 'learner'); queue.transcribed('audio-one', 'I go there yesterday.', 'learner');
+  queue.committed('audio-two', context, 'learner'); queue.transcribed('audio-two', 'Then I went home.', 'learner');
+  const first = queue.next();
+  assert.equal(first.turn.id, 'audio-one');
+  assert.equal(queue.next(), null, 'one request at a time');
+  assert.equal(queue.abandon('some-other-request'), false, 'only the request in flight can be abandoned');
+  assert.equal(queue.next(), null);
+  assert.equal(queue.abandon(first.requestId), true);
+  assert.equal(queue.abandon(first.requestId), false, 'abandoning twice does nothing');
+  const second = queue.next();
+  assert.equal(second.turn.id, 'audio-two');
+  assert.equal(queue.completed(identity(first)), null, 'a late reply to the abandoned request is not shown');
+  assert.equal(queue.completed(identity(second)).request.turn.id, 'audio-two');
+});
+
+test('the live screen skips a suggestion that cannot be sent or is refused, and never throws on a slide picture', () => {
+  const view = fs.readFileSync('src/components/views/LiveTeachingCoach.tsx', 'utf8');
+  assert.doesNotMatch(view, /dc\.send\(JSON\.stringify\(nativeCoachEvent\(request\)\)\);/, 'requests are never sent without a guard');
+  assert.match(view, /try \{ dc\.send\(payload\); sent = true; \}/);
+  assert.match(view, /pc\.sctp\?\.maxMessageSize/);
+  assert.match(view, /queue\.abandon\(request\.requestId\)/);
+  assert.match(view, /queue\.abandon\(value\.error\.event_id\)/);
+  assert.match(view, /\+\+failures >= 3/);
+  assert.match(view, /const sendImage=useCallback\(\(\)=>\{if\(slideImage\.current&&channel\.current\?\.readyState==="open"\)try\{/);
+});

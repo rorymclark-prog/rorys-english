@@ -95,7 +95,9 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
   const audienceId=useRef("");
   const currentPage=useRef(1);
   const shareSlide=useCallback(()=>{if(slideImage.current)audience.current?.postMessage({type:"slide",image:slideImage.current,page:currentPage.current});},[]);
-  const sendImage=useCallback(()=>{if(slideImage.current&&channel.current?.readyState==="open")channel.current.send(JSON.stringify({type:"conversation.item.create",item:{type:"message",role:"user",content:[{type:"input_text",text:"Current slide image: lesson evidence only, not a request to respond."},{type:"input_image",image_url:slideImage.current}]}}));},[]);
+  // A slide picture can be larger than the connection accepts in one message.
+  // Failing to send it must never stop a page turn or the student window.
+  const sendImage=useCallback(()=>{if(slideImage.current&&channel.current?.readyState==="open")try{channel.current.send(JSON.stringify({type:"conversation.item.create",item:{type:"message",role:"user",content:[{type:"input_text",text:"Current slide image: lesson evidence only, not a request to respond."},{type:"input_image",image_url:slideImage.current}]}}));}catch{/* the picture still travels with each coaching request when it fits */}},[]);
   const referenceIndex=aiPage===null?slideIndex:aiPage-1;
   const currentNotes=slides[referenceIndex]?.notes;
   const referenceText=aiPage!==null?slides[referenceIndex]?.text||"":source||slides[slideIndex]?.text||"";
@@ -203,14 +205,34 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
       const pc = new RTCPeerConnection(); peer.current = pc;
       mic.getAudioTracks().forEach(track => { pc.addTrack(track, mic); track.onended = () => { if (generation.current === attempt) stop("The microphone disconnected. Start again when ready."); }; });
       const dc = pc.createDataChannel("oai-events"); channel.current = dc;
+      // One suggestion that cannot be sent, or that the service refuses, is
+      // skipped so the lesson carries on. Three in a row ends the session.
+      let failures = 0;
+      const skipped = (message: string) => {
+        if (responseDeadline.current) clearTimeout(responseDeadline.current);
+        if (++failures >= 3) { stop("AI suggestions failed three times in a row, so listening stopped. Your notes remain here. Start again when ready."); return false; }
+        setError(message); return true;
+      };
       const requestNext = () => {
-        if (generation.current !== attempt || dc.readyState !== "open") return;
-        const request = queue.next();
-        if (!request) return;
-        dc.send(JSON.stringify(nativeCoachEvent(request)));
-        responseDeadline.current = setTimeout(() => {
-          if (generation.current === attempt) stop("AI feedback timed out. Listening stopped; your saved recording and lesson notes are separate. Start again when ready.");
-        }, 45000);
+        while (generation.current === attempt && dc.readyState === "open") {
+          const request = queue.next();
+          if (!request) return;
+          const withoutImage = () => JSON.stringify(nativeCoachEvent({ ...request, turn: { ...request.turn, image: "" } }));
+          let payload = JSON.stringify(nativeCoachEvent(request));
+          const limit = pc.sctp?.maxMessageSize;
+          if (request.turn.image && typeof limit === "number" && Number.isFinite(limit) && limit > 0 && new TextEncoder().encode(payload).length > limit) payload = withoutImage();
+          let sent = false;
+          try { dc.send(payload); sent = true; }
+          catch { if (request.turn.image) try { dc.send(withoutImage()); sent = true; } catch { /* abandoned below */ } }
+          if (sent) {
+            responseDeadline.current = setTimeout(() => {
+              if (generation.current === attempt) stop("AI feedback timed out. Listening stopped; your saved recording and lesson notes are separate. Start again when ready.");
+            }, 45000);
+            return;
+          }
+          queue.abandon(request.requestId);
+          if (!skipped("One suggestion could not be sent. Listening continues with the next answer.")) return;
+        }
       };
       dc.onopen = () => {
         if (generation.current !== attempt) return;
@@ -290,12 +312,17 @@ export default function LiveTeachingCoach({ token, learners, onBack, initialLear
                     }
                   }
                   queue.rememberFeedback(turn.id, feedback);
-                  addFeedback(feedback, ctx, false, turn.id); setError("");
+                  addFeedback(feedback, ctx, false, turn.id); setError(""); failures = 0;
                 }
               }
             } finally { requestNext(); }
           }
-          if (value.type === "error") stop("The AI listening service reported an error. Your feedback remains here; no automatic retry was made.");
+          if (value.type === "error") {
+            // An error that names one coaching request ends that request only.
+            const refused = typeof value.error?.event_id === "string" && queue.abandon(value.error.event_id);
+            if (!refused) stop("The AI listening service reported an error. Your feedback remains here; no automatic retry was made.");
+            else if (skipped("One suggestion could not be prepared. Listening continues with the next answer.")) requestNext();
+          }
         } catch { setError("One feedback response could not be read. Continue with the next answer."); }
       };
       pc.onconnectionstatechange = () => { if (generation.current === attempt && ["failed", "disconnected"].includes(pc.connectionState)) stop("The listening connection was interrupted. Start again when ready."); };

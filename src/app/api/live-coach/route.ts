@@ -64,7 +64,9 @@ export async function POST(request: Request) {
   // Bounded per-instance protection; Platform limits are still required.
   for (const [key, value] of attempts) if (now - value.at >= 3600000) attempts.delete(key);
   const previous = attempts.get(key), current = previous && now - previous.at < 3600000 ? previous : { at: now, count: 0 };
-  if (current.count >= (body.action === "connect" ? 4 : 120) || attempts.size >= 1000) return reply({ error: "Please pause before starting more coaching requests." }, 429);
+  // A 60-minute lesson is four 15-minute sessions. Eight leaves room to
+  // reconnect after a dropped connection without locking the lesson out.
+  if (current.count >= (body.action === "connect" ? 8 : 120) || attempts.size >= 1000) return reply({ error: "Please pause before starting more coaching requests." }, 429);
   current.count++; attempts.set(key, current);
   try {
     const auth = { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "OpenAI-Safety-Identifier": id };
