@@ -28,9 +28,13 @@ const descriptions={
   header:"Shared page heading layout",
   simplicity:"21 Oct one-job-per-page student screens",
   findability:"12 Nov single navigation map and Find",
+  "today-diet":"12 Nov shorter Today, practice panel on Feedback",
+  "teacher-tabs":"12 Nov four tabs in a student's teacher workspace",
+  "needs-you":"12 Nov Needs you today list on the teacher home",
+  "dashboard-folds":"12 Nov learning dashboard folds empty sections",
 };
 const features=Object.keys(descriptions);
-const unstyled=new Set(["settings","speaking-budget","simplicity","writing-feedback","findability"]);
+const unstyled=new Set(["settings","speaking-budget","simplicity","writing-feedback","findability","today-diet","teacher-tabs","needs-you","dashboard-folds"]);
 const styledFeatures=features.filter(name=>!unstyled.has(name));
 const [command,...args]=process.argv.slice(2);
 

@@ -1,0 +1,151 @@
+diff --git b/src/app/visual-refresh/teacher.css a/src/app/visual-refresh/teacher.css
+index 57fde56..a36343e 100644
+--- b/src/app/visual-refresh/teacher.css
++++ a/src/app/visual-refresh/teacher.css
+@@ -10,15 +10,6 @@
+ .teacher-voice-tool p{color:var(--re-muted);font-size:.72rem;line-height:1.5;margin-top:3px}
+ .teacher-voice-tool button{flex-shrink:0}
+ @media(max-width:700px){.teacher-workspace .teacher-section-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.teacher-workspace .teacher-section-nav button{min-height:65px;flex-direction:row;align-items:center;text-align:left;gap:9px;padding:10px}.teacher-voice-tool{flex-wrap:wrap}.teacher-voice-tool button{width:100%}}
+-/* Four tabs over the seven places, then the pages inside the open tab (12 Nov). */
+-.teacher-workspace .teacher-group-nav{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px}
+-.teacher-workspace .teacher-group-nav button{min-height:64px;align-items:center}
+-.teacher-sub-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px;padding:6px;border:1px solid var(--re-line);border-radius:14px;background:var(--re-soft)}
+-.teacher-sub-nav button{min-height:44px;padding:8px 16px;border-radius:10px;font-size:.875rem;font-weight:750;color:var(--re-muted)}
+-.teacher-sub-nav button[aria-pressed=true]{background:var(--re-surface);color:var(--re-ink);box-shadow:0 0 0 1px var(--re-line)}
+-.teacher-sub-nav button:focus-visible{outline:3px solid var(--re-accent);outline-offset:2px}
+-.teacher-workspace .teacher-group-nav+:not(.teacher-sub-nav){margin-top:22px}
+-@media(max-width:700px){.teacher-workspace .teacher-group-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.teacher-sub-nav button{flex:1 1 auto}}
+ 
+ /* Dated marks and vocabulary demonstration coverage. */
+ .skill-progress-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+diff --git b/src/components/views/TeacherDashboardView.tsx a/src/components/views/TeacherDashboardView.tsx
+index ccf09a7..f1035b2 100644
+--- b/src/components/views/TeacherDashboardView.tsx
++++ a/src/components/views/TeacherDashboardView.tsx
+@@ -13,7 +13,7 @@ import {
+   type WritingAssessment,
+   type TeacherStudent,
+ } from "@/lib/remote";
+-import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon, MessageIcon, TargetIcon } from "@/components/Icons";
++import { ChartIcon, ChevronRightIcon, ChevronLeftIcon, BookIcon, CheckSquareIcon, FileIcon, MessageIcon, PencilIcon, TargetIcon } from "@/components/Icons";
+ import ProgressView from "./ProgressView";
+ import TeacherInsights from "./TeacherInsights";
+ import type {Unit} from "@/lib/types";
+@@ -37,9 +37,6 @@ import InboxView from "./InboxView";
+ import InboxLink from "@/components/InboxLink";
+ import LiveTeachingCoach from "./LiveTeachingCoach";
+ import type { CoachLearnerLibrary } from "@/lib/coach-lessons";
+-import { TEACHER_FIND_SECTIONS, TEACHER_GROUPS, teacherGroupOf, type TeacherGroup } from "@/lib/find";
+-
+-const groupIcons:Record<TeacherGroup,typeof ChartIcon>={dashboard:ChartIcon,work:CheckSquareIcon,teach:BookIcon,results:TargetIcon};
+ 
+ // One-time removal of the old persisted password; only expiring tokens remain.
+ const STORAGE_KEY = "re_teacher_secret";
+@@ -381,7 +378,6 @@ function TeacherStudentPanel({
+   }
+ 
+   const s = student.summary;
+-  const here=teacherGroupOf(section);
+ 
+   return (
+     <div className="teacher-workspace">
+@@ -395,12 +391,15 @@ function TeacherStudentPanel({
+           <button type="button" onClick={onViewProgress} className="teacher-progress-button"><ChartIcon/><span>Saved progress & feedback <span aria-hidden>↗</span></span></button>
+         </section>
+         <div className="mb-4 flex justify-end"><a className="teacher-quiet-button" href={`/teacher/?inbox=messages&student=${student.code}`}>Message {student.name} →</a><StudentPreviewButton code={student.code} name={student.name}/></div>
+-        <nav className="teacher-section-nav teacher-group-nav" aria-label="Student workspace sections">
+-          {TEACHER_GROUPS.map(group=>{const Icon=groupIcons[group.id],first=TEACHER_FIND_SECTIONS.find(place=>place.group===group.id)!;return <button key={group.id} type="button" aria-pressed={here.group===group.id} onClick={()=>setSection(here.group===group.id?section:first.section)}><Icon/><span>{group.label}<small>{group.hint}</small></span></button>;})}
++        <nav className="teacher-section-nav" aria-label="Student workspace sections">
++          <button type="button" aria-pressed={section === "overview"} onClick={()=>setSection("overview")}><ChartIcon/><span>Learning dashboard<small>Homework, activity & assessment</small></span></button>
++          <button type="button" aria-pressed={section === "teaching"} onClick={()=>setSection("teaching")}><BookIcon/><span>Teaching materials<small>PowerPoints & teacher notes</small></span></button>
++          <button type="button" aria-pressed={section === "learning"} onClick={()=>setSection("learning")}><MessageIcon/><span>Feedback & lesson notes<small>Saved reviews & practice</small></span></button>
++          <button type="button" aria-pressed={section === "documents"} onClick={()=>setSection("documents")}><FileIcon/><span>Documents<small>Scan, upload & discuss</small></span></button>
++          <button type="button" aria-pressed={section === "review"} onClick={()=>setSection("review")}><CheckSquareIcon/><span>Work to review<small>New answers & uploaded work</small></span></button>
++          <button type="button" aria-pressed={section === "assign"} onClick={()=>setSection("assign")}><PencilIcon/><span>Assign homework<small>Set the next step</small></span></button>
++          <button type="button" aria-pressed={section === "assess"} onClick={()=>setSection("assess")}><TargetIcon/><span>School results<small>Tests & writing checkpoints</small></span></button>
+         </nav>
+-        {here.places.length>1&&<div className="teacher-sub-nav" role="group" aria-label="Pages in this tab">
+-          {here.places.map(place=><button key={place.section} type="button" aria-pressed={section===place.section} onClick={()=>setSection(place.section)}>{place.label}</button>)}
+-        </div>}
+         {section === "overview" && <TeacherInsights code={student.code} name={student.name} unit={unit} onReview={()=>setSection("review")} onNotes={()=>setSection("learning")}/>}
+         {section === "teaching" && <TeachingFilesView key={student.code} code={student.code} name={student.name}/>}
+         {section === "documents" && <DocumentsView key={student.code} code={student.code} name={student.name} teacher/>}
+diff --git b/src/lib/find.ts a/src/lib/find.ts
+index f1145a3..135239b 100644
+--- b/src/lib/find.ts
++++ a/src/lib/find.ts
+@@ -82,36 +82,17 @@ export function studentFindEntries(code:string,sections:readonly (FindPage&{more
+   ];
+ }
+ 
+-/** The four tabs of one student's teacher workspace. Each opens on its first place below. */
+-export const TEACHER_GROUPS=[
+-  {id:'dashboard',label:'Dashboard',hint:'Where they are now'},
+-  {id:'work',label:'Work',hint:'Review, files & homework'},
+-  {id:'teach',label:'Teach',hint:'Materials & lesson notes'},
+-  {id:'results',label:'Results',hint:'Tests & checkpoints'},
+-] as const;
+-export type TeacherGroup=typeof TEACHER_GROUPS[number]['id'];
+-
+-/**
+- * The seven places inside one student's teacher workspace, in tab order, with
+- * the tab each sits under and the words Rory might type for it. The addresses
+- * (`?section=…`) are unchanged, so older links and notifications still land.
+- */
++/** The seven places inside one student's teacher workspace, with the words Rory might type for each. */
+ export const TEACHER_FIND_SECTIONS=[
+-  {section:'overview',group:'dashboard',label:'Learning dashboard',hint:'Homework, activity & assessment',words:'overview summary progress rings'},
+-  {section:'review',group:'work',label:'Work to review',hint:'New answers & uploaded work',words:'mark marking correct submissions answers homework check'},
+-  {section:'documents',group:'work',label:'Documents',hint:'Scan, upload & discuss',words:'photo essay handwriting worksheet file pdf saved work writing'},
+-  {section:'assign',group:'work',label:'Assign homework',hint:'Set the next step',words:'set task new assignment give'},
+-  {section:'teaching',group:'teach',label:'Teaching materials',hint:'PowerPoints & teacher notes',words:'slides powerpoint pptx lesson plan files prepare'},
+-  {section:'learning',group:'teach',label:'Feedback & lesson notes',hint:'Saved reviews & practice',words:'recorded lesson transcript brief records history'},
+-  {section:'assess',group:'results',label:'School results',hint:'Tests & writing checkpoints',words:'grades marks noten schularbeit test exam assessment checkpoint'},
++  {section:'overview',label:'Learning dashboard',hint:'Homework, activity & assessment',words:'overview summary progress rings'},
++  {section:'teaching',label:'Teaching materials',hint:'PowerPoints & teacher notes',words:'slides powerpoint pptx lesson plan files prepare'},
++  {section:'learning',label:'Feedback & lesson notes',hint:'Saved reviews & practice',words:'recorded lesson transcript brief records history'},
++  {section:'documents',label:'Documents',hint:'Scan, upload & discuss',words:'photo essay handwriting worksheet file pdf saved work writing'},
++  {section:'review',label:'Work to review',hint:'New answers & uploaded work',words:'mark marking correct submissions answers homework check'},
++  {section:'assign',label:'Assign homework',hint:'Set the next step',words:'set task new assignment give'},
++  {section:'assess',label:'School results',hint:'Tests & writing checkpoints',words:'grades marks noten schularbeit test exam assessment checkpoint'},
+ ] as const;
+ 
+-/** The tab a place sits under, and the places that share it. */
+-export function teacherGroupOf(section:string){
+-  const place=TEACHER_FIND_SECTIONS.find(s=>s.section===section)||TEACHER_FIND_SECTIONS[0];
+-  return {group:place.group as TeacherGroup,places:TEACHER_FIND_SECTIONS.filter(s=>s.group===place.group)};
+-}
+-
+ /** Everything Rory can look for: the workspace pages, each student, and each place inside each student. */
+ export function teacherFindEntries(students:readonly {code:string;name:string}[]):FindEntry[]{
+   return [
+diff --git b/tests/find.test.mjs a/tests/find.test.mjs
+index ac555fa..ecbb151 100644
+--- b/tests/find.test.mjs
++++ a/tests/find.test.mjs
+@@ -107,22 +107,9 @@ test("the teacher can find a student, a place, or a place for a student", () =>
+   assert.deepEqual(plain(find.findMatches("marking", teacher).map(e => e.label)), ["Ferdi · Work to review", "Valentin · Work to review"]);
+ });
+ 
+-test("the teacher places in Find are the workspace's own sections, under four tabs", () => {
++test("the teacher places in Find match the workspace's own sections and names", () => {
+   const route = read("src/lib/teacher-route.ts").match(/TEACHER_SECTIONS=\[([^\]]*)\]/)[1].replace(/"/g, "").split(",");
+-  assert.deepEqual(plain(find.TEACHER_FIND_SECTIONS.map(s => s.section)).sort(), route.slice().sort(), "every address still has exactly one place");
+-  assert.deepEqual(plain(find.TEACHER_GROUPS.map(g => g.label)), ["Dashboard", "Work", "Teach", "Results"]);
+-  const groups = plain(find.TEACHER_GROUPS.map(g => g.id));
+-  for (const place of find.TEACHER_FIND_SECTIONS) assert.ok(groups.includes(place.group), `${place.section} sits under a tab`);
+-  for (const id of groups) assert.ok(find.TEACHER_FIND_SECTIONS.some(s => s.group === id), `the ${id} tab is not empty`);
+-  // Places under one tab sit together, so a tab opens on its first place.
+-  const order = plain(find.TEACHER_FIND_SECTIONS.map(s => s.group));
+-  assert.deepEqual(order.filter((g, i) => g !== order[i - 1]), groups);
+-  assert.deepEqual(plain(find.teacherGroupOf("documents")), { group: "work", places: plain(find.TEACHER_FIND_SECTIONS.filter(s => s.group === "work")) });
+-  assert.equal(find.teacherGroupOf("review").places[0].section, "review", "Work opens on what is waiting");
+-  assert.equal(find.teacherGroupOf("not-a-section").group, "dashboard");
+-  // The workspace draws its tabs and pages from this list, not from its own copy.
++  assert.deepEqual(plain(find.TEACHER_FIND_SECTIONS.map(s => s.section)), route);
+   const view = read("src/components/views/TeacherDashboardView.tsx");
+-  assert.match(view, /TEACHER_GROUPS\.map\(/);
+-  assert.match(view, /here\.places\.map\(/);
+-  assert.doesNotMatch(view, /<span>Learning dashboard<small>/, "no hand-written copy of the section names");
++  for (const place of find.TEACHER_FIND_SECTIONS) assert.ok(view.includes(`<span>${place.label}<small>${place.hint}</small>`), `"${place.label}" is no longer the name on the teacher tile`);
+ });

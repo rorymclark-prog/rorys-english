@@ -16,4 +16,13 @@ The areas are `entry`, `navigation`, `today`, `homework`, `lessons`, `practice`,
 
 `findability` (12 November 2026) returns the tab bar, sidebar and menu to their separate lists, removes Find from the student and teacher menus, and restores the second Back control on Resource library and Writing help. It covers only the navigation components, `student-navigation.ts`, the Find files, the navigation styles and `tests/find.test.mjs`; it does not disable a stylesheet. Release notes and the design spec stay as written, so add a note when it is applied. Recorded against the commit that introduced it and proven by applying it in an isolated copy, then running type checking and the full tests.
 
-State on 12 November: `npm run ui:rollbacks` reports only `entry`, `header` and `findability` as ready. The other nineteen areas no longer apply to `main` because later edits overlap them; they were already in that state before `findability` was recorded.
+Four more areas were recorded on 12 November 2026, one per commit, and each rolls back on its own or with any of the others, in any order:
+
+- `today-diet` puts the full practice panel back on Today, removes it from Feedback and restores the Speak and Feedback rows.
+- `teacher-tabs` returns one student's workspace to seven tiles. `findability` shares `find.ts` and its test with this area, so roll `teacher-tabs` back first if `findability` has to go.
+- `needs-you` removes the Needs you today list from the teacher home and makes Notifications the primary button again.
+- `dashboard-folds` shows every block of the learning dashboard again, empty or not.
+
+Each covers its own components, styles and tests, and none disables a stylesheet. Release notes and the design spec stay as written, so add a note when one is applied. Each was proven in an isolated copy, alone and all four together, with type checking and the full tests.
+
+State on 12 November: `npm run ui:rollbacks` reports `entry`, `header` and these four as ready; `findability` becomes ready once `teacher-tabs` is rolled back.

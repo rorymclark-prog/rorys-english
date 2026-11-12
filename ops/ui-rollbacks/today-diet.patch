@@ -1,0 +1,181 @@
+diff --git b/src/app/refined-feedback.css a/src/app/refined-feedback.css
+index 472ca04..ea37c8f 100644
+--- b/src/app/refined-feedback.css
++++ a/src/app/refined-feedback.css
+@@ -61,6 +61,3 @@
+  .refined-sentence-review .sentence-table-scroll{border:1px solid var(--re-line);border-radius:.75rem}
+ }
+ @media(prefers-reduced-motion:reduce){.refined-feedback-filters button,.sentence-reading-controls button,.refined-feedback-open>span{transition:none}}
+-
+-/* The weekly rings and activity history, moved here from Today (12 Nov). */
+-.progress-weekly-practice{scroll-margin-top:6rem;margin-top:1.5rem}
+diff --git b/src/components/EngagementPanel.tsx a/src/components/EngagementPanel.tsx
+index 923f3a2..bff2857 100644
+--- b/src/components/EngagementPanel.tsx
++++ a/src/components/EngagementPanel.tsx
+@@ -16,7 +16,7 @@ import {engagementEvents,engagementTotals,periodRange,shiftDay,type EngagementPe
+ const periods:{id:EngagementPeriod;label:string}[]=[{id:'day',label:'Day'},{id:'week',label:'Week'},{id:'month',label:'Month'},{id:'semester',label:'Semester'},{id:'year',label:'School year'}];
+ const dateLabel=(date:string)=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Vienna'}).format(new Date(date+'T12:00:00Z'));
+ const minutes=(value:number)=>value===0?'0':value<1?'<1':String(Math.round(value*10)/10);
+-export default function EngagementPanel({code,teacher=false,source,sourceError='',compact=false,summaryOnly=false,onRefresh,onWeeklySummary}:{code:string;teacher?:boolean;source?:EngagementSource;sourceError?:string;compact?:boolean;/** Load and report the week through onWeeklySummary, and draw nothing. */summaryOnly?:boolean;onRefresh?:()=>Promise<void>;onWeeklySummary?:(state:WeeklySummaryState)=>void}){
++export default function EngagementPanel({code,teacher=false,source,sourceError='',compact=false,onRefresh,onWeeklySummary}:{code:string;teacher?:boolean;source?:EngagementSource;sourceError?:string;compact?:boolean;onRefresh?:()=>Promise<void>;onWeeklySummary?:(state:WeeklySummaryState)=>void}){
+  const [historyOpen,setHistoryOpen]=useState(!compact);
+  const [data,setData]=useState<EngagementSource|null>(source||null),[breaks,setBreaks]=useState<{from:string;to:string}[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[calendarError,setCalendarError]=useState(''),[calendarReady,setCalendarReady]=useState(false),[period,setPeriod]=useState<EngagementPeriod>('week'),[anchor,setAnchor]=useState(viennaDay()),[retry,setRetry]=useState(0);
+  useEffect(()=>{let live=true;setError('');setCalendarReady(false);setLoading(true);
+@@ -34,7 +34,6 @@ export default function EngagementPanel({code,teacher=false,source,sourceError='
+   if(!calendarReady||!practiceCourse(code)){onWeeklySummary({status:'unavailable'});return;}
+   onWeeklySummary({status:'ready',progress:ringProgress(data,code,{kind:'week',id:ringWeek(today)},today,breaks)});
+  },[loading,error,sourceError,data,calendarReady,code,today,breaks,onWeeklySummary]);
+- if(summaryOnly)return null;
+  if(loading)return <section className="engagement-panel engagement-loading" role="status" aria-busy="true"><h2>{teacher?'Practice overview':'Your practice'}</h2><p>Checking your saved work…</p><div className="engagement-skeleton" aria-hidden="true"><span/><div><i/><i/><i/></div></div><p className="engagement-note">Including earlier uploads and conversations.</p></section>;
+  if(error||sourceError||!data)return <StatusRow kind="error" onRetry={()=>{if(onRefresh)void onRefresh();else setRetry(n=>n+1);}}>{error||sourceError||'Activity is unavailable.'}</StatusRow>;
+  const events=engagementEvents(data,today),range=periodRange(period,anchor),total=engagementTotals(events,range.from,range.to);
+diff --git b/src/components/WeeklyPracticeSummary.tsx a/src/components/WeeklyPracticeSummary.tsx
+index 45cdbe5..09345c1 100644
+--- b/src/components/WeeklyPracticeSummary.tsx
++++ a/src/components/WeeklyPracticeSummary.tsx
+@@ -6,11 +6,11 @@ import type {ringProgress} from '@/lib/practice-rings';
+ export type WeeklySummaryState={status:'loading'|'ready'|'error'|'unavailable';progress?:ReturnType<typeof ringProgress>};
+ const amount=(n:number)=>n>0&&n<1?'<1':String(Math.round(n*10)/10);
+ /** Uses the same loaded sources, calendar and credit rules as the detailed rings. */
+-export default function WeeklyPracticeSummary({state,href='#weekly-practice'}:{state:WeeklySummaryState;/** Where the full rings live. */href?:string}){
++export default function WeeklyPracticeSummary({state}:{state:WeeklySummaryState}){
+  const p=state.progress,ready=state.status==='ready'&&!!p,paused=ready&&p.paused;
+  const goals=[{id:'speaking',label:'Speaking',Icon:MicrophoneIcon,value:p?.minutes||0,target:p?.target||0,unit:'min',radius:78},{id:'writing',label:'Writing',Icon:PencilIcon,value:p?.writing||0,target:p?.writingTarget||0,unit:'attempt',radius:59},{id:'vocabulary',label:'Vocabulary',Icon:BookIcon,value:p?.vocabulary||0,target:p?.vocabularyTarget||0,unit:'words',radius:40}];
+  return <aside className="today-weekly-summary" aria-label="This week’s saved practice">
+-  <Link href={href} className="today-weekly-open" aria-label="View weekly speaking, writing and vocabulary progress">
++  <Link href="#weekly-practice" className="today-weekly-open" aria-label="View weekly speaking, writing and vocabulary progress">
+    <div className="weekly-rings-graphic" role="img" aria-label={ready?(paused?'Weekly practice paused for a holiday':goals.map(g=>`${g.label}: ${amount(g.value)} of ${g.target} ${g.unit}`).join('; ')):'Weekly progress unavailable until saved work and calendar are checked'}>
+     <svg viewBox="0 0 180 180" aria-hidden="true">{goals.map(g=><g key={g.id} className={`weekly-ring-${g.id}`}><circle className="weekly-ring-track" style={{opacity:1}} cx="90" cy="90" r={g.radius}/><circle className="weekly-ring-fill" style={{opacity:ready&&!paused&&g.value>0?1:0}} cx="90" cy="90" r={g.radius} pathLength="100" strokeDasharray={`${ready&&!paused&&g.target?Math.min(1,g.value/g.target)*100:0} 100`}/></g>)}</svg>
+     <span><strong>{!ready?'—':paused?'Rest':`${p.closed}/3`}</strong><small>{!ready?(state.status==='loading'?'checking':'unavailable'):paused?'holiday pause':'rings closed'}</small></span>
+@@ -18,6 +18,6 @@ export default function WeeklyPracticeSummary({state,href='#weekly-practice'}:{s
+    <span className="today-weekly-label">This week’s progress <span aria-hidden="true">↗</span></span>
+   </Link>
+   <ul className="today-weekly-legend">{goals.map(({id,label,Icon,value,target,unit})=><li key={id} className={`weekly-ring-${id}`}><Icon/><span>{label}</span><strong>{!ready?'—':paused?'Paused':`${amount(value)}/${target}`}<small>{ready&&!paused?` ${unit}`:''}</small></strong></li>)}</ul>
+-  {state.status==='error'||state.status==='unavailable'?<p role="status">Progress could not be checked. <Link href={href}>Open the details to retry</Link>.</p>:state.status==='loading'?<p role="status">Checking saved work…</p>:<p>Saved practice · <Link href={href}>See details</Link></p>}
++  {state.status==='error'||state.status==='unavailable'?<p role="status">Progress could not be checked. <a href="#weekly-practice">Retry below</a>.</p>:state.status==='loading'?<p role="status">Checking saved work…</p>:<p>Saved practice · <a href="#weekly-practice">See details</a></p>}
+  </aside>;
+ }
+diff --git b/src/components/views/ProgressView.tsx a/src/components/views/ProgressView.tsx
+index 1d7c940..a8807d7 100644
+--- b/src/components/views/ProgressView.tsx
++++ a/src/components/views/ProgressView.tsx
+@@ -10,7 +10,6 @@ import { isStudentPreview } from "@/lib/student-preview";
+ import {SharedSkillProgress} from '@/components/SkillProgressPanel';
+ import LearningView from "./LearningView";
+ import DocumentsView from "./DocumentsView";
+-import EngagementPanel from "@/components/EngagementPanel";
+ 
+ type Mode = "student" | "parent" | "teacher";
+ 
+@@ -116,7 +115,7 @@ export default function ProgressView({
+       </header>
+ 
+       <main className="re-screen-main progress-page">
+-        {mode==='student'?<nav className="refined-progress-jumps" aria-label="Feedback and progress sections"><a href="#feedback-stream">Feedback & next steps</a><a href="#weekly-practice">This week’s practice</a><a href="#measured-progress" onClick={()=>setMeasuredOpen(true)}>Measured progress <span aria-hidden="true">↗</span></a></nav>:<SharedSkillProgress code={fetchCode} teacher={mode==="teacher"}/>}
++        {mode==='student'?<nav className="refined-progress-jumps" aria-label="Feedback and progress sections"><a href="#feedback-stream">Feedback & next steps</a><a href="#measured-progress" onClick={()=>setMeasuredOpen(true)}>Measured progress <span aria-hidden="true">↗</span></a></nav>:<SharedSkillProgress code={fetchCode} teacher={mode==="teacher"}/>}
+         {state === "loading" && (
+           <div className="mt-4 space-y-3">
+             <div className="h-20 animate-pulse rounded-card bg-surface shadow-card dark:bg-navy-raised dark:shadow-card-dark" />
+@@ -155,7 +154,6 @@ export default function ProgressView({
+           </>
+         )}
+ 
+-        {mode==='student'&&<div id="weekly-practice" className="progress-weekly-practice"><EngagementPanel code={fetchCode} compact/></div>}
+         {mode==='student'&&<details id="measured-progress" className="refined-feedback-support refined-measured-progress" open={measuredOpen} onToggle={event=>{if(event.target===event.currentTarget)setMeasuredOpen(event.currentTarget.open);}}><summary>Measured progress <span>Checked skills, vocabulary and dated evidence</span></summary><SharedSkillProgress code={fetchCode}/></details>}
+ 
+         {/* Links shelf — dashboards / resources the tutor adds */}
+diff --git b/src/components/views/TodayView.tsx a/src/components/views/TodayView.tsx
+index ed0bd92..e4d78da 100644
+--- b/src/components/views/TodayView.tsx
++++ a/src/components/views/TodayView.tsx
+@@ -5,8 +5,8 @@ import Link from "next/link";
+ import type {Unit} from "@/lib/types";
+ import {useStudent} from "@/components/StudentContext";
+ import {fetchNote,fetchAssignments,fetchSubmissions,type Submission,rowToAssignment,isCurrentAssignment,type Assignment} from "@/lib/remote";
+-import {ChevronRightIcon} from "@/components/Icons";
+-import {RepeatIcon} from "@/components/LearningVisuals";
++import {ChevronRightIcon,MessageIcon} from "@/components/Icons";
++import {MicrophoneIcon,RepeatIcon} from "@/components/LearningVisuals";
+ import {isFerdiSpeakingHomework} from "@/lib/speaking-homework";
+ import {readableDate,submissionStatus,isCompletedAssignment} from "@/lib/clarity";
+ import {LatestLessonPractice} from "@/components/LessonPractice";
+@@ -69,7 +69,7 @@ export default function TodayView({unit,units}:{unit:Unit|null;units?:Unit[]}){
+       {hero.action&&<Link className="re-button" href={hero.href} aria-label={`${heroButton}: ${hero.title}`}>{heroButton}</Link>}
+       {loaded&&!error&&more>0&&<Link className="today-hero-more" href="#additional-work-title">{more} more {more===1?"task":"tasks"} below <ChevronRightIcon/></Link>}
+       </div>
+-      <WeeklyPracticeSummary state={weeklySummary} href={`${base}/progress/#weekly-practice`}/>
++      <WeeklyPracticeSummary state={weeklySummary}/>
+     </section>
+     {loaded&&!error&&additionalSteps.length>0&&<section aria-labelledby="additional-work-title">
+       <h2 id="additional-work-title" className="week-form-heading">Other current tasks</h2>
+@@ -84,11 +84,12 @@ export default function TodayView({unit,units}:{unit:Unit|null;units?:Unit[]}){
+     <LatestLessonPractice code={code} compact/>
+     <div className="today-rows">
+       <NextLesson code={code} row/>
++      <Link className="today-row" href={`${base}/speak/`}><MicrophoneIcon/><span><strong>Speak</strong><small>A short conversation, saved for Rory</small></span><ChevronRightIcon/></Link>
++      <Link className="today-row" href={`${base}/progress/`}><MessageIcon/><span><strong>Feedback</strong><small>What worked and what to try next</small></span><ChevronRightIcon/></Link>
+       <Link className="today-row" href={`${base}/study/`}><RepeatIcon/><span><strong>Practice desk</strong><small>A few optional exercises from your own feedback</small></span><ChevronRightIcon/></Link>
+     </div>
+     {!isStudentPreview(code)&&<MomentumStrip studentId={studentId}/>}
+-    {/* The full rings and history live on Feedback. This loads the week for the summary above and draws nothing. */}
+-    <EngagementPanel code={code} summaryOnly onWeeklySummary={setWeeklySummary}/>
++    <div id="weekly-practice"><EngagementPanel code={code} compact onWeeklySummary={setWeeklySummary}/></div>
+     <YearPlanNotice code={code} note={note}/>
+   </main>;
+ }
+diff --git b/tests/today-diet.test.mjs a/tests/today-diet.test.mjs
+deleted file mode 100644
+index 1c07c53..0000000
+--- b/tests/today-diet.test.mjs
++++ /dev/null
+@@ -1,27 +0,0 @@
+-import test from "node:test";
+-import assert from "node:assert/strict";
+-import fs from "node:fs";
+-import vm from "node:vm";
+-import ts from "typescript";
+-
+-// The modules under test are import-free on purpose, so they load as plain scripts.
+-function load(file) {
+-  const exports = {};
+-  const src = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+-  vm.runInNewContext(src, { exports, module: { exports } });
+-  return exports;
+-}
+-const plain = v => JSON.parse(JSON.stringify(v));
+-const read = f => fs.readFileSync(f, "utf8");
+-
+-test("Today keeps one weekly summary and Feedback holds the full practice panel", () => {
+-  const today = read("src/components/views/TodayView.tsx"), feedback = read("src/components/views/ProgressView.tsx"), panel = read("src/components/EngagementPanel.tsx");
+-  assert.match(today, /<EngagementPanel code=\{code\} summaryOnly onWeeklySummary=\{setWeeklySummary\}\/>/);
+-  assert.match(today, /href=\{`\$\{base\}\/progress\/#weekly-practice`\}/);
+-  assert.doesNotMatch(today, /id="weekly-practice"/);
+-  assert.match(panel, /if\(summaryOnly\)return null;/);
+-  assert.match(feedback, /mode==='student'&&<div id="weekly-practice"[^>]*><EngagementPanel code=\{fetchCode\} compact\/>/);
+-  assert.match(feedback, /<a href="#weekly-practice">This week’s practice<\/a>/);
+-  // Speak and Feedback are tabs on every screen, so Today no longer repeats them as rows.
+-  assert.doesNotMatch(today, /className="today-row" href=\{`\$\{base\}\/(speak|progress)\/`\}/);
+-});
+diff --git b/tests/today-view.test.mjs a/tests/today-view.test.mjs
+index d245910..7800cb2 100644
+--- b/tests/today-view.test.mjs
++++ a/tests/today-view.test.mjs
+@@ -28,7 +28,7 @@ function today({assignments=[],submissions=[],error='',loaded=true,lesson=unit,c
+     '@/lib/remote':{isCurrentAssignment:a=>/^2026-(09|10|11|12)-|^2027-(01|02|03|04|05|06|07|08)-/.test(a.date)},
+     '@/lib/clarity':clarity,'@/lib/speaking-homework':speaking,'@/lib/student-preview':{isStudentPreview:()=>true},
+     '@/lib/today-task':todayTask,'@/lib/calendar-client':{},'@/lib/lesson-calendar':{viennaDate:()=> '2026-10-22'},'@/lib/engagement':{},
+-    '@/components/Icons':{ChevronRightIcon:empty},'@/components/LearningVisuals':{RepeatIcon:empty},
++    '@/components/Icons':{ChevronRightIcon:empty,MessageIcon:empty},'@/components/LearningVisuals':{MicrophoneIcon:empty,RepeatIcon:empty,TopicArt:empty},
+     '@/components/LessonPractice':{LatestLessonPractice:empty},
+     ...Object.fromEntries(['NextLesson','YearPlanNotice','EngagementPanel','StatusRow','MomentumStrip','WeeklyPracticeSummary'].map(name=>[`@/components/${name}`,{default:empty}])),
+   }).default;
+@@ -112,7 +112,7 @@ test('progress sharing is disabled and guarded in teacher preview, while normal
+       react:{...React,useState:value=>[value,()=>{}],useEffect:()=>{}},'react/jsx-runtime':jsxRuntime,'next/link':link,
+       '@/lib/remote':{},'@/components/Icons':{},'@/lib/storage':{buildProgressSummary:()=>{summaries++;return 'My progress';}},
+       '@/lib/student-preview':{isStudentPreview:()=>preview},'@/components/SkillProgressPanel':{SharedSkillProgress:empty},
+-      './LearningView':{default:empty},'./DocumentsView':{default:empty},'@/components/EngagementPanel':{default:empty},
++      './LearningView':{default:empty},'./DocumentsView':{default:empty},
+     },{navigator:{share:async data=>{shared.push(data);}}}).default;
+     const button=findShareButton(view({fetchCode:'student',studentCode:'student',studentId:'student',displayName:'Student',mode:'student'}));
+     assert.ok(button);assert.equal(button.props.disabled,preview);

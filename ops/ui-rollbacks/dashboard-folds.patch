@@ -1,0 +1,172 @@
+diff --git b/src/app/visual-refresh/teacher.css a/src/app/visual-refresh/teacher.css
+index f45dd2d..57fde56 100644
+--- b/src/app/visual-refresh/teacher.css
++++ a/src/app/visual-refresh/teacher.css
+@@ -40,14 +40,3 @@
+ .progress-coverage{margin:26px 0 22px;text-align:center}.progress-coverage>strong{font-size:2.5rem;line-height:1.3}.progress-coverage>strong>span{font-size:1.4rem;color:var(--re-muted,#64616e)}.progress-coverage-dots{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-top:18px}.progress-coverage-dots>span{height:12px;border-radius:4px;background:var(--re-line,#ddd)}.progress-coverage-dots>.reviewed{background:#c7b5e8}.progress-coverage-dots>.marked{background:var(--re-accent,#4058b0)}
+ .progress-benchmark-status{display:block;font-size:1.25rem;line-height:1.4;margin:20px 0 12px}.progress-skill-bars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px;row-gap:18px}.progress-skill-bar-title{display:flex;justify-content:space-between;gap:12px;font-size:.85rem}.progress-skill-bar-title h4{font-weight:700}.progress-skill-bar-title strong{white-space:nowrap;font-size:.8rem}.progress-bar-track{height:9px;border-radius:8px;overflow:hidden;background:var(--re-line,#ddd);margin-top:8px}.progress-bar-track>span{display:block;height:100%;background:var(--re-accent,#4058b0)}.progress-bar-track.unassessed{background:repeating-linear-gradient(135deg,var(--re-line,#ddd),var(--re-line,#ddd) 5px,transparent 5px,transparent 10px);outline:1px solid var(--re-line,#ddd)}
+ @media(max-width:850px){.progress-overview-grid{grid-template-columns:1fr}.progress-overview-tile{display:block}.progress-ring-group{margin:12px 0}.progress-coverage-dots{max-width:280px;margin:18px auto 0}.progress-benchmark-status{margin:12px 0}}@media(max-width:500px){.progress-skill-bars{grid-template-columns:1fr}.progress-overview-tile,.progress-skill-chart{padding:15px}}
+-
+-/* Learning dashboard: blocks with nothing in them are folded away and named. */
+-.teacher-insights [hidden]{display:none!important}
+-.teacher-workspace .insight-metrics{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+-.insight-folded{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:18px;padding:16px 18px;border:1px dashed var(--re-line);border-radius:16px;font-size:.875rem;color:var(--re-muted)}
+-.insight-folded p{flex:1 1 220px;line-height:1.5}
+-.insight-folded p strong{color:var(--re-ink);margin-right:6px}
+-.insight-folded>div{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 100%;order:3}
+-.insight-folded>div button{min-height:40px;padding:6px 14px;border:1px solid var(--re-line);border-radius:999px;background:var(--re-surface);color:var(--re-ink);font-weight:650}
+-.teacher-insights .insight-grid:has(>[hidden])>:not([hidden]){grid-column:1/-1}
+-.insight-folded button:focus-visible{outline:3px solid var(--re-accent);outline-offset:2px}
+diff --git b/src/components/views/TeacherInsights.tsx a/src/components/views/TeacherInsights.tsx
+index 0ca5821..89a576d 100644
+--- b/src/components/views/TeacherInsights.tsx
++++ a/src/components/views/TeacherInsights.tsx
+@@ -17,16 +17,12 @@ import LearningGoalsPanel from '@/components/LearningGoalsPanel';
+ import SkillProgressPanel from '@/components/SkillProgressPanel';
+ import LessonAssessmentPanel from '@/components/LessonAssessmentPanel';
+ import LessonBrief from '@/components/LessonBrief';
+-import {goalPlans} from '@/lib/learning-goals';
+-import {skillEntries} from '@/lib/skill-progress';
+-import {progressEvidence} from '@/lib/progress-evidence';
+-import {dashboardFolds} from '@/lib/dashboard-folds';
+ const box='mt-1 w-full rounded-lg border border-black/15 bg-transparent p-2 dark:border-white/20';
+ const emptySettings:DashboardSettings={version:1,requirements:{},schoolContext:''};
+ function Metric({label,value,detail}:{label:string;value:string;detail:string}){return <article className="insight-metric"><p>{label}</p><strong>{value}</strong><small>{detail}</small></article>;}
+ export default function TeacherInsights({code,name,unit,onReview,onNotes}:{code:string;name:string;unit:Unit|null;onReview:()=>void;onNotes:()=>void}){
+  const [source,setSource]=useState<ProgressEvidence|null>(null),[documents,setDocuments]=useState<LearnerDocument[]>([]),[replies,setReplies]=useState<LearningReply[]>([]),[evidenceError,setEvidenceError]=useState('');
+- const [records,setRecords]=useState<LearningRecord[]>([]),[assignments,setAssignments]=useState<Assignment[]>([]),[submissions,setSubmissions]=useState<Submission[]>([]),[progress,setProgress]=useState<Progress|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[settings,setSettings]=useState<DashboardSettings>(emptySettings),[savedSettings,setSavedSettings]=useState<DashboardSettings>(emptySettings),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[showAll,setShowAll]=useState(false);
++ const [records,setRecords]=useState<LearningRecord[]>([]),[assignments,setAssignments]=useState<Assignment[]>([]),[submissions,setSubmissions]=useState<Submission[]>([]),[progress,setProgress]=useState<Progress|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[settings,setSettings]=useState<DashboardSettings>(emptySettings),[savedSettings,setSavedSettings]=useState<DashboardSettings>(emptySettings),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+  async function refresh(){setLoading(true);setError('');try{const [l,a,s,p]=await Promise.all([getLearning(code,true),request<AssignmentsResult>({action:'assignments',code,session:savedSession('__teacher__')?.token||''}),request<Submissions>({action:'submissions',code,session:savedSession('__teacher__')?.token||''}),request<Progress>({action:'progress',code,session:savedSession('__teacher__')?.token||''})]);if(!l.ok||!a.ok||!s.ok||!p.ok)throw Error(l.error||a.error||s.error||p.error||'Some saved records could not be loaded.');setRecords(l.records||[]);setReplies(l.replies||[]);try{const docs=await documentRequest(code,true,{action:'documents'});setDocuments(docs.documents||[]);setEvidenceError(docs.ok?'':'Uploaded documents could not be loaded.');}catch{setDocuments([]);setEvidenceError('Uploaded documents could not be loaded.');}setAssignments((a.assignments?.rows||[]).map(rowToAssignment));setSubmissions(s.submissions||[]);setProgress(p);const config=l.records?.find(r=>r.id==='teacher-dashboard-settings')?.body.tutorPrivate?.dashboardSettings;const value=dashboardSettings(config);setSettings(value);setSavedSettings(value);}catch(e){setError(e instanceof Error?e.message:'Could not open saved records.');}finally{setLoading(false);}}
+  useEffect(()=>{void refresh();},[code]);
+  async function saveSettings(){setBusy(true);setMessage('');try{const result=await saveLearning(code,{id:'teacher-dashboard-settings',date:viennaDay(),kind:'test',title:'Private dashboard settings',visibility:'teacher',body:{tutorPrivate:{dashboardSettings:settings}}});if(!result.ok)throw Error(result.error||'Could not save settings.');setSavedSettings(settings);setMessage('Requirements and school context saved privately.');}catch(e){setMessage(e instanceof Error?e.message:'Could not save settings.');}finally{setBusy(false);}}
+@@ -34,48 +30,38 @@ export default function TeacherInsights({code,name,unit,onReview,onNotes}:{code:
+  if(loading)return <p role="status" className="insight-loading">Opening homework, recorded lessons and saved activity…</p>;
+  if(error)return <div role="alert" className="re-card"><p>{error}</p><button className="re-button mt-3" onClick={()=>void refresh()}>Retry dashboard</button></div>;
+  const today=viennaDay(),activity=engagementTotals(engagementEvents(engagementSource,today),shiftDay(today,-29),today),items=homeworkMetrics(code,unit,assignments,submissions,records,settings,today),required=items.filter(x=>x.requirement==='required'),received=required.filter(x=>x.received||x.reviewed).length,reviewed=required.filter(x=>x.reviewed).length,unclassified=items.filter(x=>x.requirement==='unclassified').length,lessons=assessedLessons(records),latest=lessons[0],assessment=latest&&readLessonAssessment(latest.body.tutorPrivate?.lessonAssessment),comparisons=lessonComparisons(records),checkpoints=records.filter(r=>r.visibility==='teacher'&&r.kind==='test'&&readCheckpoint(r.body.tutorPrivate?.checkpoint)).sort((a,b)=>b.date.localeCompare(a.date)),teacherScores=assessment?.teaching.filter(t=>t.score!=null)||[];
+- const spoken=records.filter(r=>r.kind==='speaking'&&r.author==='Student'&&r.visibility==='shared'&&r.body.transcript);
+- // A block with nothing in it yet is folded away and named in one line below, so the page is as long as the evidence.
+- const folds=dashboardFolds({goals:goalPlans(records).length>0,evidence:progressEvidence({records,documents,submissions,replies,progress}).items.length>0,skills:skillEntries(records,true).length>0,homework:items.length>0,changes:comparisons.length>0,school:!!savedSettings.schoolContext.trim(),words:spoken.length>0,checkpoints:checkpoints.length>0,teaching:lessons.length>0});
+- const shown=(id:keyof typeof folds.has)=>showAll||folds.has[id];
+- const reveal=(id:string)=>{setShowAll(true);window.setTimeout(()=>document.getElementById(`fold-${id}`)?.scrollIntoView({behavior:'smooth',block:'start'}),50);};
+- const metrics=[
+-  {on:required.length>0,label:'Required homework received',value:required.length?`${Math.round(received/required.length*100)}%`:'Not set',detail:required.length?`${received} of ${required.length} available required tasks received or marked complete; ${reviewed} reviewed.`:`${unclassified} tasks need a required / optional choice.`},
+-  {on:true,label:'Saved activity days',value:String(activity.activeDays),detail:'Last 30 days · chats, uploads, answers, replies and quizzes.'},
+-  {on:!!latest,label:'Latest assessed lesson',value:latest?readableDate(latest.date).replace(/^\w+, /,''):'Not assessed',detail:assessment?`${assessment.checks.filter(c=>c.score!==null).length} scored task checks · Draft; Rory review pending.`:'A prepared deck does not count as a completed lesson.'},
+-  {on:comparisons.some(x=>x.change!==null),label:'Retained learning',value:comparisons.some(x=>x.change!==null)?`${comparisons.filter(x=>x.change!==null).length} comparable checks`:'Next check needed',detail:'A later independent task must match the earlier objective and conditions.'},
+-  {on:teacherScores.length>0,label:'Your teaching',value:teacherScores.length?`${teacherScores.length} checks scored`:'Not scored yet',detail:'Private scores out of 4 for specific teaching actions, supported by lesson evidence.'},
+- ].filter(m=>showAll||m.on);
+  return <section className="teacher-insights" aria-label={`${name}’s learning dashboard`}>
+   <header className="insight-header"><div><p className="teacher-eyebrow">LEARNING DASHBOARD · PRIVATE TO RORY</p><h2>Practice, learning and your teaching</h2><p>Each result names the task, date and evidence behind it.</p></div><button className="teacher-quiet-button" onClick={()=>void refresh()}>Refresh dashboard</button></header>
+   <LessonBrief key={code} code={code} name={name} unit={unit} records={records} onSaved={refresh}/>
+-  <EngagementPanel code={code} teacher compact source={engagementSource} sourceError={evidenceError} onRefresh={refresh}/>
+-  <div id="fold-goals" hidden={!shown('goals')}><LearningGoalsPanel key={`goals-${code}-${records.filter(r=>r.body.tutorPrivate?.goalPlan).map(r=>r.created).join('-')||'new'}`} code={code} records={records} onSaved={refresh}/></div>
+-  <div id="fold-evidence" hidden={!shown('evidence')}><ProgressPortfolioPanel records={records} documents={documents} submissions={submissions} replies={replies} progress={progress} error={evidenceError} onAssess={e=>{setSource(e);setShowAll(true);window.setTimeout(()=>document.getElementById('marked-skill-check')?.scrollIntoView({behavior:'smooth',block:'start'}),50);}}/></div>
+-  <div id="fold-skills" hidden={!shown('skills')}><div id="marked-skill-check"><SkillProgressPanel key={code} records={records} teacher unit={unit} code={code} source={source||undefined} onSaved={refresh}/></div></div>
+-  <div className="insight-metrics">{metrics.map(m=><Metric key={m.label} label={m.label} value={m.value} detail={m.detail}/>)}</div>
++  <EngagementPanel code={code} teacher source={engagementSource} sourceError={evidenceError} onRefresh={refresh}/>
++  <LearningGoalsPanel key={`goals-${code}-${records.filter(r=>r.body.tutorPrivate?.goalPlan).map(r=>r.created).join('-')||'new'}`} code={code} records={records} onSaved={refresh}/>
++  <ProgressPortfolioPanel records={records} documents={documents} submissions={submissions} replies={replies} progress={progress} error={evidenceError} onAssess={e=>{setSource(e);window.setTimeout(()=>document.getElementById('marked-skill-check')?.scrollIntoView({behavior:'smooth',block:'start'}),50);}}/>
++  <div id="marked-skill-check"><SkillProgressPanel key={code} records={records} teacher unit={unit} code={code} source={source||undefined} onSaved={refresh}/></div>
++  <div className="insight-metrics">
++   <Metric label="Required homework received" value={required.length?`${Math.round(received/required.length*100)}%`:'Not set'} detail={required.length?`${received} of ${required.length} available required tasks received or marked complete; ${reviewed} reviewed.`:`${unclassified} tasks need a required / optional choice.`}/>
++   <Metric label="Saved activity days" value={String(activity.activeDays)} detail="Last 30 days · chats, uploads, answers, replies and quizzes."/>
++   <Metric label="Latest assessed lesson" value={latest?readableDate(latest.date).replace(/^\w+, /,''):'Not assessed'} detail={assessment?`${assessment.checks.filter(c=>c.score!==null).length} scored task checks · Draft; Rory review pending.`:'A prepared deck does not count as a completed lesson.'}/>
++   <Metric label="Retained learning" value={comparisons.some(x=>x.change!==null)?`${comparisons.filter(x=>x.change!==null).length} comparable checks`:'Next check needed'} detail="A later independent task must match the earlier objective and conditions."/>
++   <Metric label="Your teaching" value={teacherScores.length?`${teacherScores.length} checks scored`:'Not scored yet'} detail="Private scores out of 4 for specific teaching actions, supported by lesson evidence."/>
++  </div>
+   <div className="insight-grid">
+-   <article id="fold-homework" hidden={!shown('homework')} className="insight-card"><h3>Homework follow-through</h3><p>Choose which available tasks are required. Optional recap practice is excluded. This percentage measures receipt, not accuracy.</p>{unclassified>0&&<p className="mt-2 font-semibold">{unclassified} unclassified tasks are excluded from the percentage.</p>}
++   <article className="insight-card"><h3>Homework follow-through</h3><p>Choose which available tasks are required. Optional recap practice is excluded. This percentage measures receipt, not accuracy.</p>{unclassified>0&&<p className="mt-2 font-semibold">{unclassified} unclassified tasks are excluded from the percentage.</p>}
+     <p className="mt-3"><strong>{required.filter(x=>x.overdue).length}</strong> required tasks overdue · <strong>{required.filter(x=>x.revision).length}</strong> need revision</p>
+     <div className="insight-task-list">{items.map(x=><div key={x.id}><strong>{x.title}</strong><span>{x.revision?'Revision requested':x.reviewed?'Reviewed / marked complete':x.received?'Received · awaiting review':'Not fully received'}{x.overdue?' · overdue':''}</span><small>{x.due?`Due ${readableDate(x.due)}`:'No deadline set'}</small><label>Requirement<select className={box} value={settings.requirements[x.id]||'unclassified'} onChange={e=>setSettings(s=>({...s,requirements:{...s.requirements,[x.id]:e.target.value as Requirement}}))}><option value="unclassified">Choose required or optional</option><option value="required">Required</option><option value="optional">Optional practice</option></select></label></div>)}</div>{!items.length&&<p className="mt-3">No available tasks in the current unit or school year.</p>}<p className="mt-3 text-xs">Linked chat + writing count as one set, received when both are saved. Opening a task is not completion. The choices here organise your dashboard; student instructions still define the work.</p><button className="re-button re-secondary mt-3" onClick={onReview}>Review answers and uploads</button>
+    </article>
+-   <article id="fold-changes" hidden={!shown('changes')} className="insight-card"><h3>What changed since earlier lessons?</h3><p>Task support scores: 1 = unfinished after help; 2 = substantial help; 3 = small hint; 4 = own words. Accuracy and support are assessed separately.</p>{comparisons.map(x=><div className="insight-check" key={x.task}><strong>{x.task}</strong><span>{x.score===null?'Not assessed':`${x.score} / 4`}</span><p>{x.change===null?'No comparable earlier independent check yet.':`${x.change>0?'+':''}${x.change} support points since ${readableDate(x.before!)} · same recorded protocol.`}</p></div>)}{!comparisons.length&&<p className="mt-3">No scored lesson checks yet.</p>}{assessment&&<p className="mt-3"><strong>Later retention:</strong> {assessment.retainedProgress}</p>}<button className="re-button re-secondary mt-3" onClick={onNotes}>Open all feedback and lesson notes</button>
++   <article className="insight-card"><h3>What changed since earlier lessons?</h3><p>Task support scores: 1 = unfinished after help; 2 = substantial help; 3 = small hint; 4 = own words. Accuracy and support are assessed separately.</p>{comparisons.map(x=><div className="insight-check" key={x.task}><strong>{x.task}</strong><span>{x.score===null?'Not assessed':`${x.score} / 4`}</span><p>{x.change===null?'No comparable earlier independent check yet.':`${x.change>0?'+':''}${x.change} support points since ${readableDate(x.before!)} · same recorded protocol.`}</p></div>)}{!comparisons.length&&<p className="mt-3">No scored lesson checks yet.</p>}{assessment&&<p className="mt-3"><strong>Later retention:</strong> {assessment.retainedProgress}</p>}<button className="re-button re-secondary mt-3" onClick={onNotes}>Open all feedback and lesson notes</button>
+    </article>
+-   <article id="fold-school" hidden={!shown('school')} className="insight-card"><h3>Progress against school expectations</h3><p>{unit?.title||'Current unit not confirmed'}</p><p className="mt-2">Judge the learner against the actual school task and their earlier comparable work. Age alone cannot set an English score.</p><label className="mt-3 block">Confirmed age, class / year, school objectives and success criteria<textarea className={box} rows={4} maxLength={1500} value={settings.schoolContext} onChange={e=>setSettings(s=>({...s,schoolContext:e.target.value}))} placeholder="Record confirmed facts and the expected independent task. Leave unknown details unconfirmed."/></label><p className="mt-2 text-xs">No age or grade benchmark is assigned automatically.</p>
++   <article className="insight-card"><h3>Progress against school expectations</h3><p>{unit?.title||'Current unit not confirmed'}</p><p className="mt-2">Judge the learner against the actual school task and their earlier comparable work. Age alone cannot set an English score.</p><label className="mt-3 block">Confirmed age, class / year, school objectives and success criteria<textarea className={box} rows={4} maxLength={1500} value={settings.schoolContext} onChange={e=>setSettings(s=>({...s,schoolContext:e.target.value}))} placeholder="Record confirmed facts and the expected independent task. Leave unknown details unconfirmed."/></label><p className="mt-2 text-xs">No age or grade benchmark is assigned automatically.</p>
+    </article>
+   </div>
+-  {(shown('homework')||shown('school'))&&<div className="my-4 flex flex-wrap items-center gap-3"><button className="re-button" disabled={busy||JSON.stringify(settings)===JSON.stringify(savedSettings)} onClick={()=>void saveSettings()}>{busy?'Saving…':'Save requirements & school context'}</button>{JSON.stringify(settings)!==JSON.stringify(savedSettings)&&<p className="text-sm">Unsaved dashboard choices</p>}{message&&<p role="status" className="text-sm">{message}</p>}</div>}
+-  <article id="fold-words" hidden={!shown('words')} className="insight-card mb-4"><h3>Unit words in saved conversations</h3><p>Exact words and phrases found in the learner’s captions, checked against the current unit list. Captions can contain recognition mistakes; appearance does not establish correct use, independence or mastery. Variants and synonyms are not automatically counted.</p>{spoken.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3).map(r=>{const coverage=vocabularyCoverage(r.body.transcript!,unit?.voiceVocabulary||[]);return <div className="insight-check" key={r.id}><strong>{r.title} · {readableDate(r.date)}</strong>{coverage?<><p><strong>{coverage.found.length} of {coverage.total} current unit targets found</strong> · {coverage.learnerWords} caption words</p><p>Found: {coverage.found.join(', ')||'None'}</p><details><summary className="cursor-pointer">Targets not found in these captions</summary><p>{coverage.missing.join(', ')||'All targets appeared.'}</p></details></>:<p>Coverage unavailable: no recognised learner captions or verified unit word list.</p>}</div>;})}<p className="mt-3 text-xs">This applies today’s word list to the displayed conversation, even if its topic differed. Speech rate, pronunciation, talk-time share and response latency need separately verified audio timing and are not scored from caption timestamps.</p></article>
+-  <article id="fold-checkpoints" hidden={!shown('checkpoints')} className="insight-card"><h3>Rory’s checkpoints</h3><p>Suggested rhythm: a short retrieval / exit check each lesson; a 15–20-minute checkpoint after a unit or about every 3–4 lessons. Test taught vocabulary, grammar and relevant skills with fresh tasks. Repeat an equivalent independent task later to check retention.</p><CheckpointForm code={code} onSaved={refresh}/>
++  <div className="my-4 flex flex-wrap items-center gap-3"><button className="re-button" disabled={busy||JSON.stringify(settings)===JSON.stringify(savedSettings)} onClick={()=>void saveSettings()}>{busy?'Saving…':'Save requirements & school context'}</button>{JSON.stringify(settings)!==JSON.stringify(savedSettings)&&<p className="text-sm">Unsaved dashboard choices</p>}{message&&<p role="status" className="text-sm">{message}</p>}</div>
++  <article className="insight-card mb-4"><h3>Unit words in saved conversations</h3><p>Exact words and phrases found in the learner’s captions, checked against the current unit list. Captions can contain recognition mistakes; appearance does not establish correct use, independence or mastery. Variants and synonyms are not automatically counted.</p>{records.filter(r=>r.kind==='speaking'&&r.author==='Student'&&r.visibility==='shared'&&r.body.transcript).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3).map(r=>{const coverage=vocabularyCoverage(r.body.transcript!,unit?.voiceVocabulary||[]);return <div className="insight-check" key={r.id}><strong>{r.title} · {readableDate(r.date)}</strong>{coverage?<><p><strong>{coverage.found.length} of {coverage.total} current unit targets found</strong> · {coverage.learnerWords} caption words</p><p>Found: {coverage.found.join(', ')||'None'}</p><details><summary className="cursor-pointer">Targets not found in these captions</summary><p>{coverage.missing.join(', ')||'All targets appeared.'}</p></details></>:<p>Coverage unavailable: no recognised learner captions or verified unit word list.</p>}</div>;})}<p className="mt-3 text-xs">This applies today’s word list to the displayed conversation, even if its topic differed. Speech rate, pronunciation, talk-time share and response latency need separately verified audio timing and are not scored from caption timestamps.</p></article>
++  <article className="insight-card"><h3>Rory’s checkpoints</h3><p>Suggested rhythm: a short retrieval / exit check each lesson; a 15–20-minute checkpoint after a unit or about every 3–4 lessons. Test taught vocabulary, grammar and relevant skills with fresh tasks. Repeat an equivalent independent task later to check retention.</p><CheckpointForm code={code} onSaved={refresh}/>
+    {checkpoints.map((r,i)=>{const c=readCheckpoint(r.body.tutorPrivate?.checkpoint)!,result=checkpointResult(c);let change:number|null=null;for(const previous of checkpoints.slice(i+1)){if(previous.date>=r.date)continue;change=checkpointChange(readCheckpoint(previous.body.tutorPrivate?.checkpoint)!,c);if(change!==null)break;}return <details className="insight-checkpoint" key={r.id}><summary><strong>{r.title} · {readableDate(r.date)}</strong><span>{result?`${result.earned} / ${result.possible} · ${result.percent}%`:'Not fully assessed'}</span></summary><p className="mt-3">{c.objective} · {c.support}</p><p className="mt-2">{change===null?'No comparable earlier checkpoint result.':`${change>0?'+':''}${change} percentage points on a comparable independent checkpoint.`}</p>{c.criteria.map(x=><p className="mt-2" key={x.skill}><strong>{x.skill}: {x.earned??'—'} / {x.possible}</strong> · {x.evidence||'Not checked'}</p>)}<p className="mt-3"><strong>What went well:</strong> {c.strength}</p><p><strong>Practise next:</strong> {c.target}</p><p><strong>Next check:</strong> {c.nextCheck}</p><CheckpointShare code={code} record={r} checkpoint={c} onSaved={refresh}/></details>;})}
+   </article>
+   {latest&&<article className="insight-card mt-4"><h3>Latest lesson and your teaching · {readableDate(latest.date)}</h3><LessonAssessmentPanel key={`${latest.id}-${latest.created}`} record={latest} records={records} code={code} onSaved={()=>void refresh()}/></article>}
+-  <article id="fold-teaching" hidden={!shown('teaching')} className="insight-card mt-4"><h3>Your teaching over time</h3><p>Compare the same teaching action across observed lessons. Each score stays beside its evidence; there is no combined teaching percentage.</p>{lessons.slice(0,5).map(r=>{const a=readLessonAssessment(r.body.tutorPrivate?.lessonAssessment)!;return <details className="insight-checkpoint" key={r.id}><summary>{readableDate(r.date)} · {a.teaching.filter(t=>t.score!=null).length} scored checks</summary>{a.teaching.map(t=><p className="mt-2" key={t.title}><strong>{t.title}: {t.score==null?'Not scored':`${t.score} / 4`}</strong> · {t.observation}</p>)}</details>;})}{!lessons.length&&<p className="mt-3">No observed lesson teaching checks yet.</p>}</article>
+-  <article hidden={!showAll} className="insight-card mt-4"><h3>What {name} and their parents see</h3><p>Required homework instructions, receipt / revision status, Rory-approved strengths, one or two next targets, and dated results with their marks and scope. practice advice stays labelled. Share a lesson summary only after reviewing it; your teaching scores, school-context notes and full draft analyses stay private.</p></article>
+-  {(folds.empty.length>0||showAll)&&<div className="insight-folded" role="group" aria-label="Sections with nothing in them yet">
+-   {showAll?<p><strong>Showing everything.</strong> Sections with nothing in them yet are open too.</p>:<><p><strong>Nothing here yet · {folds.empty.length}</strong> Open one to start it.</p><div>{folds.empty.map(f=><button key={f.id} type="button" onClick={()=>reveal(f.id)}>{f.label}</button>)}</div></>}
+-   <button type="button" className="teacher-quiet-button" aria-pressed={showAll} onClick={()=>setShowAll(x=>!x)}>{showAll?'Show only what has something in it':'Show all'}</button>
+-  </div>}
++  <article className="insight-card mt-4"><h3>Your teaching over time</h3><p>Compare the same teaching action across observed lessons. Each score stays beside its evidence; there is no combined teaching percentage.</p>{lessons.slice(0,5).map(r=>{const a=readLessonAssessment(r.body.tutorPrivate?.lessonAssessment)!;return <details className="insight-checkpoint" key={r.id}><summary>{readableDate(r.date)} · {a.teaching.filter(t=>t.score!=null).length} scored checks</summary>{a.teaching.map(t=><p className="mt-2" key={t.title}><strong>{t.title}: {t.score==null?'Not scored':`${t.score} / 4`}</strong> · {t.observation}</p>)}</details>;})}{!lessons.length&&<p className="mt-3">No observed lesson teaching checks yet.</p>}</article>
++  <article className="insight-card mt-4"><h3>What {name} and their parents see</h3><p>Required homework instructions, receipt / revision status, Rory-approved strengths, one or two next targets, and dated results with their marks and scope. practice advice stays labelled. Share a lesson summary only after reviewing it; your teaching scores, school-context notes and full draft analyses stay private.</p></article>
+  </section>;
+ }
+ function CheckpointForm({code,onSaved}:{code:string;onSaved:()=>Promise<void>}){
+diff --git b/src/lib/dashboard-folds.ts a/src/lib/dashboard-folds.ts
+deleted file mode 100644
+index 7b8f25e..0000000
+--- b/src/lib/dashboard-folds.ts
++++ /dev/null
+@@ -1,21 +0,0 @@
+-// The teacher's Learning dashboard shows the blocks that have something in
+-// them. A block with nothing yet is folded away and named, so Rory can open it
+-// to start it; nothing is removed and "Show all" brings the whole page back.
+-
+-export const DASHBOARD_FOLDS=[
+-  {id:'goals',label:'School profile & learning goals'},
+-  {id:'evidence',label:'Evidence record'},
+-  {id:'skills',label:'Skills & vocabulary checks'},
+-  {id:'homework',label:'Homework follow-through'},
+-  {id:'changes',label:'Change since earlier lessons'},
+-  {id:'school',label:'School expectations'},
+-  {id:'words',label:'Unit words in conversations'},
+-  {id:'checkpoints',label:'Your checkpoints'},
+-  {id:'teaching',label:'Your teaching over time'},
+-] as const;
+-export type DashboardFold=typeof DASHBOARD_FOLDS[number]['id'];
+-
+-/** Which blocks have something in them, and the ones that do not, in page order. */
+-export function dashboardFolds(has:Record<DashboardFold,boolean>){
+-  return {has,empty:DASHBOARD_FOLDS.filter(fold=>!has[fold.id])};
+-}
+diff --git b/tests/dashboard-folds.test.mjs a/tests/dashboard-folds.test.mjs
+deleted file mode 100644
+index a136aea..0000000
+--- b/tests/dashboard-folds.test.mjs
++++ /dev/null
+@@ -1,30 +0,0 @@
+-import test from "node:test";
+-import assert from "node:assert/strict";
+-import fs from "node:fs";
+-import vm from "node:vm";
+-import ts from "typescript";
+-
+-// The modules under test are import-free on purpose, so they load as plain scripts.
+-function load(file) {
+-  const exports = {};
+-  const src = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+-  vm.runInNewContext(src, { exports, module: { exports } });
+-  return exports;
+-}
+-const plain = v => JSON.parse(JSON.stringify(v));
+-const read = f => fs.readFileSync(f, "utf8");
+-const folds = load("src/lib/dashboard-folds.ts");
+-
+-test("the learning dashboard folds only what is empty, names it, and can show everything", () => {
+-  const all = Object.fromEntries(folds.DASHBOARD_FOLDS.map(f => [f.id, true]));
+-  assert.deepEqual(plain(folds.dashboardFolds(all).empty), []);
+-  const some = folds.dashboardFolds({ ...all, goals: false, checkpoints: false });
+-  assert.deepEqual(plain(some.empty.map(f => f.label)), ["School profile & learning goals", "Your checkpoints"]);
+-  const view = read("src/components/views/TeacherInsights.tsx");
+-  for (const fold of folds.DASHBOARD_FOLDS) assert.ok(view.includes(`id="fold-${fold.id}"`), `the ${fold.id} block can be scrolled to when it is opened`);
+-  // Folded blocks stay mounted (hidden), so an open form keeps what was typed.
+-  assert.match(view, /hidden=\{!shown\('checkpoints'\)\}/);
+-  assert.match(view, /Show all/);
+-  // Assessing a piece of evidence opens the skills form even when it was folded.
+-  assert.match(view, /setSource\(e\);setShowAll\(true\)/);
+-});
