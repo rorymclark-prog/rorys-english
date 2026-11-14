@@ -21,11 +21,16 @@ export interface HomeworkTask {
   id: string;
   type: HomeworkTaskType;
   prompt: string;
+  /** Short action heading displayed above the full instructions. */
+  title?: string;
+  /** Optional practice is excluded from the required answer form. */
+  optional?: boolean;
   /** For `written` tasks: number of lined rows. Defaults to 3. */
   lines?: number;
 }
 
 export interface HomeworkWeek {
+  focus?: "writing-spelling";
   /** Non-English supplementary checks keep their subject visible. */
   subject?: "english" | "maths";
   week: number;

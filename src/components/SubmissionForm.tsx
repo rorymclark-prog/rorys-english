@@ -11,7 +11,7 @@ import AnswerWithPhotos from "@/components/AnswerWithPhotos";
 import {handwritingParts} from "@/lib/handwritten-answer";
 import ReviewTiming from "@/components/ReviewTiming";
 import {useReviewRefresh} from "@/lib/use-review-refresh";
-export interface AnswerField {id:string;prompt:string;type?:string}
+export interface AnswerField {id:string;prompt:string;type?:string;title?:string}
 export default function SubmissionForm({code,unit,task,title,fields,initialAnswers={},onSaved,onSubmitted}:{code:string;unit:string;task:string;title?:string;fields:AnswerField[];initialAnswers?:Record<string,string>;onSaved?:(answers:Record<string,string>)=>void;onSubmitted?:()=>void}) {
   const preview=isStudentPreview(code);
   const key=`re_draft_v2_${code}_${unit}_${task}`;
@@ -67,7 +67,8 @@ export default function SubmissionForm({code,unit,task,title,fields,initialAnswe
   const unchanged=last && JSON.stringify(last.answers)===JSON.stringify(answers);
   return <div className="space-y-4">
     {fields.map(f=><label key={f.id} className="block rounded-card bg-surface p-4 shadow-card dark:bg-navy-raised">
-      <span className="mb-2 block font-semibold"><FeedbackText text={f.prompt}/></span>
+      {f.title&&<span className="mb-2 block text-xl font-bold">{f.title}</span>}
+      <span className={`mb-2 block ${f.title?"":"font-semibold"}`}><FeedbackText text={f.prompt}/></span>
       {f.type==="voice" && <span className="mb-2 block text-sm">This box submits your note, not an audio file. A Speaking studio rehearsal stays on your device. Send a recording privately only if the task asks you to.</span>}
       {f.type==="checkbox" && <span className="mb-2 block text-sm">Tell Rory what you practised or what you found difficult.</span>}
       <textarea aria-label={f.prompt} disabled={preview||!ready||!!pending||busy||photoBusy} value={answers[f.id]||""} onChange={e=>edit(f.id,e.target.value)} rows={f.type==="written"?5:2} maxLength={6000} className="w-full rounded-lg border border-slate-300 bg-transparent p-3 disabled:opacity-60"/>

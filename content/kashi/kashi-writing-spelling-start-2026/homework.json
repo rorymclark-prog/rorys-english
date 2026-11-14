@@ -4,7 +4,7 @@
     "title": "Session 1 · Your first writing sample",
     "due": "",
     "estimatedMinutes": 15,
-    "description": "Start here. Save your own first attempt before asking for corrections. This is a starting sample, not a formal test. If the writing takes longer, stop at a sensible point and tell Rory.",
+    "description": "Writing and spelling come first. Write your own answer below, then click Send answers to Rory. About 15 minutes. The short AI chat is optional.",
     "objectives": [
       "Share your own ideas in complete sentences.",
       "Save a first writing sample so Rory can plan useful spelling and writing practice."
@@ -12,30 +12,34 @@
     "source": "Rory’s original supplementary English practice, 12 November 2026; not a textbook task.",
     "tasks": [
       {
-        "id": "kashi-start-conversation",
-        "type": "voice",
-        "prompt": "Spend about 3 minutes talking about a hobby, game, film or sport you enjoy. Open Speak and choose Build sentences or Everyday conversation. Explain what you enjoy, describe something that happened recently, and give a reason for your opinion. Use your own ideas. Save the conversation before returning here. This conversation helps you gather ideas; it does not test your spelling."
-      },
-      {
         "id": "kashi-start-writing-original",
         "type": "written",
-        "prompt": "Now write 80–120 words about a small problem you solved or an enjoyable day. Say what happened, why it mattered and what you would do next time. Real or invented details are fine. Use your own words without asking an AI to write it for you. Save your first attempt before getting corrections. If that is too much, write 5–6 sentences and tell Rory. You may attach clear photos of handwriting instead.",
-        "lines": 10
+        "prompt": "Write 80–120 words about an enjoyable day or a small problem you solved. Real or invented is fine. Say what happened, what you did, why it mattered and what you would do next time. Use your own words. If that feels too much, write 5–6 sentences. Try it yourself before using corrections. Type below or add a clear photo of your handwriting.",
+        "lines": 10,
+        "title": "1. Write about one day or a small problem"
       },
       {
         "id": "kashi-start-reflection",
         "type": "written",
-        "prompt": "What felt easy, and what would you like help with? Tell Rory if you used spelling suggestions, a dictionary or any other help.",
-        "lines": 3
+        "prompt": "List any words you were unsure how to spell. Tell Rory what felt difficult and whether you used spelling suggestions, a dictionary or other help. It is fine to say “none”. Then click Send answers to Rory.",
+        "lines": 3,
+        "title": "2. Tell Rory which words were tricky"
+      },
+      {
+        "id": "kashi-start-conversation",
+        "type": "voice",
+        "prompt": "Optional · Talk through the same enjoyable day or small problem as your writing. The AI asks one question at a time: what happened, what you did, why it mattered and what you would do next time. About 3 minutes. This helps organise ideas; it does not check spelling. No separate recording or written chat report is needed.",
+        "optional": true
       }
-    ]
+    ],
+    "focus": "writing-spelling"
   },
   {
     "week": 2,
     "title": "Session 2 · Spelling and a better draft",
     "due": "",
     "estimatedMinutes": 15,
-    "description": "Do this after saving Session 1. Keep your original writing. Use any feedback that is available; if it is not ready, choose words you are unsure of rather than assuming they are wrong. We will choose later lessons from what your work shows.",
+    "description": "After Session 1: practise five spellings, improve your paragraph, then click Send answers to Rory. About 15 minutes. Keep your first version unchanged. The short AI chat is optional.",
     "objectives": [
       "Practise five useful words from your own writing.",
       "Improve a paragraph while keeping the original and revision separate."
@@ -45,15 +49,24 @@
       {
         "id": "kashi-personal-word-log",
         "type": "written",
-        "prompt": "Choose five useful words from your first paragraph that you are unsure how to spell, or use words identified in your feedback. Check each spelling. Read it, cover it, write it from memory, then check it again. Below, list the five words and write one new sentence using each. Tell Rory which words you had to correct.",
-        "lines": 10
+        "prompt": "Open your Session 1 writing in another tab, or use your handwritten copy. Choose five words you were unsure how to spell, or use words from your feedback. Check each spelling in a dictionary. Look, cover, write from memory, then check. Below, list the five words and write one new sentence with each. Say which spellings you corrected. If feedback is not ready, use words you are unsure of; they may already be right.",
+        "lines": 10,
+        "title": "1. Practise five spellings"
       },
       {
         "id": "kashi-first-revision",
         "type": "written",
-        "prompt": "Re-read your first paragraph. Check sentence endings, capitals, clear word order and the five spellings you practised. Use any feedback to improve it in your own words. Paste or write your revised paragraph here, leaving Session 1 unchanged. Then add one sentence explaining what you changed. An AI may explain a correction, but should not write the paragraph for you.",
-        "lines": 10
+        "prompt": "Write an improved version of your Session 1 paragraph below, or add a clear photo. Check capitals, full stops, word order and your five spellings. Keep your original in Session 1 unchanged. Add one sentence saying what you changed. Use your own words; an AI may explain a correction, but should not write your paragraph. Then click Send answers to Rory.",
+        "lines": 10,
+        "title": "2. Improve your paragraph"
+      },
+      {
+        "id": "kashi-revision-conversation",
+        "type": "voice",
+        "optional": true,
+        "prompt": "Optional · Talk about one sentence you want to improve from Session 1. Read it aloud or tell the AI your idea. It asks what you mean and helps you say one clearer sentence. You then write and check the spelling yourself. About 3 minutes. No separate recording or chat report is needed."
       }
-    ]
+    ],
+    "focus": "writing-spelling"
   }
 ]

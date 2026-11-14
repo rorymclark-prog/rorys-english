@@ -5,7 +5,7 @@ import ferdiTasks from '../../content/ferdi/english-in-context5-unit01-2026/home
 import valentinTasks from '../../content/valentin/way2go8-unit01-2026/homework.json';
 import ferdiArchive from '../../content/ferdi/unit10/homework.json';
 import valentinArchive from '../../content/valentin/unit05/homework.json';
-export type RingUnit={id:string;title:string;year:string;available:boolean;active:boolean;homework:{week:number;title:string;availableFrom?:string;tasks:{type:string}[]}[]};
+export type RingUnit={id:string;title:string;year:string;available:boolean;active:boolean;homework:{week:number;title:string;availableFrom?:string;tasks:{type:string;optional?:boolean}[]}[]};
 // Student and parent codes both start with the learner they belong to ("<learner>-…"), so the
 // catalogue never needs the sign-in codes themselves in public browser code.
 function codeLearner(code:string):'ferdi'|'valentin'|null{return code.startsWith('ferdi-')?'ferdi':code.startsWith('valentin-')?'valentin':null;}
@@ -22,6 +22,6 @@ export function practiceCourse(code:string){const plan=plans.find(p=>p.studentId
 export function ringWritingPath(code:string,unit:RingUnit|undefined,lessonId:string|undefined,today:string){
  if(lessonId)return `/s/${code}/progress/#write-${lessonId}`;
  const available=unit?.homework.filter(h=>(!h.availableFrom||h.availableFrom<=today)&&h.tasks.some(t=>t.type==='written'))||[];
- const task=available.find(h=>/\b(writing|write|email|essay|blog|letter|draft|revision)\b/i.test(h.title))||available.find(h=>!h.tasks.some(t=>t.type==='voice'))||available[0];
+ const task=available.find(h=>/\b(writing|write|email|essay|blog|letter|draft|revision)\b/i.test(h.title))||available.find(h=>!h.tasks.some(t=>t.type==='voice'&&!t.optional))||available[0];
  return task?`/s/${code}/lessons/${unit!.id}/homework/${task.week}/`:`/s/${code}/lessons/`;
 }

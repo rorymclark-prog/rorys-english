@@ -75,7 +75,7 @@ export function ringEvidence(source:EngagementSource,code:string,today:string){
   if(!r.answer.startsWith('Weekly practice · Writing')&&hasWriting(parts.text))add('reply:'+r.id,'writing','Writing · '+target.title,r.created,unit,lesson);
  }
  for(const s of source.submissions){if(!eventDay(s.submitted)||eventDay(s.submitted)!>today||softwareCheck(s.title,s.task))continue;const unit=units.find(u=>u.id===s.unit),hw=unit?.homework.find(h=>`hw:${h.week}`===s.task);
-  const writing=/\b(writing|write|email|essay|blog|letter|draft|revision)\b/i.test(s.title||'')||!!hw&&hw.tasks.some(t=>t.type==='written')&&!hw.tasks.some(t=>t.type==='voice');if(!writing)continue;
+  const writing=/\b(writing|write|email|essay|blog|letter|draft|revision)\b/i.test(s.title||'')||!!hw&&hw.tasks.some(t=>t.type==='written')&&!hw.tasks.some(t=>t.type==='voice'&&!t.optional);if(!writing)continue;
   const values=Object.values(s.answers||{}),linked=values.flatMap(a=>handwritingParts(a).documentIds).filter(id=>docIds.has(id));
   if(linked.length){for(const id of linked){const item=items.get('document:'+id);if(item){item.counted=true;item.unit=unit?.id||'';}}}
   else if(values.some(a=>hasWriting(handwritingParts(a).text)))add('submission:'+s.id,'writing',s.title||hw?.title||'Writing submission',s.submitted,unit?.id||'');
