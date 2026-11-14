@@ -14,9 +14,31 @@ export type GuidedSpeaking = {
   purpose?: string;
   duration: string;
   instructions: string;
+  optional?: boolean;
+  maxSeconds?: number;
 };
 
 const conversations: GuidedSpeaking[] = [
+  {
+    id: "kashi-chat-1", learner: "kashi", unitId: "kashi-writing-spelling-start-2026", week: 1,
+    topic: "story", unitLabel: "WRITING AND SPELLING", title: "Talk through your story.", savedTitle: "Writing and spelling · Session 1: story ideas",
+    optional: true, maxSeconds: 180, duration: "3 minutes",
+    focus: "Organise your own ideas for the same enjoyable day or small problem as your writing.",
+    cue: "What happened → what you did → why it mattered → next time",
+    prompt: "Talk about the enjoyable day or small problem you chose for Session 1. The AI will ask one short question at a time. Real or invented is fine.",
+    purpose: "Saying your ideas aloud can help you organise your writing. Your written work is the main task; this chat cannot check your spelling.",
+    instructions: "This is Kashi's optional Session 1 writing rehearsal, about three minutes. Writing and spelling are the main goals. Briefly introduce yourself as the AI partner, explain that this optional chat helps organise ideas, then ask: What enjoyable day or small problem will you write about? Use that same topic throughout. Ask one short question at a time, waiting for the learner's own answer: what happened, what they did, why it mattered, and what they would do next time. Accept invented details. Do not switch to an unrelated hobby, game, film or sport. If the learner is stuck, offer one short sentence starter and let them finish it. Do not dictate or write the finished 80–120-word homework or supply a complete example paragraph. Do not claim to have read their writing. Do not assess spelling from spoken answers or captions. After these ideas, briefly name one clear idea they supplied, then say: End this conversation, return to Session 1, and write your own answer. If they already wrote, invite one detail they might improve while preserving the original. Do not add further homework or require a separate recording or written chat report.",
+  },
+  {
+    id: "kashi-chat-2", learner: "kashi", unitId: "kashi-writing-spelling-start-2026", week: 2,
+    topic: "story", unitLabel: "WRITING AND SPELLING", title: "Make one sentence clearer.", savedTitle: "Writing and spelling · Session 2: improve one sentence",
+    optional: true, maxSeconds: 180, duration: "3 minutes",
+    focus: "Explain one idea from your first paragraph and say one clearer sentence before writing it yourself.",
+    cue: "Your sentence → your meaning → your improved sentence",
+    prompt: "Read aloud one sentence you want to improve from Session 1, or explain your idea. The AI will help you make that one sentence clearer. Write and check the spelling yourself afterwards.",
+    purpose: "A short spoken retry can help you make one sentence clearer. The required work is still your five spellings and revised paragraph.",
+    instructions: "This is Kashi's optional Session 2 writing revision rehearsal, about three minutes. Writing and spelling remain the main goals. Introduce yourself briefly as the AI partner, then ask: Which one sentence from your first paragraph would you like to improve? Ask the learner to read it aloud or explain the idea; you cannot see their saved paragraph and must not claim to have read it. If they have no paragraph yet, direct them back to finish Session 1 rather than inventing a completed submission. Ask one short question about what they mean or one useful detail. Offer at most one short explanation or sentence starter when needed, then let them produce their own clearer sentence. Do not rewrite the paragraph or dictate the complete homework. Do not infer misspellings from speech or captions, select five supposedly wrong words without written evidence, or claim to have checked spelling by listening. End by asking them to return to Session 2, write their improved sentence in their own revised paragraph, check their five chosen spellings in writing, and click Send answers to Rory. Keep the original separate. Do not require a separate recording or chat report or add more work.",
+  },
   {
     id: "ferdi-chat-1", learner: "ferdi", unitId: "english-in-context5-unit01-2026", week: 1,
     topic: "story", unitLabel: "FAMILY LIFE", title: "Tell a family day-out story.", savedTitle: "Family life · Chat 1: story",
@@ -55,4 +77,8 @@ export function guidedSpeaking(studentCode: string, id: string | null | undefine
 
 export function guidedSpeakingForHomework(studentCode: string, unitId: string, week: number): GuidedSpeaking | null {
   return conversations.find(chat => studentCode.startsWith(`${chat.learner}-`) && chat.unitId === unitId && chat.week === week) || null;
+}
+
+export function optionalGuidedSpeaking(studentCode: string): GuidedSpeaking[] {
+  return conversations.filter(chat => chat.optional && studentCode.startsWith(`${chat.learner}-`));
 }
