@@ -11,6 +11,10 @@ export function inboxDestination(event:InboxEvent,teacher:boolean,studentCode=ev
     if(practice.source==='document')query.set('document',practice.id);
     if(practice.source==='submission')query.set('submission',practice.id);
     if(practice.source==='reply'&&practice.record&&/^[A-Za-z0-9_-]{8,100}$/.test(practice.record))query.set('record',practice.record);
+    if(practice.summary){
+      query.delete('attempt');query.set('practice',practice.source==='document'?practice.id:`${practice.source}:${practice.id}`);
+      return '/teacher/?'+query.toString()+'#saved-practice';
+    }
     return '/teacher/?'+query.toString()+'#practice-'+encodeURIComponent(practice.attempt);
   }
   if(teacher){

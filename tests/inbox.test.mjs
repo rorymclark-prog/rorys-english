@@ -87,22 +87,23 @@ test('message history paginates without gaps and daily limits preserve existing 
  const earlier=f.post({...p,before:latest.messages[0].id});assert.equal(earlier.messages.length,5);assert.equal(earlier.hasEarlier,false);
  assert.equal(new Set([...earlier.messages,...latest.messages].map(m=>m.id)).size,305);
 });
-test('practice notifications use immutable attempt dates, keep retries separate and never notify parents or students',()=>{
+test('practice summaries combine a homework’s questions and retries at the latest student save time',()=>{
  const f=setup(),ss=f.ctx.studentSheet_('student-a'),docs=ss.insertSheet('Documents'),practice=ss.insertSheet('Document practice');
- const doc=randomUUID(),first=randomUUID(),retry=randomUUID(),saved='2026-11-12T06:29:41.327Z';
- docs.appendRow(f.ctx.DOCUMENT_HEADERS_);docs.appendRow([doc,'October school play','2026-10-08T12:00:00Z','Student','[]','ready',JSON.stringify({workType:'writing',exercises:[{id:'present-s',focus:'Present simple'}]})]);
+ const doc=randomUUID(),first=randomUUID(),retry=randomUUID(),another=randomUUID(),saved='2026-11-12T06:29:41.327Z';
+ docs.appendRow(f.ctx.DOCUMENT_HEADERS_);docs.appendRow([doc,'School play · Hugh and Alice','2026-10-08T12:00:00Z','Student','[]','ready',JSON.stringify({workType:'writing'}),'','','','[Work source: School homework — set by the school]']);
  practice.appendRow(['Id','Document','Review version','Exercise','Created','Answer JSON','Result JSON']);
  practice.appendRow([first,doc,'v1','present-s',saved,'"listen"','{}']);
  practice.appendRow([retry,doc,'v1','present-s','2026-11-12T06:30:14.757Z','"listens"','{}']);
- practice.appendRow([first,doc,'v1','present-s',saved,'"listen"','{}']); // uncertain save retry has the same source ID
- const t=f.teacher(),read=()=>f.post({action:'teacherNotifications',session:t});
- const events=read().events.filter(e=>e.kind==='practice');assert.equal(events.length,2);
- assert.equal(events[1].at,saved);assert.equal(events[0].practice.attempt,retry);assert.equal(events[0].practice.id,doc);assert.equal(events[0].practice.source,'document');
- assert.equal(events[0].detail,'October school play · Present simple');assert.equal(JSON.stringify(events).includes('listens'),false);
- f.post({action:'notificationsRead',code:'student-a',session:t,ids:['practice:'+first]});
- assert.equal(read().events.find(e=>e.id==='practice:'+first).read,true);assert.equal(read().events.find(e=>e.id==='practice:'+retry).read,false);
- docs.data[1][6]=JSON.stringify({workType:'writing',exercises:[{id:'present-s',focus:'Revised feedback'}]});
- assert.equal(read().events.filter(e=>e.kind==='practice').length,2);assert.equal(read().events.find(e=>e.id==='practice:'+first).at,saved);
+ practice.appendRow([first,doc,'v1','present-s',saved,'"listen"','{}']);
+ practice.appendRow([another,doc,'v1','preposition','2026-11-12T06:40:00Z','"at"','{}']);
+ const t=f.teacher(),read=()=>f.post({action:'teacherNotifications',session:t}),groups=()=>read().events.filter(e=>e.kind==='practice');
+ assert.equal(groups().length,1);const event=groups()[0];
+ assert.equal(event.at,'2026-11-12T06:40:00.000Z');assert.equal(event.id,'practice:'+another);assert.equal(event.practice.attemptCount,3);assert.equal(event.practice.exerciseCount,2);assert.equal(event.practice.summary,true);
+ assert.equal(event.title,'Practice: School play · Hugh and Alice');assert.equal(event.detail,'School homework · 2 exercises practised · 3 saved answers');assert.equal(JSON.stringify(event).includes('listens'),false);
+ const mark={action:'notificationsRead',code:'student-a',session:t,ids:[event.id]};assert.equal(f.post(mark).ok,true);assert.equal(groups()[0].read,true);
+ docs.data[1][6]=JSON.stringify({workType:'writing',summary:'Updated teacher feedback'});assert.equal(groups().length,1);assert.equal(groups()[0].at,event.at);assert.equal(groups()[0].read,true);
+ const latest=randomUUID();practice.appendRow([latest,doc,'v1','present-s','2026-11-14T06:00:00Z','"listens"','{}']);
+ assert.equal(groups().length,1);assert.equal(groups()[0].practice.attemptCount,4);assert.equal(groups()[0].read,false);assert.equal(groups()[0].id,'practice:'+latest);
  assert.equal(f.post({action:'notifications',code:'student-a',session:f.student()}).events.filter(e=>e.kind==='practice').length,0);
  assert.equal(f.post({action:'notifications',code:'student-a',session:t,preview:true}).events.filter(e=>e.kind==='practice').length,0);
 });

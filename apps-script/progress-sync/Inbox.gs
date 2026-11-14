@@ -12,6 +12,39 @@ function inboxRows_(code,name){var sh=inboxSheet_(code,name,false);return sh?sh.
 function inboxIso_(value){if(value instanceof Date)return value.toISOString();var t=String(value||'');if(/^\d{4}-\d{2}-\d{2}T/.test(t)&&isFinite(Date.parse(t)))return new Date(t).toISOString();if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(t))return Utilities.parseDate(t,'Europe/Vienna','yyyy-MM-dd HH:mm').toISOString();return '';}
 function inboxMessages_(code){return inboxRows_(code,'Messages').map(function(r){return {id:String(r[0]),created:inboxIso_(r[1]),sender:String(r[2]),text:JSON.parse(r[3]||'""')};});}
 function inboxReads_(code,audience){var ids={};inboxRows_(code,'Inbox reads').forEach(function(r){if(r[1]===audience)ids[String(r[0])]=true;});return ids;}
+// One notification per original piece of homework, across its practice questions
+// and retries. Its newest immutable attempt supplies the date and read receipt;
+// a later saved answer makes the summary unread again without rewriting history.
+function inboxPracticeGroups_(code){
+  var sources={},submissions={},replies={},assignments={},groups={},seen={};
+  inboxRows_(code,'Documents').forEach(function(r){sources[String(r[0])]=r;});
+  inboxRows_(code,'Submissions').forEach(function(r){submissions[String(r[0])]=r;});
+  inboxRows_(code,'Learning replies').forEach(function(r){replies[String(r[0])]=r;});
+  var assignmentRows=inboxRows_(code,'Assignments');
+  if(typeof numberedHomeworkRows_==='function')assignmentRows=numberedHomeworkRows_(assignmentRows);
+  assignmentRows.forEach(function(r){assignments[String(r[5])]=r;});
+  inboxRows_(code,'Document practice').forEach(function(r){
+    var attempt=String(r[0]||''),at=inboxIso_(r[4]),key=String(r[1]||''),match=/^(submission|reply):(.+)$/.exec(key),kind=match?match[1]:'document',id=match?match[2]:key;
+    if(!documentId_(attempt)||!documentId_(id)||!at||!r[3]||seen[attempt])return;
+    var source,title,record='',context='Writing feedback';
+    if(kind==='document'){
+      source=sources[id];if(!source)return;title=source[1];
+      if(/\[Work source: School homework/.test(String(source[10]||'')))context='School homework';
+      else if(/\[Work source: Rory/.test(String(source[10]||'')))context='Homework from Rory';
+    }else if(kind==='submission'){
+      source=submissions[id];if(!source)return;var assignment=source[2]==='assigned'?assignments[String(source[1])]:null;
+      title=assignment?assignment[1]:source[8]||source[1];context='Homework from Rory';
+    }else{
+      source=replies[id];if(!source||source[4]!=='Student')return;
+      var parent=learningFind_(code,source[1]);if(!parent)return;record=String(parent[0]);title=parent[4];context='Lesson practice';
+    }
+    seen[attempt]=true;
+    var group=groups[key];if(!group)group=groups[key]={kind:kind,id:id,title:String(title||'Saved writing'),context:context,record:record,count:0,questions:{},latest:{id:attempt,at:at}};
+    group.count++;group.questions[String(r[2])+':'+String(r[3])]=true;
+    if(at>group.latest.at||at===group.latest.at&&attempt>group.latest.id)group.latest={id:attempt,at:at};
+  });
+  return Object.keys(groups).map(function(key){var g=groups[key];g.exercises=Object.keys(g.questions).length;delete g.questions;return g;});
+}
 function inboxEvents_(code,teacher){
   var events=[],seen={},base='/s/'+encodeURIComponent(code),reader=teacher?'teacher':'student',reads=inboxReads_(code,reader);
   function add(id,at,kind,title,detail,view){at=inboxIso_(at);if(!at||seen[id])return;seen[id]=true;events.push({id:id,code:code,at:at,kind:kind,title:String(title).slice(0,180),detail:detail,view:view,read:!!reads[id]});}
@@ -26,24 +59,10 @@ function inboxEvents_(code,teacher){
     DOCUMENT_CHECKS_CACHE_=documentChecks_(code);
     DOCUMENT_LEARNING_CACHE_=learningLatest_(code,'teacher').filter(function(r){return r[5]==='shared';});
     inboxRows_(code,'Documents').forEach(function(r){var d=documentPublic_(r,false,true);if(r[3]!=='Student'&&!d.needsTeacherCheck)return;if(d.workType==='conversation'||d.workType==='recording'){if(d.conversationId){var speech=events.filter(function(e){return e.id==='speaking:'+d.conversationId;})[0];if(speech)speech.needsCheck=!!d.needsTeacherCheck;}return;}add('document:'+r[0],r[2],'upload',d.needsTeacherCheck?'Check feedback':r[9]?'Revision uploaded':'Work uploaded',String(r[1]||'Document'),'documents');var event=events.filter(function(e){return e.id==='document:'+r[0];})[0];if(event)event.needsCheck=!!d.needsTeacherCheck;});
-    // Each immutable student attempt has its own receipt and original save time.
-    // Reading this list never creates a sheet, regenerates feedback or marks work.
-    var documents={},submissions={},replies={};
-    inboxRows_(code,'Documents').forEach(function(r){documents[String(r[0])]=r;});
-    inboxRows_(code,'Submissions').forEach(function(r){submissions[String(r[0])]=r;});
-    inboxRows_(code,'Learning replies').forEach(function(r){replies[String(r[0])]=r;});
-    inboxRows_(code,'Document practice').forEach(function(r){
-      if(!documentId_(String(r[0]||'')))return;
-      var key=String(r[1]||''),match=/^(submission|reply):(.+)$/.exec(key),kind=match?match[1]:'document',id=match?match[2]:key,source,title,analysis,record;
-      if(!documentId_(id))return;
-      if(kind==='document'){source=documents[id];if(!source)return;title=source[1];try{analysis=JSON.parse(source[6]||'null');}catch(e){}}
-      else if(kind==='submission'){source=submissions[id];if(!source)return;title=source[8]||source[1];}
-      else {source=replies[id];if(!source||source[4]!=='Student')return;record=learningFind_(code,source[1]);if(!record)return;title=record[4];}
-      if(kind!=='document'&&typeof workFeedbackLatest_==='function'){var state=workFeedbackLatest_(code,key);analysis=state&&state.analysis;}
-      var exercise=analysis&&(analysis.exercises||[]).filter(function(e){return e.id===r[3];})[0];
-      add('practice:'+r[0],r[4],'practice','Practice attempt saved',String(title||'Saved work')+(exercise?' · '+exercise.focus:''),kind==='document'?'documents':kind==='submission'?'review':'learning');
-      var event=events.filter(function(e){return e.id==='practice:'+r[0];})[0];
-      if(event)event.practice={source:kind,id:id,attempt:String(r[0]),record:record?String(record[0]):''};
+    inboxPracticeGroups_(code).forEach(function(g){
+      add('practice:'+g.latest.id,g.latest.at,'practice','Practice: '+g.title,g.context+' · '+g.exercises+' '+(g.exercises===1?'exercise':'exercises')+' practised · '+g.count+' saved '+(g.count===1?'answer':'answers'),g.kind==='document'?'documents':g.kind==='submission'?'review':'learning');
+      var event=events.filter(function(e){return e.id==='practice:'+g.latest.id;})[0];
+      if(event)event.practice={source:g.kind,id:g.id,attempt:g.latest.id,record:g.record,summary:true,attemptCount:g.count,exerciseCount:g.exercises};
     });
     calendarRows_(code,'School test calendar').forEach(function(r){if(r.updatedBy==='student')add('test:'+r.id+':'+r.sequence,r.updatedAt,'test',r.status==='cancelled'?'School test cancelled':r.sequence?'School test updated':'School test added',String(r.title||'School test'),'calendar');});
     calendarRows_(code,'Lesson requests').forEach(function(r){if(r.role==='student')add('request:'+r.id,r.createdAt,'request','Lesson change requested','Open Calendar to respond.','calendar');});

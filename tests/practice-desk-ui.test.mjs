@@ -16,7 +16,7 @@ function componentHarness(file,mocks,props){
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>name==='react'?react:name==='react/jsx-runtime'?jsxRuntime:mocks[name]||pureModules[name]||(()=>{throw Error(name);})(),window,URLSearchParams,Intl,Date,Error,encodeURIComponent});
  const cleanups=[];
  function render(){cursor=refCursor=effectCursor=0;const tree=exports.default(props);while(effects.length){const cleanup=effects.shift()();if(cleanup)cleanups.push(cleanup);}return tree;}
- return {render,html:()=>renderToStaticMarkup(render()),event:name=>listeners.get(name)?.(),unmount:()=>cleanups.forEach(fn=>fn()),props};
+ return {search:value=>{window.location.search=value;},render,html:()=>renderToStaticMarkup(render()),event:name=>listeners.get(name)?.(),unmount:()=>cleanups.forEach(fn=>fn()),props};
 }
 function find(element,predicate){if(!React.isValidElement(element))return null;if(predicate(element))return element;for(const child of React.Children.toArray(element.props.children)){const match=find(child,predicate);if(match)return match;}return null;}
 const exercise={id:'past-001',type:'choice',prompt:'Yesterday, I ___ home.',focus:'Past simple',options:['go','went'],example:'SECRET GUIDANCE',explanation:'SECRET EXPLANATION'};
@@ -69,4 +69,11 @@ test('read-only teacher and learner previews retain choices without forms or old
  for(const options of [{disabled:true,teacher:true},{disabled:true,preview:true}]){
   const h=exerciseHarness(options),html=h.html();assert.match(html,/<li>go<\/li>/);assert.match(html,/<li>went<\/li>/);assert.doesNotMatch(html,/<select|<textarea|Save this try|OLD ANSWER|OLD EXAMPLE|SECRET/);assert.equal(h.requests.length,0);
  }
+});
+
+
+test('a grouped teacher practice link opens all retries with their saved dates',()=>{
+ const h=exerciseHarness({teacher:true,disabled:true,attempts:[old,{...old,id:'second-answer',answer:'went',created:'2026-11-12T06:30:00Z'}]});
+ h.props.hidePreviousUntilAttempt=false;h.search('?practice=document-001');
+ const html=h.html();assert.match(html,/<details open/);assert.match(html,/2 saved attempts/);assert.match(html,/OLD ANSWER/);assert.match(html,/went/);assert.match(html,/2026-11-12T06:30:00Z/);
 });
