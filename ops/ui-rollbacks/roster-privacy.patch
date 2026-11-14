@@ -1,11 +1,11 @@
 diff --git b/design/MODERN-2026-SPEC.md a/design/MODERN-2026-SPEC.md
-index 8417171..8f7ff5f 100644
+index b6a7d2e..e89bffa 100644
 --- b/design/MODERN-2026-SPEC.md
 +++ a/design/MODERN-2026-SPEC.md
-@@ -108,7 +108,3 @@ Four separate steps, each with its own rollback area.
- - **Four teacher tabs (`teacher-tabs`).** One student's workspace shows Dashboard, Work, Teach and Results. The seven sections and their `?section=` addresses are unchanged; `TEACHER_GROUPS` and `TEACHER_FIND_SECTIONS` in `src/lib/find.ts` are the only list, and the workspace draws tabs and the row of pages from it. A tab opens on its first page; a tab with one page shows no second row.
- - **Needs you today (`needs-you`).** The teacher home opens with one list from `teacherNotifications` and the student summaries: unread messages, feedback to check, new work, then students with no saved activity for seven days. One row per student per kind, oldest wait first, six rows at most. A failed check says so and never reads as all clear. The list marks nothing as read.
- - **Dashboard folds (`dashboard-folds`).** A block of the learning dashboard with nothing in it is hidden, not unmounted, and named as a button in a "Nothing here yet" bar; Show all opens every block. Lesson brief and Practice overview always show. New styles use `--re-*` tokens only.
+@@ -117,7 +117,3 @@ Four fixes, one commit each, one rollback patch.
+ - **No empty boxes.** `src/lib/home-folds.ts` names the two blocks. An empty Recorded lesson assessments or Your teaching progress is a closed `details` line (`.home-fold`) saying what will appear; with content they render as cards as before.
+ - **Shorter live screen.** Once listening or the rehearsal has started (`phase` is not idle or a rehearsal has run), the student and lesson chooser, tabs, Float private coach and audio settings collapse to one summary row with Show setup and Hide setup. The setup stays mounted, only hidden. Without slides or a document (setup view, no PDF) the grid is one column. The commentary feed scrolls to its newest turn, and its turns no longer shrink.
+ - **Readable small text.** Top bar buttons, card footers, the hint under Review the work and Records updated are 14px in `--teacher-soft` (78% `--re-ink`; about 6.5:1 light, 8.6:1 or more dark). The top bar wraps instead of overflowing at 390px.
 -
 -## Homework that has not opened · 13 November 2026
 -
@@ -353,7 +353,7 @@ index 2dc7664..ad80e88 100644
      {voiceTask&&!archived&&<HomeworkAudioRecorder code={code} studentId={studentId} unitId={unitId} week={week.week} title={week.title} prompt={voiceTask.prompt}/>}
      {week.objectives&&<section className="week-objectives"><div className="ux-panel-heading"><MessageIcon/><h2>What to focus on</h2></div><ul>{week.objectives.map(o=><li key={o}>{o}</li>)}</ul></section>}
 diff --git b/src/components/views/TeacherDashboardView.tsx a/src/components/views/TeacherDashboardView.tsx
-index e8ab69a..c3a9b8b 100644
+index 0bd48ad..745dbfe 100644
 --- b/src/components/views/TeacherDashboardView.tsx
 +++ a/src/components/views/TeacherDashboardView.tsx
 @@ -33,7 +33,7 @@ import AppMenu from "@/components/AppMenu";
