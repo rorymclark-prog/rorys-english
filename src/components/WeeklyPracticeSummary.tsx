@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import {PencilIcon,BookIcon} from './Icons';
 import {MicrophoneIcon} from './LearningVisuals';
+import {weeklyTimeEstimate} from '@/lib/homework-hub';
 import type {ringProgress} from '@/lib/practice-rings';
 export type WeeklySummaryState={status:'loading'|'ready'|'error'|'unavailable';progress?:ReturnType<typeof ringProgress>};
 const amount=(n:number)=>n>0&&n<1?'<1':String(Math.round(n*10)/10);
@@ -18,6 +19,7 @@ export default function WeeklyPracticeSummary({state,href='#weekly-practice'}:{s
    <span className="today-weekly-label">This week’s progress <span aria-hidden="true">↗</span></span>
   </Link>
   <ul className="today-weekly-legend">{goals.map(({id,label,Icon,value,target,unit})=><li key={id} className={`weekly-ring-${id}`}><Icon/><span>{label}</span><strong>{!ready?'—':paused?'Paused':`${amount(value)}/${target}`}<small>{ready&&!paused?` ${unit}`:''}</small></strong></li>)}</ul>
+  {ready&&!paused&&<p className="weekly-time-estimate">{weeklyTimeEstimate(p)===0?'All three rings closed — well done!':`To close these rings: about ${weeklyTimeEstimate(p)} min left`}<br/><small>An estimate from saved work; your pace may vary.</small></p>}
   {state.status==='error'||state.status==='unavailable'?<p role="status">Progress could not be checked. <Link href={href}>Open the details to retry</Link>.</p>:state.status==='loading'?<p role="status">Checking saved work…</p>:<p>Saved practice · <Link href={href}>See details</Link></p>}
  </aside>;
 }
