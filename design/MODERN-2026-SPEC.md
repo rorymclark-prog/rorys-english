@@ -117,3 +117,7 @@ Four fixes, one commit each, one rollback patch.
 - **No empty boxes.** `src/lib/home-folds.ts` names the two blocks. An empty Recorded lesson assessments or Your teaching progress is a closed `details` line (`.home-fold`) saying what will appear; with content they render as cards as before.
 - **Shorter live screen.** Once listening or the rehearsal has started (`phase` is not idle or a rehearsal has run), the student and lesson chooser, tabs, Float private coach and audio settings collapse to one summary row with Show setup and Hide setup. The setup stays mounted, only hidden. Without slides or a document (setup view, no PDF) the grid is one column. The commentary feed scrolls to its newest turn, and its turns no longer shrink.
 - **Readable small text.** Top bar buttons, card footers, the hint under Review the work and Records updated are 14px in `--teacher-soft` (78% `--re-ink`; about 6.5:1 light, 8.6:1 or more dark). The top bar wraps instead of overflowing at 390px.
+
+## Homework that has not opened · 13 November 2026
+
+A homework week with a future `availableFrom` shows one `week-notice` line, "This homework opens on <date>" (Vienna date, `lessonDate`), and the existing Back to homework link, instead of the week's tasks. `isHomeworkReleased` in `src/lib/homework-release.ts` is the single release rule.

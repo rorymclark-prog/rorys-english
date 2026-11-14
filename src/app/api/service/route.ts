@@ -3,6 +3,7 @@ import { getAuth } from "firebase-admin/auth";
 import { accountService, type Account } from "@/lib/server/account-service";
 import { ProgressTransportError } from "@/lib/server/progress-transport";
 import {upstream,backendSession} from "@/lib/server/progress-backend";
+import { getTeacherExtras } from "@/lib/content";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     if (!body || typeof body !== "object" || Array.isArray(body)) return Response.json({ ok: false, error: "Invalid request" }, { status: 400, headers });
     const roster = JSON.parse(process.env.ACCOUNT_ROSTER_JSON || "{}") as Record<string, Account>;
     const result = await accountService(body, {
-      roster, upstream, backendSession,
+      roster, upstream, backendSession, teacherExtras: getTeacherExtras,
       verify: async token => {
         const projectId = process.env.FIREBASE_PROJECT_ID;
         if (!projectId) throw new Error("Accounts are not configured");

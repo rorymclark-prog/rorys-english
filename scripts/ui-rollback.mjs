@@ -34,9 +34,10 @@ const descriptions={
   "dashboard-folds":"12 Nov learning dashboard folds empty sections",
   "live-coach-resilience":"13 Nov live teaching skips a failed suggestion, eight sessions an hour",
   "look-2026-11-13":"13 Nov one colour scheme, folded empty boxes, shorter live screen, readable small text",
+  "roster-privacy":"13 Nov student roster out of public code, unreleased homework gate, voice 503",
 };
 const features=Object.keys(descriptions);
-const unstyled=new Set(["settings","speaking-budget","simplicity","writing-feedback","findability","today-diet","teacher-tabs","needs-you","dashboard-folds","live-coach-resilience","look-2026-11-13"]);
+const unstyled=new Set(["settings","speaking-budget","simplicity","writing-feedback","findability","today-diet","teacher-tabs","needs-you","dashboard-folds","live-coach-resilience","look-2026-11-13","roster-privacy"]);
 const styledFeatures=features.filter(name=>!unstyled.has(name));
 const [command,...args]=process.argv.slice(2);
 

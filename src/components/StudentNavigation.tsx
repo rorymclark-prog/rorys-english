@@ -15,11 +15,11 @@ import {localDate} from '@/lib/local-date';
 // The desktop sidebar: the same five sections as the phone's tab bar, each
 // with its own pages underneath, and Find above them.
 export default function StudentNavigation(){
-  const {code,displayName}=useStudent();
+  const {code,displayName,studentId}=useStudent();
   const path=usePathname();
   const base=`/s/${code}`;
   const here=navPlace(path,base);
-  const entries=useCallback(()=>studentFindIndex(code,localDate()),[code]);
+  const entries=useCallback(()=>studentFindIndex(code,localDate(),studentId),[code,studentId]);
   return <aside className="re-sidebar">
     <Link href={`${base}/`} className="re-brand"><span>r.</span><div>Rory’s English<small>A LITTLE EVERY LESSON.</small></div></Link>
     <FindBox entries={entries} placeholder="Find" shortcut/>

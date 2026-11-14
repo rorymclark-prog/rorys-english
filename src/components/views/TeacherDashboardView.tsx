@@ -33,7 +33,7 @@ import AppMenu from "@/components/AppMenu";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import QuickAppearance from "@/components/QuickAppearance";
 import StudentPreviewButton from "@/components/StudentPreviewButton";
-import studentRoster from "../../../content/students.json";
+import { TeacherRosterProvider, type TeacherRosterEntry } from "@/components/TeacherRoster";
 import InboxView from "./InboxView";
 import InboxLink from "@/components/InboxLink";
 import LiveTeachingCoach from "./LiveTeachingCoach";
@@ -47,7 +47,16 @@ const STORAGE_KEY = "re_teacher_secret";
 
 type LoadState = "idle" | "loading" | "ok" | "error";
 
-export default function TeacherDashboardView({initialCalendar=false,initialLive=false,activeUnits={},lessonLibraries={}}:{initialCalendar?:boolean;initialLive?:boolean;activeUnits?:Record<string,Unit|null>;lessonLibraries?:Record<string,CoachLearnerLibrary>}) {
+/** The /teacher routes pass `roster` (code, parentCode, name per student): the one place client code
+ *  learns who the students are, because the static JavaScript must not carry content/students.json. */
+export default function TeacherDashboardView({initialCalendar=false,initialLive=false}:{initialCalendar?:boolean;initialLive?:boolean}) {
+  // None of this is in the prerendered page: it arrives with the signed-in teacherDashboard reply.
+  const [roster,setRoster]=useState<TeacherRosterEntry[]>([]);
+  const [content,setContent]=useState<{activeUnits:Record<string,Unit|null>;lessonLibraries:Record<string,CoachLearnerLibrary>}>({activeUnits:{},lessonLibraries:{}});
+  return <TeacherRosterProvider roster={roster}><TeacherWorkspace roster={roster} activeUnits={content.activeUnits} lessonLibraries={content.lessonLibraries} initialCalendar={initialCalendar} initialLive={initialLive} onRoster={(r,c)=>{setRoster(r);setContent(c);}}/></TeacherRosterProvider>;
+}
+
+function TeacherWorkspace({roster,onRoster,initialCalendar=false,initialLive=false,activeUnits,lessonLibraries}:{roster:TeacherRosterEntry[];onRoster:(roster:TeacherRosterEntry[],content:{activeUnits:Record<string,Unit|null>;lessonLibraries:Record<string,CoachLearnerLibrary>})=>void;initialCalendar?:boolean;initialLive?:boolean;activeUnits:Record<string,Unit|null>;lessonLibraries:Record<string,CoachLearnerLibrary>}) {
   const [inboxTab,setInboxTab]=useState<"messages"|"notifications"|null>(null);
   const [inboxCode,setInboxCode]=useState("__teacher__");
   const [section,setSection]=useState<TeacherSection>("overview");
@@ -116,6 +125,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
       .then((d) => {
         if (!live) return;
         if (d.ok) {
+          onRoster(d.roster??[],{activeUnits:d.teacherContent?.activeUnits??{},lessonLibraries:d.teacherContent?.lessonLibraries??{}});
           setStudents(d.students ?? []);
           setGeneratedAt(d.generatedAt);
           setLoadState("ok");
@@ -169,7 +179,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
 
   if (testingVoice) return <div className="teacher-workspace">
     <header className="teacher-topbar"><button type="button" className="teacher-quiet-button" onClick={() => go({kind:"home"})}>← Back to teacher dashboard</button><div className="flex items-center gap-2"><InboxLink teacher/><QuickAppearance/><AppMenu teacher/></div></header>
-    <VoiceStudio code="__teacher__" lines={[]} teacherTest practiceOptions={studentRoster.map(s => ({ code: s.code, name: s.displayName, unit: s.units.find(u => u.active)?.title }))} />
+    <VoiceStudio code="__teacher__" lines={[]} teacherTest practiceOptions={roster.map(s => ({ code: s.code, name: s.name, unit: activeUnits[s.code]?.title }))} />
   </div>;
 
   const selected = selectedCode ? students?.find((x) => x.code === selectedCode) ?? null : null;
@@ -232,7 +242,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
           <div className="teacher-section-heading"><div><p className="teacher-eyebrow">ONE STEP AT A TIME</p><h2>Your students <span>{students.length}</span></h2></div><button type="button" onClick={()=>setAddingStudent(true)} className="teacher-quiet-button">+ Add student</button></div>
           <div className="teacher-student-grid">
             {students.length===0 && <div className="teacher-empty"><BookIcon/><h2>Your classroom starts here</h2><p>Add your first student to get started.</p></div>}
-            {students.map(student=><StudentCard key={student.code} student={student} onOpen={()=>go({kind:"student",student:student.code,section:"overview"})}/>)}
+            {students.map(student=><StudentCard key={student.code} student={student} unitTitle={activeUnits[student.code]?.title} onOpen={()=>go({kind:"student",student:student.code,section:"overview"})}/>)}
           </div>
           <section className="teacher-voice-tool"><MessageIcon/><div><h2>Speaking partner test</h2><p>Try a conversation before a lesson. Your test stays separate from student work.</p></div><button type="button" className="teacher-primary" onClick={() => go({kind:"voice"})}>Test voice</button></section>
           <TeachingProgress students={students} onOpen={(code)=>go({kind:"student",student:code,section:"overview"})}/>
@@ -300,10 +310,9 @@ function PasswordGate({
   );
 }
 
-function StudentCard({ student, onOpen }: { student: TeacherStudent; onOpen: () => void }) {
-  const unit = studentRoster.find(entry=>entry.code===student.code)?.units.find(unit=>unit.active);
+function StudentCard({ student, unitTitle, onOpen }: { student: TeacherStudent; unitTitle?: string; onOpen: () => void }) {
   return <button type="button" onClick={onOpen} className={`teacher-student-card ${student.code.startsWith("ferdi-") ? "teacher-blue" : "teacher-lilac"}`} aria-label={`Open ${student.name}’s teaching workspace`}>
-    <div className="teacher-card-heading"><ProfileAvatar code={student.code} name={student.name} className="teacher-avatar"/><div><h3>{student.name}</h3><p>{unit?.title || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
+    <div className="teacher-card-heading"><ProfileAvatar code={student.code} name={student.name} className="teacher-avatar"/><div><h3>{student.name}</h3><p>{unitTitle || "Ready for a new chapter"}</p></div><ChevronRightIcon className="ml-auto shrink-0"/></div>
     <div className="teacher-focus"><span>{student.focusNote ? "CURRENT FOCUS" : "NEXT STEP"}</span><p>{student.focusNote || "Open their workspace to review answers or assign a little practice."}</p></div>
     <div className="teacher-card-footer"><span>Saved work, practice & feedback</span><strong>Open learning dashboard <span aria-hidden>↗</span></strong></div>
   </button>;

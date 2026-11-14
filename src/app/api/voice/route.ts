@@ -74,7 +74,15 @@ export async function POST(request: Request) {
     }else if(body.topic==="lesson")throw new Error("Choose a learner with a saved practice plan.");
     config = voiceConfiguration(body, unit ? { title: unit.title, vocabulary: "voiceVocabulary" in unit ? unit.voiceVocabulary : undefined } : null,lessonPractice,learningMemory?memoryInput(learningMemory):undefined);
   }
-  catch { return Response.json({ error: "Choose a topic and try connecting your microphone again." }, { status: 400, headers }); }
+  catch (error) {
+    // The learning context comes from the backend (Apps Script). When that is slow or down it is not
+    // the student's mistake: say so with a 503 and keep the 400 for requests that are really invalid.
+    if (error instanceof ProgressTransportError) {
+      console.error("Live voice learning context unavailable", { stage: error.stage, status: error.status });
+      return Response.json({ error: "Speaking practice is briefly unavailable. Try again in a minute." }, { status: 503, headers });
+    }
+    return Response.json({ error: "Choose a topic and try connecting your microphone again." }, { status: 400, headers });
+  }
   // Per-instance burst protection, not an account-wide spending limit.
   const now = Date.now(); const recent = (attempts.get(uid) || []).filter(t => now - t < 3600000);
   if (recent.length >= 4 || recent.some(t => now - t < 30000)) return Response.json({ error: "Please wait before starting another conversation." }, { status: 429, headers });

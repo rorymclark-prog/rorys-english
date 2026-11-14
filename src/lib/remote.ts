@@ -1,6 +1,8 @@
 "use client";
 import { authed, request, type ApiResult } from "./api";
 import {learnerProgress} from "./evidence-common";
+import type {Unit} from "./types";
+import type {CoachLearnerLibrary} from "./coach-lessons";
 export const remoteEnabled = () => !!process.env.NEXT_PUBLIC_SYNC_URL;
 export interface Section { headers: string[]; rows: (string | number)[][] }
 export interface Progress extends ApiResult { name?: string; generatedAt?: string; homework?: Section; quizzes?: Section; schoolTests?: Section; writing?: Section; speaking?: Section; mockTests?: Section }
@@ -21,7 +23,7 @@ export interface NoteResult extends ApiResult {note?:string}
 export const fetchNote = (code:string) => authed<NoteResult>(code,{action:"note"});
 export interface TeacherStudentSummary {homeworkDone:number|string;quizRounds:number|string;bestQuizPct:number|string;schoolTests:number|string;writingSamples:number|string;lastUpdated:string;daysSinceActivity:number|null}
 export interface TeacherStudent {code:string;name:string;summary:TeacherStudentSummary|null;focusNote:string}
-export interface TeacherDashboard extends ApiResult {generatedAt?:string;students?:TeacherStudent[]}
+export interface TeacherDashboard extends ApiResult {generatedAt?:string;students?:TeacherStudent[];roster?:{code:string;parentCode:string;name:string}[];teacherContent?:{activeUnits?:Record<string,Unit|null>;lessonLibraries?:Record<string,CoachLearnerLibrary>}}
 const teacherPost = <T extends ApiResult>(session:string,body:Record<string,unknown>) => request<T>({...body,session});
 export const fetchTeacherDashboard = (session:string) => teacherPost<TeacherDashboard>(session,{action:"teacherDashboard"});
 export interface AddStudentResult extends ApiResult {code?:string;parentCode?:string;name?:string}

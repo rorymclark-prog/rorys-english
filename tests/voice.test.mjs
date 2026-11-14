@@ -114,3 +114,40 @@ test('archived unit practice selects only a published unit in the authenticated 
  assert.equal(exports.selectVoiceUnit(undefined,units).id,'current-unit');assert.equal(exports.selectVoiceUnit('old-unit',units).title,'Old');
  for(const id of ['other-student-unit','future-unpublished',{},null])assert.throws(()=>exports.selectVoiceUnit(id,units));
 });
+
+test('a slow or failing backend gives the student a 503 to retry, and only real validation problems stay a 400',async()=>{
+  const route={};let lookup;
+  const source=ts.transpileModule(fs.readFileSync('src/app/api/voice/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  const {createHash}=await import('node:crypto');
+  class TransportError extends Error{constructor(stage,status=0){super('Progress service unavailable');this.stage=stage;this.status=status;}}
+  vm.runInNewContext(source,{
+    exports:route,Response,URL,AbortSignal,console:{...console,error(){}},process:{env:{LIVE_VOICE_ENABLED:'true',OPENAI_API_KEY:'synthetic-api-key',APPS_SCRIPT_URL:'https://script.google.com/synthetic',ACCOUNT_ROSTER_JSON:'{"learner-a":{}}'}},
+    require:name=>{
+      if(name==='node:crypto')return {createHash};
+      if(name.includes('firebase-admin'))return {};
+      if(name.includes('voice-session'))return exports;
+      if(name.includes('content/students.json'))return {default:[{code:'learner-a',id:'ferdi'}]};
+      if(name.includes('content/ferdi/units.json'))return {default:[{id:'current-unit',active:true,title:'Current'}]};
+      if(name.includes('content/valentin/units.json'))return {default:[]};
+      if(name.includes('google-http'))return {googleHttp:async()=>({})};
+      if(name.includes('learning-memory'))return {buildLearningMemory:()=>({}),memoryInput:()=>({})};
+      if(name.includes('lesson-practice'))return practiceExports;
+      if(name.includes('progress-backend'))return {upstream:async()=>lookup(),backendSession:async()=>'session'};
+      if(name.includes('progress-transport'))return {ProgressTransportError:TransportError,postProgress:async()=>({ok:true,students:[]})};
+      throw Error(name);
+    },
+    fetch:async()=>Response.json({session:{id:'synthetic-live'},transport:{sdp:'v=0 answer'}}),
+  });
+  const post=extra=>route.POST(new Request('https://app.example/api/voice/',{method:'POST',headers:{origin:'https://app.example'},body:JSON.stringify({...body,teacherTest:true,code:'__teacher__',token:'teacher-token',practiceStudent:'learner-a',...extra})}));
+  const message='Speaking practice is briefly unavailable. Try again in a minute.';
+  for(const failure of [new TransportError('response-http',502),new TransportError('timeout'),new TransportError('service-missing')]){
+    lookup=async()=>{throw failure;};
+    const res=await post();assert.equal(res.status,503);assert.equal((await res.json()).error,message);
+  }
+  lookup=async()=>({ok:true,records:[],settings:{}});
+  assert.equal((await post({topic:'lesson',lessonPracticeId:{}})).status,400,'a malformed request stays a 400');
+  assert.equal((await post({practiceStudent:'unknown-learner',topic:'lesson'})).status,400,'asking for a practice that does not exist stays a 400');
+  const client=fs.readFileSync('src/components/views/SpeakView.tsx','utf8');
+  assert.match(client,/if \(!response\.ok\) throw new Error\(result\.error/,'the Speak page shows the server message for any non-OK status');
+  assert.match(fs.readFileSync('src/lib/server/progress-backend.ts','utf8'),/ProgressTransportError\("student-session"\)/);
+});
