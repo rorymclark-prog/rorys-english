@@ -1,6 +1,8 @@
 "use client";
 
 import {useEffect,useState} from "react";
+import HomeworkHub from '@/components/HomeworkHub';
+import {activeHomework} from '@/lib/homework-hub';
 import {LatestLessonPractice} from "@/components/LessonPractice";
 import Link from "next/link";
 import type {HomeworkWeek,Unit} from "@/lib/types";
@@ -60,16 +62,20 @@ export default function HomeworkListView({unit}:{unit:Unit|null}){
   const today=localDate();
   const weeks=hasSpeakingHomework||resetHomework?[]:unit?.homework||[];
   const readyWeeks=weeks.filter(h=>!h.availableFrom||h.availableFrom<=today),upcomingWeeks=weeks.filter(h=>h.availableFrom&&h.availableFrom>today);
-  const count=readyAssignments.length+readyWeeks.length;
-  return <Screen title="Homework" subtitle={unit?.title}>
+  const requested=typeof window!=='undefined'?selectedAssignmentId(window.location.search,window.location.hash):'';
+  const hub=(code.startsWith('ferdi-')||code.startsWith('valentin-'))?activeHomework(readyAssignments,requested):null;
+  const otherAssignments=readyAssignments.filter(a=>a.id!==hub?.id);
+  const count=otherAssignments.length+readyWeeks.length;
+  return <Screen title="This week’s homework">
     <div className="work-page">
-      <p className="work-intro">Open a task, or return to an earlier attempt.</p>
+      {!hub&&<p className="work-intro">Open a task, or return to an earlier attempt.</p>}
       {error&&<StatusRow kind="error" onRetry={()=>void refresh()}>{error}</StatusRow>}
       {!loaded&&<StatusRow kind="loading">Checking Rory’s assignments…</StatusRow>}
-      <LatestLessonPractice code={code}/>
-      {(count>0||loaded)&&<section className="work-section"><SectionHeading eyebrow="YOUR CURRENT WORK" title="Homework & earlier practice" count={count}/><div className="work-card-list">{readyAssignments.map(a=>isFerdiSpeakingHomework(code,a)?<SpeakingHomeworkCard key={a.id} code={code} assignment={a}/>:<AssignedCard key={a.id} assignment={a} code={code}/>)}{readyWeeks.map(h=><WeekCard key={`${unit!.id}-${h.week}`} week={h} unitId={unit!.id} code={code} upcoming={false} status={loaded?error?"Status unavailable":submissionStatus(submissions,unit!.id,`hw:${h.week}`):"Checking saved work…"}/>)}{loaded&&!error&&count===0&&<div className="work-empty"><BookIcon/><strong>Nothing new to do right now.</strong><p>Your lessons and earlier work are still here when you want to practise.</p></div>}</div></section>}
+      {hub&&<HomeworkHub key={hub.id} code={code} name={displayName} assignment={hub}/>}
+      {(count>0||loaded&&!hub)&&<section className="work-section"><SectionHeading eyebrow="YOUR CURRENT WORK" title={hub?"Other homework":"Homework & earlier practice"} count={count}/><div className="work-card-list">{otherAssignments.map(a=>isFerdiSpeakingHomework(code,a)?<SpeakingHomeworkCard key={a.id} code={code} assignment={a}/>:<AssignedCard key={a.id} assignment={a} code={code}/>)}{readyWeeks.map(h=><WeekCard key={`${unit!.id}-${h.week}`} week={h} unitId={unit!.id} code={code} upcoming={false} status={loaded?error?"Status unavailable":submissionStatus(submissions,unit!.id,`hw:${h.week}`):"Checking saved work…"}/>)}{loaded&&!error&&count===0&&<div className="work-empty"><BookIcon/><strong>Nothing new to do right now.</strong><p>Your lessons and earlier work are still here when you want to practise.</p></div>}</div></section>}
       {upcomingWeeks.length>0&&<section className="work-section"><SectionHeading eyebrow="PLAN AHEAD" title="Coming up" count={upcomingWeeks.length}/><div className="work-card-list">{upcomingWeeks.map(h=><WeekCard key={`${unit!.id}-${h.week}`} week={h} unitId={unit!.id} code={code} upcoming status="Not available yet"/>)}</div></section>}
-      <SavedWriting code={code} name={displayName}/>
+      {!hub&&<SavedWriting code={code} name={displayName}/>}
+      <details className="work-archive"><summary>Lesson recap and resources</summary><LatestLessonPractice code={code}/></details>
       {archivedAssignments.length>0&&<details className="work-archive"><summary><FileIcon/><span><strong>Replaced homework</strong><small>Reference only · {archivedAssignments.length} earlier tasks</small></span><ChevronRightIcon/></summary><div className="work-card-list">{archivedAssignments.map(a=><AssignedCard key={a.id} assignment={a} code={code} archived/>)}</div></details>}
       {resetHomework&&!!unit?.homework?.length&&<details className="work-archive"><summary><BookIcon/><span><strong>Earlier lesson practice</strong><small>Reference only · not currently assigned</small></span><ChevronRightIcon/></summary><div className="work-card-list">{unit.homework.map(h=><WeekCard key={`${unit.id}-${h.week}`} week={h} unitId={unit.id} code={code} upcoming={false} status="Optional reference"/>)}</div></details>}
       {completedAssignments.length>0&&<details className="work-archive"><summary><CheckSquareIcon/><span><strong>Completed assignments</strong><small>{completedAssignments.length} saved for reference</small></span><ChevronRightIcon/></summary><div className="work-card-list">{completedAssignments.map(a=><AssignedCard key={a.id} assignment={a} code={code}/>)}</div></details>}

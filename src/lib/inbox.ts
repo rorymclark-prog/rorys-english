@@ -1,6 +1,6 @@
 "use client";
 import {authed,request,type ApiResult} from './api';
-export type InboxEvent={id:string;code:string;name?:string;at:string;kind:string;title:string;detail:string;view:string;read:boolean;needsCheck?:boolean;practice?:{source:'document'|'submission'|'reply';id:string;attempt:string;record?:string}};
+export type InboxEvent={id:string;code:string;name?:string;at:string;kind:string;title:string;detail:string;view:string;read:boolean;needsCheck?:boolean;practice?:{source:'document'|'submission'|'reply';id:string;attempt:string;record?:string;summary?:boolean;attemptCount?:number;exerciseCount?:number}};
 export type DirectMessage={id:string;created:string;sender:'student'|'teacher';text:string;read?:boolean};
 export interface InboxResult extends ApiResult{events?:InboxEvent[];unread?:number;messages?:DirectMessage[];message?:DirectMessage;received?:boolean;hasEarlier?:boolean;students?:{code:string;name:string;lastActivity:string|null}[];generatedAt?:string}
 export const inboxRequest=(code:string,teacherToken:string|undefined,body:Record<string,unknown>)=>teacherToken?request<InboxResult>({...body,code,session:teacherToken}):authed<InboxResult>(code,body);

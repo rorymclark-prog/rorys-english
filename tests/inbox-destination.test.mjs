@@ -25,3 +25,13 @@ test('practice links select the exact original and immutable attempt, including 
  }
  const url=new URL(inboxDestination({...event,kind:'practice',practice:{source:'document',id:'../../wrong',attempt:'attempt-valid-0001'}},true),'https://app.test');assert.equal(url.searchParams.has('attempt'),false);
 });
+
+test('grouped practice opens the whole matching homework practice without selecting one retry',()=>{
+ for(const source of ['document','submission','reply']){
+  const practice={source,id:'original-source-0001',attempt:'latest-attempt-0001',record:'lesson-practice-0001',summary:true};
+  const url=new URL(inboxDestination({...event,kind:'practice',practice},true),'https://app.test');
+  assert.equal(url.searchParams.get('practice'),source==='document'?practice.id:`${source}:${practice.id}`);
+  assert.equal(url.searchParams.has('attempt'),false);assert.equal(url.hash,'#saved-practice');
+  assert.equal(url.searchParams.get('student'),'student-a');
+ }
+});
