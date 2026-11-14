@@ -24,7 +24,7 @@ type WorkKind="speaking"|"writing"|"task";
 const kindLabel:Record<WorkKind,string>={speaking:"Speaking",writing:"Writing",task:"Assignment"};
 const kindIcon={speaking:MicrophoneIcon,writing:PencilIcon,task:CheckSquareIcon};
 const kindForAssignment=(a:Assignment):WorkKind=>/speak|voice|conversation|chat|record|talk/i.test(`${a.title} ${a.details}`)?"speaking":/writ|essay|email|paragraph|draft/i.test(`${a.title} ${a.details}`)?"writing":"task";
-const kindForWeek=(week:HomeworkWeek):WorkKind=>week.tasks.some(t=>t.type==="voice")?"speaking":week.tasks.some(t=>t.type==="written")?"writing":"task";
+const kindForWeek=(week:HomeworkWeek):WorkKind=>week.tasks.some(t=>t.type==="voice"&&!t.optional)?"speaking":week.tasks.some(t=>t.type==="written")?"writing":"task";
 const localDate=()=>{const now=new Date();return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;};
 const isDone=(a:Assignment)=>isCompletedAssignment(a.status);
 const isArchived=(a:Assignment)=>/^(archived|superseded|cancelled|withdrawn)$/i.test(a.status.trim());
