@@ -208,7 +208,7 @@ export default function TeacherDashboardView({initialCalendar=false,initialLive=
     <div className="teacher-workspace">
       <header className="teacher-topbar">
         <a href="/teacher/" className="teacher-brand"><span aria-hidden>r.</span><div>Rory’s English<small>TEACHER WORKSPACE</small></div></a>
-        <div className="flex items-center gap-2">
+        <div className="teacher-topbar-actions flex items-center gap-2">
           <InboxLink teacher/>
           <button type="button" disabled={loadState === "loading"} onClick={() => setRefreshKey(k => k + 1)} className="teacher-quiet-button">{loadState === "loading" ? "Refreshing…" : "Refresh"}</button>
           <button type="button" disabled={loadState !== "ok"} className="teacher-quiet-button" onClick={() => go({kind:"live"})}>Live teaching</button>
