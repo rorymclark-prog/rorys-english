@@ -13,10 +13,10 @@ export function LessonPracticeDetails({code,record,practice,mode}:{code:string;r
     <ul className="mt-3 ml-5 list-disc">{practice.focus.map(x=><li key={x}>{x}</li>)}</ul>
     <p className="mt-3"><strong>Speak · about {practice.speakingMinutes} minutes:</strong> {practice.speakingPrompt}</p>
     {mode==='student'&&<Link className="re-button mt-3 inline-block" href={`/s/${code}/speak/?mode=lesson&practice=${encodeURIComponent(record.id)}`}>Practise with AI →</Link>}
-    <p className="mt-4"><strong>Write · about {practice.writingMinutes} minutes:</strong> {practice.writingPrompt}</p>
+    <p className="mt-4"><strong>Write · about {practice.writingMinutes} minutes:</strong> {practice.writingPrompt}</p>{practice.writingSource&&<details className="mt-4 rounded-xl border p-4"><summary className="cursor-pointer font-bold">{practice.writingSource.title}</summary><p className="mt-3 whitespace-pre-wrap leading-8">{practice.writingSource.text}</p></details>}{practice.vocabularyPrompt&&<p className="mt-4"><strong>Vocabulary:</strong> {practice.vocabularyPrompt}</p>}
     <p className="mt-2">{mode==='student'?'Use the answer box below to save your own writing, or attach a photograph.':'The student can save writing or a photograph with this task in their app.'} There is no new deadline.</p>
     <p className="mt-3 font-semibold">Check your attempt</p><ul className="ml-5 list-disc">{practice.successCriteria.map(x=><li key={x}>{x}</li>)}</ul>
-    <p className="mt-3 text-xs">Optional practice. Your Conversation feedback is saved separately after the chat.</p>
+    <p className="mt-3 text-sm">{practice.assignmentId?'Current homework. This short conversation counts inside your weekly speaking time.':'Optional practice.'} Your Conversation feedback is saved separately after the chat.</p>
   </section>;
 }
 export function LatestLessonPractice({code,showFiles=true,compact=false}:{code:string;showFiles?:boolean;compact?:boolean}) {
@@ -25,7 +25,7 @@ export function LatestLessonPractice({code,showFiles=true,compact=false}:{code:s
   if(error)return <StatusRow kind="error" className="mt-5" onRetry={()=>setRetry(x=>x+1)}>Could not check your latest lesson recap.</StatusRow>;
   if(!entry)return null;
   const {record,practice}=entry;
-  const assignedHomework=record.body.source?.includes("-homework-reset-source-")===true;
+  const assignedHomework=!!practice.assignmentId||record.body.source?.includes("-homework-reset-source-")===true;
   if(compact)return <section className="studio-lesson-note" aria-labelledby="studio-lesson-title">
     <div><p className="re-eyebrow">{assignedHomework?'CURRENT PRACTICE FOCUS':'FROM YOUR LESSON'} · {readableDate(practice.lessonDate)}</p><h2 id="studio-lesson-title">{learnerTaskTitle(practice.title)}</h2><p className="studio-lesson-focus">{practice.focus[0]}</p></div>
     <Link className="studio-lesson-link" href={`/s/${code}/progress/#review-${record.id}`}>Recap & full task <span aria-hidden="true">→</span></Link>
@@ -41,7 +41,7 @@ export function LessonPracticeEditor({code,record,existing,onSaved}:{code:string
   const field='mt-1 w-full rounded-xl border border-black/15 bg-white p-3 text-sm text-navy dark:border-white/20 dark:bg-navy dark:text-cream';
   async function publish(){
     if(busy)return;
-    const practice=readLessonPractice({version:1,status:'ready',sourceReviewId:initial?.sourceReviewId||record.id,lessonDate:record.date,title,recap,focus:focus.split('\n').map(x=>x.trim()).filter(Boolean),speakingPrompt:speaking,coaching,writingPrompt:writing,speakingMinutes:speakMinutes,writingMinutes:writeMinutes,successCriteria:criteria.split('\n').map(x=>x.trim()).filter(Boolean)});
+    const practice=readLessonPractice({...initial,version:1,status:'ready',sourceReviewId:initial?.sourceReviewId||record.id,lessonDate:record.date,title,recap,focus:focus.split('\n').map(x=>x.trim()).filter(Boolean),speakingPrompt:speaking,coaching,writingPrompt:writing,speakingMinutes:speakMinutes,writingMinutes:writeMinutes,successCriteria:criteria.split('\n').map(x=>x.trim()).filter(Boolean)});
     if(!practice){setMessage('Add a short recap, 1–3 focus points, both tasks, AI coaching and 1–4 success criteria.');return;}
     setBusy(true);setMessage('');id.current||=crypto.randomUUID();
     const result=await saveLearning(code,{id:id.current,date:practice.lessonDate,kind:'lesson',title:`Lesson practice · ${readableDate(practice.lessonDate)}`,visibility:'shared',body:{...((existing?.body.feedbackOrigin==='recorded-lesson-practice'||record.body.source?.includes('/lesson-recording/'))?{feedbackOrigin:'recorded-lesson-practice' as const}:{}),summary:practice.recap,evidenceType:'Student practice prepared from the lesson',source:`lesson-practice:${practice.sourceReviewId}`,lessonPractice:practice}});

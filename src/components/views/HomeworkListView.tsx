@@ -60,10 +60,10 @@ export default function HomeworkListView({unit}:{unit:Unit|null}){
   const resetHomework=currentYear.some(a=>a.id.startsWith("homework-reset-"));
   const hasSpeakingHomework=current.some(a=>isFerdiSpeakingHomework(code,a));
   const today=localDate();
-  const weeks=hasSpeakingHomework||resetHomework?[]:unit?.homework||[];
-  const readyWeeks=weeks.filter(h=>!h.availableFrom||h.availableFrom<=today),upcomingWeeks=weeks.filter(h=>h.availableFrom&&h.availableFrom>today);
   const requested=typeof window!=='undefined'?selectedAssignmentId(window.location.search,window.location.hash):'';
   const hub=(code.startsWith('ferdi-')||code.startsWith('valentin-'))?activeHomework(readyAssignments,requested):null;
+  const weeks=hasSpeakingHomework||resetHomework||hub?[]:unit?.homework||[];
+  const readyWeeks=weeks.filter(h=>!h.availableFrom||h.availableFrom<=today),upcomingWeeks=weeks.filter(h=>h.availableFrom&&h.availableFrom>today);
   const otherAssignments=readyAssignments.filter(a=>a.id!==hub?.id);
   const count=otherAssignments.length+readyWeeks.length;
   return <Screen title="This week’s homework">
@@ -77,7 +77,7 @@ export default function HomeworkListView({unit}:{unit:Unit|null}){
       {!hub&&<SavedWriting code={code} name={displayName}/>}
       <details className="work-archive"><summary>Lesson recap and resources</summary><LatestLessonPractice code={code}/></details>
       {archivedAssignments.length>0&&<details className="work-archive"><summary><FileIcon/><span><strong>Replaced homework</strong><small>Reference only · {archivedAssignments.length} earlier tasks</small></span><ChevronRightIcon/></summary><div className="work-card-list">{archivedAssignments.map(a=><AssignedCard key={a.id} assignment={a} code={code} archived/>)}</div></details>}
-      {resetHomework&&!!unit?.homework?.length&&<details className="work-archive"><summary><BookIcon/><span><strong>Earlier lesson practice</strong><small>Reference only · not currently assigned</small></span><ChevronRightIcon/></summary><div className="work-card-list">{unit.homework.map(h=><WeekCard key={`${unit.id}-${h.week}`} week={h} unitId={unit.id} code={code} upcoming={false} status="Optional reference"/>)}</div></details>}
+      {(resetHomework||!!hub)&&!!unit?.homework?.length&&<details className="work-archive"><summary><BookIcon/><span><strong>Earlier lesson practice</strong><small>Reference only · not currently assigned</small></span><ChevronRightIcon/></summary><div className="work-card-list">{unit.homework.map(h=><WeekCard key={`${unit.id}-${h.week}`} week={h} unitId={unit.id} code={code} upcoming={false} status="Optional reference"/>)}</div></details>}
       {completedAssignments.length>0&&<details className="work-archive"><summary><CheckSquareIcon/><span><strong>Completed assignments</strong><small>{completedAssignments.length} saved for reference</small></span><ChevronRightIcon/></summary><div className="work-card-list">{completedAssignments.map(a=><AssignedCard key={a.id} assignment={a} code={code}/>)}</div></details>}
       {previous.length>0&&<details className="work-archive"><summary><FileIcon/><span><strong>Previous-year assignments</strong><small>Optional revision · {previous.length} items</small></span><ChevronRightIcon/></summary><div className="work-card-list">{previous.map(a=><AssignedCard key={a.id} assignment={a} code={code} previous/>)}</div></details>}
       <Link className="work-library-link" href={`/s/${code}/lessons/`}><BookIcon/><span><strong>Find lessons and past material</strong><small>Current unit, practice and approved resources</small></span><ChevronRightIcon/></Link>

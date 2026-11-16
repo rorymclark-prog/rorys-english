@@ -64,3 +64,13 @@
 
 /* The weekly rings and activity history, moved here from Today (12 Nov). */
 .progress-weekly-practice{scroll-margin-top:6rem;margin-top:1.5rem}
+
+/* Keep the useful summary and teaching advice readable before optional evidence. */
+.feedback-reading{max-width:74ch;margin-inline:auto;font-size:1rem;line-height:1.85}
+.teaching-reflection>p+p{margin-top:1.25rem}
+.teaching-reflection>p>strong{display:inline-block;margin-bottom:.25rem}
+.lesson-assessment-details>summary{min-height:44px;align-content:center;line-height:1.6}
+.lesson-assessment-content p,.lesson-assessment-content li{line-height:1.8}
+.refined-feedback-entry[open]>.refined-feedback-summary .refined-feedback-snippet{display:none}
+.refined-feedback-body .feedback-reading .text-xs{font-size:.875rem;line-height:1.7}
+@media(max-width:640px){.feedback-reading{max-width:100%}.teaching-reflection{padding:1.1rem}}
