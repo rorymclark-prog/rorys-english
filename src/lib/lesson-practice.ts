@@ -4,6 +4,8 @@ export type LessonPractice = {
   version:1; status:'draft'|'ready'; sourceReviewId:string; lessonDate:string;
   title:string; recap:string; focus:string[]; speakingPrompt:string; coaching:string;
   writingPrompt:string; speakingMinutes:number; writingMinutes:number; successCriteria:string[];
+  assignmentId?:string; unitId?:string; vocabularyPrompt?:string;
+  writingSource?:{title:string;text:string};
 };
 const text=(value:unknown,max:number)=>typeof value==='string'&&value.trim().length>0&&value.length<=max?value.trim():null;
 const list=(value:unknown,maxItems:number)=>Array.isArray(value)&&value.length>0&&value.length<=maxItems&&value.every(v=>text(v,350))?value.map(v=>String(v).trim()):null;
@@ -12,9 +14,17 @@ export function readLessonPractice(value:unknown):LessonPractice|null {
   const p=value as Record<string,unknown>,focus=list(p.focus,3),criteria=list(p.successCriteria,4);
   if(p.version!==1||!['draft','ready'].includes(String(p.status))||!text(p.sourceReviewId,100)||!/^20\d\d-\d\d-\d\d$/.test(String(p.lessonDate)))return null;
   if(!focus||!criteria||!text(p.title,120)||!text(p.recap,1200)||!text(p.speakingPrompt,1200)||!text(p.coaching,2000)||!text(p.writingPrompt,1800))return null;
+  if(p.assignmentId!==undefined&&!text(p.assignmentId,100)||p.unitId!==undefined&&!text(p.unitId,100)||p.vocabularyPrompt!==undefined&&!text(p.vocabularyPrompt,1800))return null;
+  const source=p.writingSource as Record<string,unknown>|undefined;
+  if(source!==undefined&&(!source||!text(source.title,150)||!text(source.text,6000)))return null;
   if(!Number.isInteger(p.speakingMinutes)||Number(p.speakingMinutes)<1||Number(p.speakingMinutes)>15||!Number.isInteger(p.writingMinutes)||Number(p.writingMinutes)<1||Number(p.writingMinutes)>20)return null;
   // Return only the student-safe fields. Never forward the containing review.
-  return {version:1,status:p.status as LessonPractice['status'],sourceReviewId:String(p.sourceReviewId),lessonDate:String(p.lessonDate),title:String(p.title).trim(),recap:String(p.recap).trim(),focus,speakingPrompt:String(p.speakingPrompt).trim(),coaching:String(p.coaching).trim(),writingPrompt:String(p.writingPrompt).trim(),speakingMinutes:Number(p.speakingMinutes),writingMinutes:Number(p.writingMinutes),successCriteria:criteria};
+  return {version:1,status:p.status as LessonPractice['status'],sourceReviewId:String(p.sourceReviewId),lessonDate:String(p.lessonDate),title:String(p.title).trim(),recap:String(p.recap).trim(),focus,speakingPrompt:String(p.speakingPrompt).trim(),coaching:String(p.coaching).trim(),writingPrompt:String(p.writingPrompt).trim(),speakingMinutes:Number(p.speakingMinutes),writingMinutes:Number(p.writingMinutes),successCriteria:criteria,...(p.assignmentId?{assignmentId:String(p.assignmentId).trim()}:{}),...(p.unitId?{unitId:String(p.unitId).trim()}:{}),...(p.vocabularyPrompt?{vocabularyPrompt:String(p.vocabularyPrompt).trim()}:{}),...(source?{writingSource:{title:String(source.title).trim(),text:String(source.text).trim()}}:{})};
+}
+/** Never attach another assignment's newer conversation to this homework. */
+export function homeworkPracticeRecord(records:LearningRecord[],assignmentId:string){
+  const bound=records.filter(r=>r.body?.lessonPractice?.assignmentId);
+  return bound.length?lessonPracticeRecord(bound.filter(r=>r.body.lessonPractice?.assignmentId===assignmentId)):lessonPracticeRecord(records);
 }
 export function lessonPracticeRecord(records:LearningRecord[],id?:string):{record:LearningRecord;practice:LessonPractice}|null {
   const choices=records.flatMap(record=>{
