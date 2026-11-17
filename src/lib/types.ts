@@ -30,6 +30,10 @@ export interface HomeworkTask {
 }
 
 export interface HomeworkWeek {
+  /** Assignment week, distinct from the deadline and actual submission date. */
+  assignmentWeek?: string;
+  /** Explicit fields used for receipt progress; optional chats/stretch tasks stay separate. */
+  progress?: {area:"writing"|"spelling"|"multiplication"; requiredTaskIds:string[]};
   focus?: "writing-spelling";
   /** Non-English supplementary checks keep their subject visible. */
   subject?: "english" | "maths";

@@ -54,6 +54,17 @@
         "lines": 3
       }
     ],
-    "subject": "maths"
+    "subject": "maths",
+    "assignmentWeek": "2026-11-16",
+    "progress": {
+      "area": "multiplication",
+      "requiredTaskIds": [
+        "kashi-multiplication-check-1",
+        "kashi-multiplication-check-2",
+        "kashi-multiplication-check-3",
+        "kashi-multiplication-check-4",
+        "kashi-multiplication-check-5"
+      ]
+    }
   }
 ]

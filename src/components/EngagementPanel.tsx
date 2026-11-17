@@ -5,6 +5,8 @@ import {ringDocuments} from '@/lib/ring-documents';
 import {ringProgress,ringWeek} from '@/lib/practice-rings';
 import {practiceCourse} from '@/lib/practice-catalog';
 import type {WeeklySummaryState} from '@/components/WeeklyPracticeSummary';
+import HomeworkProgressLoader from './HomeworkProgressLoader';
+import {usesHomeworkProgress} from '@/lib/homework-progress';
 import WeeklyPracticeRings from '@/components/WeeklyPracticeRings';
 import {getLearning} from '@/lib/learning';
 import {documentRequest} from '@/lib/documents';
@@ -16,7 +18,12 @@ import {engagementEvents,engagementTotals,periodRange,shiftDay,type EngagementPe
 const periods:{id:EngagementPeriod;label:string}[]=[{id:'day',label:'Day'},{id:'week',label:'Week'},{id:'month',label:'Month'},{id:'semester',label:'Semester'},{id:'year',label:'School year'}];
 const dateLabel=(date:string)=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Vienna'}).format(new Date(date+'T12:00:00Z'));
 const minutes=(value:number)=>value===0?'0':value<1?'<1':String(Math.round(value*10)/10);
-export default function EngagementPanel({code,teacher=false,source,sourceError='',compact=false,summaryOnly=false,vocabularyOnly=false,onRefresh,onWeeklySummary}:{code:string;teacher?:boolean;source?:EngagementSource;sourceError?:string;compact?:boolean;/** Load and report the week through onWeeklySummary, and draw nothing. */summaryOnly?:boolean;vocabularyOnly?:boolean;onRefresh?:()=>Promise<void>;onWeeklySummary?:(state:WeeklySummaryState)=>void}){
+export type EngagementPanelProps={code:string;teacher?:boolean;source?:EngagementSource;sourceError?:string;compact?:boolean;summaryOnly?:boolean;vocabularyOnly?:boolean;onRefresh?:()=>Promise<void>;onWeeklySummary?:(state:WeeklySummaryState)=>void};
+export default function EngagementPanel(props:EngagementPanelProps){
+ if(usesHomeworkProgress(props.code))return <HomeworkProgressLoader {...props}/>;
+ return <CourseEngagementPanel {...props}/>;
+}
+function CourseEngagementPanel({code,teacher=false,source,sourceError='',compact=false,summaryOnly=false,vocabularyOnly=false,onRefresh,onWeeklySummary}:EngagementPanelProps){
  const [historyOpen,setHistoryOpen]=useState(!compact);
  const [data,setData]=useState<EngagementSource|null>(source||null),[breaks,setBreaks]=useState<{from:string;to:string}[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[calendarError,setCalendarError]=useState(''),[calendarReady,setCalendarReady]=useState(false),[period,setPeriod]=useState<EngagementPeriod>('week'),[anchor,setAnchor]=useState(viennaDay()),[retry,setRetry]=useState(0);
  useEffect(()=>{let live=true;setError('');setCalendarReady(false);setLoading(true);
