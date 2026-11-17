@@ -55,7 +55,7 @@ export function homeworkMetrics(code:string,unit:Unit|null,assignments:Assignmen
  };
  const items=current.filter(a=>!combined.includes(a)).map(a=>item(`assignment:${a.id}`,a.title,a.due,'assigned',a.id,isCompletedAssignment(a.status)));
  for(const week of unit?.homework||[]){if(week.availableFrom&&week.availableFrom>today)continue;const guided=guidedSpeakingForHomework(code,unit!.id,week.week);
-  items.push(item(`unit:${unit!.id}:hw:${week.week}`,week.title,combined[0]?.due||week.due,unit!.id,`hw:${week.week}`,false,guided?.savedTitle));
+  items.push(item(`unit:${unit!.id}:hw:${week.week}`,week.title,combined[0]?.due||week.due,unit!.id,`hw:${week.week}`,false,guided?.optional?undefined:guided?.savedTitle));
  }
  return items;
 }

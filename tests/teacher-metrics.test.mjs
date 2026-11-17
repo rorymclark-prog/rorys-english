@@ -18,3 +18,12 @@ test('new private checkpoint, school context and teaching metrics are excluded f
  for(const [role,code,preview] of [['student','a',false],['parent','parent-a',false],['teacher','a',true]]){const result=ctx.learningService_({action:'learningRecords',code,preview},{role,code});assert.equal(result.ok,true);assert.equal(result.records.length,1);assert.equal(result.records[0].body.tutorPrivate,undefined);assert.doesNotMatch(JSON.stringify(result),/PRIVATE|checkpoint|skillCheck|goalPlan|dashboardSettings|lessonAssessment/);}
  const teacher=ctx.learningService_({action:'learningRecords',code:'a'},{role:'teacher'});assert.equal(teacher.records.length,2);assert.equal(teacher.records[0].body.tutorPrivate.checkpoint.criteria[0].earned,3);
 });
+
+
+test('Kashi writing receipts do not require his optional guided conversations',()=>{
+ const unit={id:'kashi-writing-spelling-start-2026',homework:[1,2].map(week=>({week,title:'Writing '+week,due:''}))};
+ const sent=[{...submission('hw:1','submitted','2026-11-17'),unit:unit.id},{...submission('hw:2','reviewed','2026-11-17'),unit:unit.id}];
+ const r=m.homeworkMetrics('kashi-route',unit,[],sent,[],config,'2026-11-17');
+ assert.equal(r[0].received,true);assert.equal(r[0].reviewed,false);
+ assert.equal(r[1].received,true);assert.equal(r[1].reviewed,true);
+});
