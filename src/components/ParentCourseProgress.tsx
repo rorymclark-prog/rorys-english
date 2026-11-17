@@ -8,10 +8,13 @@ import {viennaDay} from '@/lib/teacher-metrics';
 import type {EngagementSource} from '@/lib/engagement';
 import {ringProgress} from '@/lib/practice-rings';
 import {practiceCourse} from '@/lib/practice-catalog';
+import {homeworkProgress,usesHomeworkProgress} from '@/lib/homework-progress';
+import HomeworkProgressPanel from './HomeworkProgress';
 import {useParentLanguage} from './ParentLanguage';
 export function ParentCourseProgress({source,code,today}:{source:EngagementSource;code:string;today:string}){
  const {t,language}=useParentLanguage(),course=practiceCourse(code),[unitId,setUnitId]=useState('');
  const amount=(value:number)=>new Intl.NumberFormat(language==='de'?'de-AT':'en-GB',{maximumFractionDigits:1}).format(value);
+ if(usesHomeworkProgress(code))return <HomeworkProgressPanel progress={homeworkProgress(code,source.submissions,today,unitId)} code={code} parent onWeekChange={setUnitId}/>;
  if(!course)return null;
  const whole=ringProgress(source,code,{kind:'course',id:course.year},today),selected=whole.units.find(u=>u.id===unitId&&u.year===course.year);
  const p=selected?ringProgress(source,code,{kind:'unit',id:selected.id},today):whole;
@@ -29,7 +32,7 @@ export function ParentCourseProgress({source,code,today}:{source:EngagementSourc
 
 export default function ParentCourseProgressLoader({source,code}:{source:EngagementSource;code:string}){
  const {t}=useParentLanguage(),[ready,setReady]=useState<EngagementSource|null>(null),[error,setError]=useState(false),[retry,setRetry]=useState(0);
- useEffect(()=>{let active=true;setError(false);setReady(null);Promise.all([authed<Submissions>(code,{action:'parentPractice'}),ringDocuments(source.documents,id=>documentRequest(code,false,{action:'document',id}))]).then(([work,documents])=>{if(!work.ok)throw Error();if(active)setReady({...source,documents,submissions:work.submissions||[]});}).catch(()=>{if(active)setError(true);});return()=>{active=false;};},[code,source,retry]);
+ useEffect(()=>{let active=true;setError(false);setReady(null);Promise.all([authed<Submissions>(code,{action:'parentPractice'}),usesHomeworkProgress(code)?Promise.resolve(source.documents):ringDocuments(source.documents,id=>documentRequest(code,false,{action:'document',id}))]).then(([work,documents])=>{if(!work.ok||!Array.isArray(work.submissions))throw Error();if(active)setReady({...source,documents,submissions:work.submissions||[]});}).catch(()=>{if(active)setError(true);});return()=>{active=false;};},[code,source,retry]);
  if(error)return <section id="parent-course" className="parent-error"><h2>{t('Course practice','Kursübungen')}</h2><p>{t('Some saved practice could not be loaded. The totals are temporarily unavailable.','Einige gespeicherte Übungen konnten nicht geladen werden. Die Summen sind vorübergehend nicht verfügbar.')}</p><button className="parent-action" onClick={()=>setRetry(n=>n+1)}>{t('Try again','Erneut versuchen')}</button></section>;
  if(!ready)return <section id="parent-course" role="status" aria-busy="true"><h2>{t('Course practice','Kursübungen')}</h2><p>{t('Including earlier writing and conversations…','Frühere Texte und Gespräche werden einbezogen…')}</p></section>;
  return <ParentCourseProgress source={ready} code={code} today={viennaDay()}/>;

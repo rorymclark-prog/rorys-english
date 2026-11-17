@@ -8,7 +8,7 @@ import React from 'react';
 import * as jsx from 'react/jsx-runtime';
 import {renderToStaticMarkup} from 'react-dom/server';
 const cache=new Map();
-function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file);if(file.endsWith('.json'))return {default:JSON.parse(fs.readFileSync(file,'utf8'))};const exports={};cache.set(file,exports);const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports,process:{env:{}},Intl,Date,Set,Map,URL,Blob,Uint8Array,console,setTimeout,clearTimeout,require:name=>{if(name==='react')return React;if(name==='react/jsx-runtime')return jsx;let resolved=name.startsWith('@/')?path.resolve('src',name.slice(2)):path.resolve(path.dirname(file),name);if(!path.extname(resolved))resolved+=fs.existsSync(resolved+'.tsx')?'.tsx':'.ts';return load(resolved);}});return exports;}
+function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file);if(file.endsWith('.json'))return {default:JSON.parse(fs.readFileSync(file,'utf8'))};const exports={};cache.set(file,exports);const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports,process:{env:{}},Intl,Date,Set,Map,URL,Blob,Uint8Array,console,setTimeout,clearTimeout,require:name=>{if(name==='react')return React;if(name==='react/jsx-runtime')return jsx;if(name==='next/link')return {default:({children,href,...props})=>React.createElement('a',{...props,href},children)};let resolved=name.startsWith('@/')?path.resolve('src',name.slice(2)):path.resolve(path.dirname(file),name);if(!path.extname(resolved))resolved+=fs.existsSync(resolved+'.tsx')?'.tsx':'.ts';return load(resolved);}});return exports;}
 const language=load('src/lib/parent-language.ts'),feedback=load('src/lib/parent-feedback.ts');
 const Provider=load('src/components/ParentLanguage.tsx').default,Dashboard=load('src/components/views/ParentDashboardView.tsx').default,SignIn=load('src/components/ParentSignIn.tsx').default,ParentFeedback=load('src/components/ParentFeedback.tsx');
 const german=element=>renderToStaticMarkup(React.createElement(Provider,null,element));
@@ -76,4 +76,11 @@ test('explicit publication keeps only latest valid domain marks and excludes pri
  const latest={...old,id:'latest',date:'2026-10-20',body:{tutorPrivate:{skillCheck:{...check,results:[...check.results,{domain:'grammar',criterion:'Grammar on this text',earned:2,possible:4,evidenceType:'written',evidence:'PRIVATE GRAMMAR QUOTE'}]}}}};
  const source=[old,latest,{...latest,id:'future',date:'2026-11-01'},{...latest,id:'held',date:'2026-10-30',reviewPending:true}];const before=JSON.stringify(source),out=publish(source,'2026-10-31');
  assert.equal(out.length,1);assert.equal(out[0].id,'latest-progress-summary');assert.equal(out[0].body.skillSnapshot.results.length,2);assert.equal(out[0].body.skillSnapshot.help,'unknown');assert.doesNotMatch(JSON.stringify(out),/PRIVATE|verification pending|tutorPrivate|sourceRef/);assert.equal(JSON.stringify(source),before);
+});
+
+test('Kashi parent sees the same homework receipts in German without school-course quotas or child editing links',()=>{
+ const Course=load('src/components/ParentCourseProgress.tsx').ParentCourseProgress;
+ const source={records:[],documents:[],submissions:[{id:'synthetic-kashi-writing',unit:'kashi-writing-spelling-start-2026',task:'hw:1',submitted:'2026-11-17',answers:{'kashi-start-writing-original':'My original paragraph.'}}],replies:[],progress:null};
+ const html=german(React.createElement(Course,{source,code:'kashifam-test',today:'2026-11-17'}));
+ assert.match(html,/Schreiben/);assert.match(html,/Rechtschreibung/);assert.match(html,/Multiplizieren/);assert.match(html,/1 von 3 Aufgaben abgegeben/);assert.doesNotMatch(html,/420|Gesprächsminuten|href="\/s\//);
 });

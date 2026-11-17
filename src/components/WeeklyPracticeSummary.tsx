@@ -1,13 +1,16 @@
 "use client";
 import Link from 'next/link';
+import {usesHomeworkProgress,type HomeworkProgress} from '@/lib/homework-progress';
+import {HomeworkProgressSummary} from './HomeworkProgress';
 import {PencilIcon,BookIcon} from './Icons';
 import {MicrophoneIcon} from './LearningVisuals';
 import {weeklyTimeEstimate} from '@/lib/homework-hub';
 import type {ringProgress} from '@/lib/practice-rings';
-export type WeeklySummaryState={status:'loading'|'ready'|'error'|'unavailable';progress?:ReturnType<typeof ringProgress>};
+export type WeeklySummaryState={status:'loading'|'ready'|'error'|'unavailable';progress?:ReturnType<typeof ringProgress>;homework?:HomeworkProgress};
 const amount=(n:number)=>n>0&&n<1?'<1':String(Math.round(n*10)/10);
 /** Uses the same loaded sources, calendar and credit rules as the detailed rings. */
-export default function WeeklyPracticeSummary({state,href='#weekly-practice'}:{state:WeeklySummaryState;/** Where the full rings live. */href?:string}){
+export default function WeeklyPracticeSummary({state,href='#weekly-practice',code=''}:{state:WeeklySummaryState;code?:string;/** Where the full rings live. */href?:string}){
+ if(usesHomeworkProgress(code))return <HomeworkProgressSummary progress={state.homework} status={state.status} href={href}/>;
  const p=state.progress,ready=state.status==='ready'&&!!p,paused=ready&&p.paused;
  const goals=[{id:'speaking',label:'Speaking',Icon:MicrophoneIcon,value:p?.minutes||0,target:p?.target||0,unit:'min',radius:78},{id:'writing',label:'Writing',Icon:PencilIcon,value:p?.writing||0,target:p?.writingTarget||0,unit:'attempt',radius:59},{id:'vocabulary',label:'Vocabulary',Icon:BookIcon,value:p?.vocabulary||0,target:p?.vocabularyTarget||0,unit:'words',radius:40}];
  return <aside className="today-weekly-summary" aria-label="This week’s saved practice">

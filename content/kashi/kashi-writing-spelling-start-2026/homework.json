@@ -32,7 +32,14 @@
         "optional": true
       }
     ],
-    "focus": "writing-spelling"
+    "focus": "writing-spelling",
+    "assignmentWeek": "2026-11-16",
+    "progress": {
+      "area": "writing",
+      "requiredTaskIds": [
+        "kashi-start-writing-original"
+      ]
+    }
   },
   {
     "week": 2,
@@ -67,6 +74,14 @@
         "prompt": "Optional · Talk about one sentence you want to improve from Session 1. Read it aloud or tell the AI your idea. It asks what you mean and helps you say one clearer sentence. You then write and check the spelling yourself. About 3 minutes. No separate recording or chat report is needed."
       }
     ],
-    "focus": "writing-spelling"
+    "focus": "writing-spelling",
+    "assignmentWeek": "2026-11-16",
+    "progress": {
+      "area": "spelling",
+      "requiredTaskIds": [
+        "kashi-personal-word-log",
+        "kashi-first-revision"
+      ]
+    }
   }
 ]

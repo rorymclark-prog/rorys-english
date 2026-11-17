@@ -69,7 +69,7 @@ export default function TodayView({unit,units}:{unit:Unit|null;units?:Unit[]}){
       {hero.action&&<Link className="re-button" href={hero.href} aria-label={`${heroButton}: ${hero.title}`}>{heroButton}</Link>}
       {loaded&&!error&&more>0&&<Link className="today-hero-more" href="#additional-work-title">{more} more {more===1?"task":"tasks"} below <ChevronRightIcon/></Link>}
       </div>
-      <WeeklyPracticeSummary state={weeklySummary} href={`${base}/progress/#weekly-practice`}/>
+      <WeeklyPracticeSummary code={code} state={weeklySummary} href={`${base}/progress/#weekly-practice`}/>
     </section>
     {loaded&&!error&&additionalSteps.length>0&&<section aria-labelledby="additional-work-title">
       <h2 id="additional-work-title" className="week-form-heading">Other current tasks</h2>
