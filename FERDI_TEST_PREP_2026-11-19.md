@@ -1,0 +1,13 @@
+# Adjective or adverb · original test practice
+
+Adds a static, mobile-friendly supplementary practice resource at `/resources/test-prep/adjective-or-adverb-2026-11.html`, linked from Ferdi’s authenticated Test prep record. Existing homework, marks, learner originals and backend remain unchanged. The Friday date is an assumption from his request, not a school calendar write.
+
+The sequence is a 4-item opening check, five reveal cards, a 10-choice workshop text, a 7-gap band text and an 8-choice fresh match-day mini-test. Estimate 20–25 minutes now plus 5 minutes later, with a 15-minute shorter route and optional new sentences. The main exercise format matches the requested choices inside a text. Cards support retrieval of the decision rule. Regular -ly, subject descriptions after linking verbs, good/well, fast/hard, hardly and spelling are explained. All stories are original British English.
+
+This is formative self-check practice: answers/explanations are intentionally available after checking and are present in the public resource. It is not a secure assessment. Inputs and immutable first-check snapshots stay in browser local storage; retries are separate. No network request submits work. Copying the report and sending it through the existing authenticated learning-reply workflow is explicit. The report includes first/current answers, first/latest check results, optional own examples and self-reported time/help. Storage failure leaves the page usable with an explicit copy-before-closing notice.
+
+Claude Opus 5.5 Extra reviewed the original content JSON at Rory’s request. All original keys were correct; its material teaching fixes were applied: balance regular -ly items in the mini-test, teach hardly first, practise hard, require relevant cards, fix the A1 explanation, give an early stopping route and use realistic timings. Optional alternating-pattern improvements were also applied. This is not a claim of Claude approval of an unseen final UI.
+
+References: [Cambridge, adverb forms](https://dictionary.cambridge.org/grammar/british-grammar/adverbs-forms), [British Council, manner adverbials](https://learnenglish.britishcouncil.org/grammar/english-grammar-reference/adverbials-manner), [IES learning practice guide](https://ies.ed.gov/ncee/WWC/PracticeGuide/1/Published). These inform rules/retrieval/feedback, not a measured claim about this learner.
+
+Validation receipts and private content/review/evidence are in Ferdi’s project `outputs/ferdi-adjectives-adverbs-2026-11-19/`. Synthetic browser attempts remain local and are not learner evidence. No automated learner submission or formal assessment is created.
