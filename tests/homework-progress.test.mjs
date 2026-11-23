@@ -7,9 +7,15 @@ import ts from 'typescript';
 import React from 'react';
 import * as jsx from 'react/jsx-runtime';
 import {renderToStaticMarkup} from 'react-dom/server';
+// Keep engine scenarios on their original dates as live homework is carried forward.
+// Content and required field IDs come from the maintained tasks; only test dates are fixed.
+const homeworkFixtures=new Map(['kashi-writing-spelling-start-2026','kashi-multiplication-start-2026'].map(unit=>{
+ const file=path.resolve(`content/kashi/${unit}/homework.json`),data=JSON.parse(fs.readFileSync(file,'utf8'));
+ return [file,{default:data.map(week=>({...week,assignmentWeek:'2026-11-16'}))}];
+}));
 function loader(overrides={}){
  const cache=new Map();
- function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file);if(file.endsWith('.json'))return {default:JSON.parse(fs.readFileSync(file,'utf8'))};const exports={};cache.set(file,exports);const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports,process:{env:{}},Intl,Date,Set,Map,URL,Blob,Uint8Array,console,setTimeout,clearTimeout,window:{addEventListener(){},removeEventListener(){}},require:name=>{if(name in overrides)return overrides[name];if(name==='react')return React;if(name==='react/jsx-runtime')return jsx;if(name==='next/link')return {default:({children,href,...props})=>React.createElement('a',{...props,href},children)};let resolved=name.startsWith('@/')?path.resolve('src',name.slice(2)):path.resolve(path.dirname(file),name);if(!path.extname(resolved))resolved+=fs.existsSync(resolved+'.tsx')?'.tsx':'.ts';return load(resolved);}});return exports;}return load;
+ function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file);if(file.endsWith('.json'))return homeworkFixtures.get(file)||{default:JSON.parse(fs.readFileSync(file,'utf8'))};const exports={};cache.set(file,exports);const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports,process:{env:{}},Intl,Date,Set,Map,URL,Blob,Uint8Array,console,setTimeout,clearTimeout,window:{addEventListener(){},removeEventListener(){}},require:name=>{if(name in overrides)return overrides[name];if(name==='react')return React;if(name==='react/jsx-runtime')return jsx;if(name==='next/link')return {default:({children,href,...props})=>React.createElement('a',{...props,href},children)};let resolved=name.startsWith('@/')?path.resolve('src',name.slice(2)):path.resolve(path.dirname(file),name);if(!path.extname(resolved))resolved+=fs.existsSync(resolved+'.tsx')?'.tsx':'.ts';return load(resolved);}});return exports;}return load;
 }
 const load=loader(),{homeworkProgress,usesHomeworkProgress}=load('src/lib/homework-progress.ts');
 const code='kashi-test',today='2026-11-17',english='kashi-writing-spelling-start-2026',maths='kashi-multiplication-start-2026';
@@ -39,7 +45,7 @@ test('latest revisions and duplicate records never double count or mutate origin
 });
 test('foreign tasks, future records and invalid assignment metadata cannot fill homework rings',()=>{
  const p=homeworkProgress(code,[{...writing,unit:'foreign'},{...writing,task:'hw:7'},{...writing,submitted:'2026-11-18T12:00:00Z'},{...writing,id:''}],today);assert.equal(p.hasWork,false);assert.equal(p.submitted,0);
- const data=JSON.parse(fs.readFileSync(`content/kashi/${english}/homework.json`,'utf8'));
+ const data=homeworkFixtures.get(path.resolve(`content/kashi/${english}/homework.json`)).default;
  const future={...data[0],week:3,assignmentWeek:'2026-11-23'};const invalid={...data[0],week:4,assignmentWeek:'2026-11-16',progress:{area:'writing',requiredTaskIds:['missing']}};
  const custom=loader({'../../content/kashi/kashi-writing-spelling-start-2026/homework.json':{default:[...data,future,invalid]}})('src/lib/homework-progress.ts').homeworkProgress;
  assert.equal(custom(code,[],today).goals.length,3);assert.equal(custom(code,[],'2026-11-24').goals.length,1);assert.equal(custom(code,[],'2026-11-24','2026-11-16').goals.length,3);assert.deepEqual(Array.from(custom(code,[],'2026-11-24').weeks),['2026-11-23','2026-11-16']);

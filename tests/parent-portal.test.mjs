@@ -81,6 +81,6 @@ test('explicit publication keeps only latest valid domain marks and excludes pri
 test('Kashi parent sees the same homework receipts in German without school-course quotas or child editing links',()=>{
  const Course=load('src/components/ParentCourseProgress.tsx').ParentCourseProgress;
  const source={records:[],documents:[],submissions:[{id:'synthetic-kashi-writing',unit:'kashi-writing-spelling-start-2026',task:'hw:1',submitted:'2026-11-17',answers:{'kashi-start-writing-original':'My original paragraph.'}}],replies:[],progress:null};
- const html=german(React.createElement(Course,{source,code:'kashifam-test',today:'2026-11-17'}));
+ const html=german(React.createElement(Course,{source,code:'kashifam-test',today:JSON.parse(fs.readFileSync('content/kashi/kashi-writing-spelling-start-2026/homework.json','utf8'))[0].assignmentWeek}));
  assert.match(html,/Schreiben/);assert.match(html,/Rechtschreibung/);assert.match(html,/Multiplizieren/);assert.match(html,/1 von 3 Aufgaben abgegeben/);assert.doesNotMatch(html,/420|Gesprächsminuten|href="\/s\//);
 });
